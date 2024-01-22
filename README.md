@@ -22,7 +22,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 ##### 1. Clone this repo on your machine:
 
 ```
-    git clone -b ngi-search https://github.com/PeARSearch/PeARS-lite.git
+    git clone https://github.com/PeARSearch/PeARS-OMD.git
 ```
 
 ##### 2. **Optional step** Setup a virtualenv in your directory.
@@ -37,9 +37,9 @@ If you haven't yet set up virtualenv on your machine, please install it via pip:
 
     sudo apt install python3-virtualenv
 
-Then change into the PeARS-lite directory:
+Then change into the PeARS-OMD directory:
 
-    cd PeARS-lite
+    cd PeARS-OMD
 
 Then run:
 
@@ -60,7 +60,7 @@ The PeARS authentification token is set in the *app/static/conf/pears.ini* file.
 
 ##### 5. Run your pear!
 
-If you are running/testing PeARS-lite locally (as opposed to the OMD server), first export the LOCAL_RUN variable and run the toy authentification server provided in *test-auth.py*:
+If you are running/testing PeARS-OMD locally (as opposed to the OMD server), first export the LOCAL_RUN variable and run the toy authentification server provided in *test-auth.py*:
 
 ```
 export LOCAL_RUN=True
