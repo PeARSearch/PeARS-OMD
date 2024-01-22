@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: 2023 PeARS Project, <community@pearsproject.org> 
+SPDX-FileCopyrightText: 2024 PeARS Project, <community@pearsproject.org> 
 
 SPDX-License-Identifier: AGPL-3.0-only
 -->
@@ -9,7 +9,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 ## What and why
 
-**What:** This branch of *PeARS-lite* is dedicated to the version of PeARS Lite used in the context of the project *On My Disk: search integration*. A description of the project can be found [on this page](https://www.ngisearch.eu/view/Events/FirstTenSearchersAnnounced). We are grateful to the Next Generation Internet programme of the European Commission for the financial support given to this project (see credits at the bottom of this README).
+**What:** *PeARS-OMD* is a version of PeARS used in the context of the project *On My Disk: search integration*. A description of the project can be found [on this page](https://www.ngisearch.eu/view/Events/FirstTenSearchersAnnounced). We are grateful to the Next Generation Internet programme of the European Commission for the financial support given to this project (see credits at the bottom of this README).
 
 **Why:** This PeARS version is tailored for use with the [On My Disk](https://onmydisk.com/) private cloud solution. It includes features for indexing and search over a user's decentralised filesystem.
 
