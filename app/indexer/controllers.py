@@ -18,9 +18,10 @@ from app import LANG, VEC_SIZE, tracker
 from app.api.models import Urls
 from app.indexer.neighbours import neighbour_urls
 from app.indexer import mk_page_vector, spider
-from app.utils import readDocs, readUrls, get_language, init_podsum, carbon_print
+from app.utils import readDocs, readUrls, get_language, init_pod, init_podsum, carbon_print
 from app.utils_db import pod_from_file
 from app.indexer.htmlparser import extract_links, extract_html
+from app.indexer.posix import posix_doc
 from os.path import dirname, join, realpath, isfile
 
 dir_path = dirname(dirname(realpath(__file__)))
@@ -48,6 +49,7 @@ def index():
 def from_crawl():
     keyword = "home" #hard-coded
     lang = LANG
+    init_pod(keyword)
    
     def process_start_url(u):
         print("Now crawling", u)
@@ -105,9 +107,8 @@ def progress_crawl():
         
         kwd = 'home' #hard-coded - change if needed
         lang = LANG
-        print("\n\n>>> CONTROLLER: READING DOCS")
+        print("\n\n>>> INDEXER: CONTROLLER: READING DOCS")
         urls, titles, snippets, descriptions, docs = readDocs(join(dir_path, "docs_to_index.txt"))
-        print("DOCS",docs)
         pod_name = kwd+'.npz'
         pod_dir = join(dir_path,'static','pods')
 
@@ -115,7 +116,6 @@ def progress_crawl():
         if not isfile(join(pod_dir,'podsum.npz')):
             init_podsum()
         if not isfile(join(pod_dir,pod_name)):
-            print("Making 0 CSR matrix")
             pod = np.zeros((1,VEC_SIZE))
             pod = sparse.csr_matrix(pod)
             sparse.save_npz(join(pod_dir,pod_name), pod)
@@ -125,9 +125,13 @@ def progress_crawl():
             task_name = "run indexing for "+str(len(urls))+" files"
             tracker.start_task(task_name)
         for url, title, snippet, description, doc in zip(urls, titles, snippets, descriptions, docs):
-            print(url,title)
-            success, podsum = mk_page_vector.compute_vectors_local_docs(url, title, snippet, description, doc, kwd, lang)
-            pod_from_file(kwd, lang, podsum)
+            print("\n\n>>> INDEXER: CONTROLLER: PROGRESS CRAWL: INDEXING", url)
+            success, podsum, text, doc_id = mk_page_vector.compute_vectors_local_docs(url, title, snippet, description, doc, kwd, lang)
+            if success:
+                posix_doc(text, doc_id, kwd)
+                pod_from_file(kwd, lang, podsum)
+            else:
+                print("\n\n>>> INDEXER: CONTROLLER: PROGRESS CRAWL: ERROR INDEXING", url)
             c += 1
             print('###', str(ceil(c / len(urls) * 100)))
             yield "data:" + str(ceil(c / len(urls) * 100)) + "\n\n"

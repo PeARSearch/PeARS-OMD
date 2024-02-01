@@ -71,7 +71,6 @@ def user():
         query = query.lower()
         pears = ['0.0.0.0']
         results, pods = score_pages.run(query, pears, url_filter=[ join(url,username), 'http://localhost:9090/static/']) #TODO: replace filter with correct OMD endpoint
-        print(results)
         r = app.make_response(jsonify(results))
         r.mimetype = "application/json"
         return r
@@ -97,7 +96,6 @@ def anonymous():
         else:
             url = ' https://demo.onmydisk.net/shared'
         results, pods = score_pages.run(query, pears, url_filter=[url])
-        print(results)
         r = app.make_response(jsonify(results))
         r.mimetype = "application/json"
         return r
