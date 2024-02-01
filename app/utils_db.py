@@ -3,11 +3,11 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import joblib
-from app import db, VEC_SIZE
+from app import db, vocab, VEC_SIZE
 from app.api.models import Urls, Pods
 from app.api.models import installed_languages
+from app.indexer.posix import load_posix, dump_posix
 from app.utils import convert_to_array, convert_string_to_dict, convert_to_string, normalise
-from app.indexer.mk_page_vector import compute_query_vectors
 import numpy as np
 from os.path import dirname, realpath, join
 from scipy.sparse import csr_matrix, vstack, save_npz, load_npz
@@ -58,6 +58,49 @@ def get_db_pod_description(url):
 def get_db_pod_language(url):
     pod_language = Pods.query.filter(Pods.url == url).first().language
     return pod_language
+
+
+def delete_url(idx):
+    u = db.session.query(Urls).filter_by(vector=idx).first()
+    pod = u.pod
+    vid = int(u.vector)
+    #Remove document row from .npz matrix
+    pod_m = load_npz(join(pod_dir,pod+'.npz'))
+    m1 = pod_m[:vid]
+    m2 = pod_m[vid+1:]
+    pod_m = vstack((m1,m2))
+    save_npz(join(pod_dir,pod+'.npz'),pod_m)
+
+    #Correct indices in DB
+    urls = db.session.query(Urls).filter_by(pod=pod).all()
+    for url in urls:
+        if int(url.vector) > vid:
+            url.vector = str(int(url.vector)-1) #Decrease ID now that matrix row has gone
+        db.session.add(url)
+        db.session.commit()
+
+    #Remove doc from positional index
+    posindex = load_posix(pod)
+    new_posindex = []
+    for token in vocab:
+        token_id = vocab[token]
+        tmp = {}
+        for doc_id, posidx in posindex[token_id].items():
+            if doc_id != str(vid):
+                tmp[doc_id] = posidx
+            #else:
+            #    print("Deleting doc",doc_id,"from token",token,token_id)
+        new_posindex.append(tmp)
+    dump_posix(new_posindex,pod)
+
+    #Recompute pod summary
+    podsum = np.sum(pod_m, axis=0)
+    p = db.session.query(Pods).filter_by(name=pod).first()
+    pod_from_file(pod, p.language, podsum)
+    db.session.delete(u)
+    db.session.commit()
+    return "Deleted document with vector id"+str(vid)
+
 
 
 def compute_pod_summary(name):

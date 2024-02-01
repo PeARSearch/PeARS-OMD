@@ -8,7 +8,7 @@ from flask import Blueprint, jsonify, request
 import numpy as np
 from scipy.sparse import csr_matrix, vstack, save_npz, load_npz
 from os.path import dirname, join, realpath, basename
-from app.utils_db import pod_from_file
+from app.utils_db import pod_from_file, delete_url
 from app.api.models import Urls, Pods
 from app import db
 
@@ -43,37 +43,16 @@ def return_delete(idx=None):
         path = request.args.get('path')
     else:
         path = None
-    try:
-        if not path:
-            u = db.session.query(Urls).filter_by(vector=idx).first()
-        else:
-            u = db.session.query(Urls).filter_by(url=path).first()
-        pod = u.pod
-        vid = int(u.vector)
-
-        #Remove document row from .npz matrix
-        pod_m = load_npz(join(pod_dir,pod+'.npz'))
-        m1 = pod_m[:vid]
-        m2 = pod_m[vid+1:]
-        pod_m = vstack((m1,m2)) 
-        save_npz(join(pod_dir,pod+'.npz'),pod_m)
-
-        #Correct indices in DB
-        urls = db.session.query(Urls).filter_by(pod=pod).all()
-        for url in urls:
-            if int(url.vector) > vid:
-                url.vector = str(int(url.vector)-1) #Decrease ID now that matrix row has gone
-            db.session.add(url)
-            db.session.commit()
-        
-        #Recompute pod summary
-        podsum = np.sum(pod_m, axis=0)
-        p = db.session.query(Pods).filter_by(name=pod).first()
-        pod_from_file(pod, p.language, podsum)
-        db.session.delete(u)
-        db.session.commit()
-    except:
-        return "Deletion failed"
+    #try:
+    if not path:
+        u = db.session.query(Urls).filter_by(vector=idx).first()
+    else:
+        u = db.session.query(Urls).filter_by(url=path).first()
+    pod = u.pod
+    vid = int(u.vector)
+    delete_url(vid)
+    #except:
+    #    return "Deletion failed"
     return "Deleted document with vector id"+str(vid)+'\n'
 
 

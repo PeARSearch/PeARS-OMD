@@ -81,7 +81,7 @@ NB: whenever you want to come back to a clean install, manually delete your data
 
 ```
 rm -f app/static/db/app.db
-rm -fr app/static/pods/*npz
+rm -fr app/static/pods/*
 ```
 
 
