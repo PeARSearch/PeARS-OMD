@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: AGPL-3.0-only
 
+import joblib
 import logging
 import re
 import requests
@@ -15,7 +16,7 @@ from scipy.sparse import csr_matrix, save_npz
 from os.path import dirname, join, realpath, isfile
 from pathlib import Path
 from datetime import datetime
-from app import VEC_SIZE, LOCAL_RUN, LANG, CARBON_DIR
+from app import VEC_SIZE, LOCAL_RUN, LANG, CARBON_DIR, vocab
 
 
 def carbon_print(tracker_results, task_name):
@@ -116,6 +117,20 @@ def readPods(pod_file):
         pods.append(line)
     f.close()
     return pods
+
+def init_pod(pod_name):
+    dir_path = dirname(dirname(realpath(__file__)))
+    pod_dir = join(dir_path,'app', 'static','pods')
+    if not isfile(join(pod_dir,pod_name+'.npz')):
+        print("Making 0 CSR matrix for new pod")
+        pod = np.zeros((1,VEC_SIZE))
+        pod = csr_matrix(pod)
+        save_npz(join(pod_dir,pod_name+'.npz'), pod)
+
+    if not isfile(join(pod_dir,pod_name+'.pos')):
+        print("Making empty positional index for new pod")
+        posindex = [{} for _ in range(len(vocab))]
+        joblib.dump(posindex, join(pod_dir,pod_name+'.pos'))
 
 
 def init_podsum():

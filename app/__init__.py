@@ -39,6 +39,11 @@ from app.indexer.vectorizer import read_vocab
 
 print(f"Loading SPM vocab from '{spm_vocab_path}' ...")
 vocab, _, _ = read_vocab(spm_vocab_path)
+from sklearn.feature_extraction.text import CountVectorizer
+
+print(f"Loading SPM vocab from '{spm_vocab_path}' ...")
+vocab, inverted_vocab, logprobs = read_vocab(spm_vocab_path)
+vectorizer = CountVectorizer(vocabulary=vocab, lowercase=True, token_pattern='[^ ]+')
 VEC_SIZE = len(vocab)
 
 # Assess whether the code is run locally or on the On My Disk server
@@ -169,6 +174,25 @@ class PodsModelView(ModelView):
             'readonly': True
         },
     }
+    def delete_model(self, model):
+        try:
+            self.on_model_delete(model)
+            print("DELETING",model.name)
+            # Add your custom logic here and don't forget to commit any changes e.g.
+            print(return_pod_delete(model.name))
+            self.session.commit()
+        except Exception as ex:
+            if not self.handle_view_exception(ex):
+                flash(gettext('Failed to delete record. %(error)s', error=str(ex)), 'error')
+                log.exception('Failed to delete record.')
+
+            self.session.rollback()
+
+            return False
+        else:
+            self.after_model_delete(model)
+
+        return True
 
 
 admin.add_view(PodsModelView(Pods, db.session))

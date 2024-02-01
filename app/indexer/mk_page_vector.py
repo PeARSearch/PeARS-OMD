@@ -31,44 +31,6 @@ def compute_vec(lang, text, pod_m):
     return pod_m
 
 
-def compute_vectors(target_url, keyword, lang):
-    print("Computing vectors for", target_url, "(",keyword,")",lang)
-    print(pod_dir)
-    pod_m = load_npz(join(pod_dir,keyword+'.npz'))
-    if not db.session.query(Urls).filter_by(url=target_url).all():
-        u = Urls(url=target_url)
-        title, body_str, snippet, cc, error = extract_html(target_url)
-        if error is None and snippet != '':
-            try:
-                text = title + " " + body_str
-                text = tokenize_text(lang, text)
-                pod_m = compute_vec(lang, text, pod_m)
-                u.title = str(title)
-                u.vector = str(pod_m.shape[0]-1)
-                u.keyword = keyword
-                u.pod = keyword
-                u.snippet = str(snippet)
-                if cc:
-                    u.cc = True
-                #print(u.url,u.title,u.vector,u.snippet,u.cc,u.pod)
-                db.session.add(u)
-                db.session.commit()
-                save_npz(join(pod_dir,keyword+'.npz'),pod_m)
-                podsum = np.sum(pod_m, axis=0)
-                return True, podsum
-            except:
-                print("ERROR: try statement failed while indexing url",target_url)
-                return False, None
-        else:
-            if snippet == '':
-                print("IGNORING URL: Snippet empty.")
-            else:
-                print(error)
-            return False, None
-    else:
-        return True, None
-
-
 def compute_vectors_local_docs(target_url, title, snippet, description, doc, keyword, lang):
     cc = False
     pod_m = load_npz(join(pod_dir,keyword+'.npz'))
@@ -93,16 +55,12 @@ def compute_vectors_local_docs(target_url, title, snippet, description, doc, key
     db.session.commit()
     save_npz(join(pod_dir,keyword+'.npz'),pod_m)
     podsum = np.sum(pod_m, axis=0)
-    return True, podsum
+    return True, podsum, text, u.vector
 
 
 
 def compute_query_vectors(query, lang):
     """ Make distribution for query """
-    #query = query.rstrip('\n')
-    #words = query.split()
     text = tokenize_text(lang, query)
-    print(text)
     v = vectorize_scale(lang, text, 5, len(text)) #log prob power 5
-    print(csr_matrix(v))
-    return v
+    return v, text

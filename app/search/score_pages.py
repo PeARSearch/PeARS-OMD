@@ -2,7 +2,8 @@
 #
 # SPDX-License-Identifier: AGPL-3.0-only
 
-import webbrowser
+import multiprocessing
+from joblib import Parallel, delayed
 from urllib.parse import urlparse
 import re
 import math
@@ -11,7 +12,7 @@ from app import db, tracker
 from app.utils_db import (
     get_db_url_snippet, get_db_url_title, get_db_url_cc, get_db_url_pod, get_db_url_notes)
 
-from .overlap_calculation import score_url_overlap, generic_overlap, completeness
+from .overlap_calculation import score_url_overlap, generic_overlap, completeness, posix
 from app.search import term_cosine
 from app.utils import cosine_similarity, hamming_similarity, convert_to_array, get_language, carbon_print
 from app.indexer.mk_page_vector import compute_query_vectors
@@ -23,7 +24,7 @@ import numpy as np
 dir_path = dirname(dirname(realpath(__file__)))
 pod_dir = join(dir_path,'static','pods')
 
-def score(query, query_dist, kwd):
+def score(query, query_dist, tokenized, kwd):
     URL_scores = {}
     snippet_scores = {}
     DS_scores = {}
@@ -31,13 +32,13 @@ def score(query, query_dist, kwd):
     pod_m = load_npz(join(pod_dir,kwd+'.npz'))
     m_cosines = 1 - distance.cdist(query_dist, pod_m.todense(), 'cosine')
     m_completeness = completeness(query_dist, pod_m.todense())
+    posix_scores = posix(tokenized, kwd)
 
     for u in db.session.query(Urls).filter_by(pod=kwd).all():
         DS_scores[u.url] = m_cosines[0][int(u.vector)]
         completeness_scores[u.url] = m_completeness[0][int(u.vector)]
-        #URL_scores[u.url] = score_url_overlap(query, u.url)
         snippet_scores[u.url] = generic_overlap(query, u.snippet)
-    return DS_scores, completeness_scores, snippet_scores
+    return DS_scores, completeness_scores, snippet_scores, posix_scores
 
 
 def score_pods(query, query_dist, lang):
@@ -71,19 +72,26 @@ def score_pods(query, query_dist, lang):
         return best_pods
 
 
-def score_docs(query, query_dist, kwd):
+def score_docs(query, query_dist, tokenized, kwd):
     '''Score documents for a query'''
     document_scores = {}  # Document scores
-    DS_scores, completeness_scores, snippet_scores = score(query, query_dist, kwd)
+    DS_scores, completeness_scores, snippet_scores, posix_scores = score(query, query_dist, tokenized, kwd)
+    print("POSIX SCORES",posix_scores)
     for url in list(DS_scores.keys()):
-        if completeness_scores[url] >= 0.5:
-            print(url,DS_scores[url], completeness_scores[url], snippet_scores[url])
-        #document_scores[url] = 0.5*DS_scores[url] + completeness_scores[url] + 0.1*snippet_scores[url]
-        document_scores[url] = completeness_scores[url] + snippet_scores[url]
-        if math.isnan(document_scores[url]) or completeness_scores[url] < 0.75:  # Check for potential NaN -- messes up with sorting in bestURLs.
-        #if math.isnan(document_scores[url]) or completeness_scores[url] < 1:  # Check for potential NaN -- messes up with sorting in bestURLs.
+        document_scores[url] = 0.0
+        idx = db.session.query(Urls).filter_by(url=url).first().vector
+        if idx in posix_scores:
+            document_scores[url]+=posix_scores[idx]
+        document_scores[url]+=completeness_scores[url]
+        document_scores[url]+=snippet_scores[url]
+        if snippet_scores[url] == 1:
+            document_scores[url]+=1 #bonus points
+        if math.isnan(document_scores[url]) or completeness_scores[url] < 0.3:  # Check for potential NaN -- messes up with sorting in bestURLs.
             document_scores[url] = 0
+        else:
+            print(url, document_scores[url], completeness_scores[url], snippet_scores[url])
     return document_scores
+
 
 
 def bestURLs(doc_scores, url_filter):
@@ -104,6 +112,7 @@ def bestURLs(doc_scores, url_filter):
 
 
 def output(best_urls):
+    print(best_urls)
     results = {}
     pods = []
     if len(best_urls) > 0:
@@ -113,7 +122,6 @@ def output(best_urls):
             pod = get_db_url_pod(u)
             if pod not in pods:
                 pods.append(pod)
-            # print(results)
     return results, pods
 
 
@@ -121,12 +129,20 @@ def run(query, pears, url_filter=None):
     if tracker != None:
         task_name = "run search"
         tracker.start_task(task_name)
+    
+    
     document_scores = {}
     query, lang = get_language(query)
-    q_dist = compute_query_vectors(query, lang)
+    q_dist, tokenized = compute_query_vectors(query, lang)
     best_pods = score_pods(query, q_dist, lang)
-    for pod in best_pods:
-        document_scores.update(score_docs(query, q_dist, pod))
+    print("Q:",query,"BEST PODS:",best_pods)
+
+    max_thread = int(multiprocessing.cpu_count() * 0.5)
+    with Parallel(n_jobs=max_thread, prefer="threads") as parallel:
+        delayed_funcs = [delayed(score_docs)(query, q_dist, tokenized, pod) for pod in best_pods]
+        scores = parallel(delayed_funcs)
+    for dic in scores:
+        document_scores.update(dic)
     best_urls = bestURLs(document_scores, url_filter)
     results = output(best_urls)
     if tracker != None:

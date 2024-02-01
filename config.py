@@ -37,4 +37,5 @@ SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 # To ensure utf-8 is handled properly by jsonify
 JSON_AS_ASCII = False
-
+# To ensure json preserves order of dictionaries
+JSON_SORT_KEYS = False
