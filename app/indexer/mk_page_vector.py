@@ -10,6 +10,7 @@ from app.api.models import Urls, installed_languages, sp
 from app.indexer.htmlparser import extract_html
 from app.indexer.vectorizer import vectorize_scale
 from app.utils import convert_to_string, convert_dict_to_string, normalise
+from app.utils_db import delete_url
 from scipy.sparse import csr_matrix, vstack, save_npz, load_npz
 from os.path import dirname, join, realpath, isfile
 
@@ -34,15 +35,18 @@ def compute_vec(lang, text, pod_m):
 def compute_vectors_local_docs(target_url, title, snippet, description, doc, keyword, lang):
     cc = False
     pod_m = load_npz(join(pod_dir,keyword+'.npz'))
-    f = open(join(pod_dir,'corpus.tok'),'a')
-    #if not db.session.query(Urls).filter_by(title=title).all():
+    #f = open(join(pod_dir,'corpus.tok'),'a')
     print("Computing vectors for", target_url, "(",keyword,")",lang)
-    u = Urls(url=target_url)
+    entry = db.session.query(Urls).filter_by(url=target_url).first()
+    if entry:
+        u = db.session.query(Urls).filter_by(url=target_url).first()
+    else:
+        u = Urls(url=target_url)
     text = title + " " + description + " " + doc
     #print(text)
     text = tokenize_text(lang, text)
-    f.write('\n\n'+title+'\n')
-    f.write(text)
+    #f.write('\n\n'+title+'\n')
+    #f.write(text)
     pod_m = compute_vec(lang, text, pod_m)
     u.title = title
     u.snippet = snippet
