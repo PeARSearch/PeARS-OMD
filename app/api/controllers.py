@@ -11,7 +11,7 @@ from os.path import dirname, join, realpath, basename
 from app.utils_db import pod_from_file, delete_url
 from app.api.models import Urls, Pods
 from app import db
-
+from app.auth.controllers import login_required
 
 # Define the blueprint:
 api = Blueprint('api', __name__, url_prefix='/api')
@@ -21,11 +21,13 @@ pod_dir = join(dir_path,'static','pods')
 
 
 @api.route('/pods/')
+@login_required
 def return_pods():
     return jsonify(json_list=[p.serialize for p in Pods.query.all()])
 
 
 @api.route('/pods/<pod>/')
+@login_required
 def return_pod(pod):
     pod = pod.replace('+', ' ')
     p = db.session.query(Pods).filter_by(name=pod).first()
@@ -33,11 +35,13 @@ def return_pod(pod):
 
 
 @api.route('/urls/')
+@login_required
 def return_urls():
     return jsonify(json_list=[i.serialize for i in Urls.query.all()])
 
 
 @api.route('/urls/delete', methods=["GET","POST"])
+@login_required
 def return_delete(idx=None):
     if idx is None:
         path = request.args.get('path')
@@ -57,6 +61,7 @@ def return_delete(idx=None):
 
 
 @api.route('/urls/move', methods=["GET","POST"])
+@login_required
 def return_rename():
     src = request.args.get('src')
     target = request.args.get('target')

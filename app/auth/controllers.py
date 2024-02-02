@@ -4,17 +4,15 @@
 
 # Import flask dependencies
 from flask import Blueprint, request, render_template, send_from_directory, make_response
-from flask import current_app
+from flask import current_app, session
 from flask_cors import cross_origin
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
+from functools import wraps
+from inspect import getfullargspec
 
 # Import the database object from the main app module
 from app import app
-
-# Import matrix manipulation modules
-import numpy as np
-from scipy import sparse
 
 # Import utilities
 import re
@@ -60,6 +58,7 @@ def login():
             print(user_info.cookies)
             username = user_info.json()['username']
             # Create a new response object
+            session['logged_in'] = True
             resp_frontend = make_response(render_template( 'search/user.html', welcome="Welcome "+username))
             # Transfer the cookies from backend response to frontend response
             for name, value in user_info.cookies.items():
@@ -86,6 +85,23 @@ def logout():
     else:
         print("Logged out")
     # Create a new response object
+    session['logged_in'] = False
     resp_frontend = make_response(render_template( 'search/anonymous.html'))
     resp_frontend.set_cookie('OMD_SESSION_ID', '', expires=0, samesite='Lax')
     return resp_frontend
+
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        access_token = request.headers.get('Token')
+        if not access_token:     
+            access_token = request.cookies.get('OMD_SESSION_ID')  
+        if not access_token:
+            session['logged_in'] = False
+            return render_template('search/anonymous.html')
+        if 'access_token' in getfullargspec(f).args:
+            kwargs['access_token'] = access_token
+        return f(*args, **kwargs)
+    return decorated_function
+
