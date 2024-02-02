@@ -11,6 +11,7 @@ from flask_cors import cross_origin
 from app import app
 from app.api.models import Urls
 from app.search import score_pages
+from app.auth.controllers import login_required
 
 # Import matrix manipulation modules
 import numpy as np
@@ -36,13 +37,8 @@ pod_dir = join(dir_path,'app','static','pods')
 
 @search.route('/user', methods=['POST','GET'])
 @cross_origin()
-def user():
-    access_token = request.headers.get('Token')
-    if not access_token:     
-        access_token = request.cookies.get('OMD_SESSION_ID')  
-    LOG.info(access_token)    
-    if not access_token:
-        return render_template('search/anonymous.html')
+@login_required
+def user(access_token):
     if LOCAL_RUN:
         url = 'http://localhost:9191/api' #Local test
     else:

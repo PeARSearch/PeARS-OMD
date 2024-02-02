@@ -22,6 +22,7 @@ from app.utils import readDocs, readUrls, get_language, init_pod, init_podsum, c
 from app.utils_db import pod_from_file
 from app.indexer.htmlparser import extract_links, extract_html
 from app.indexer.posix import posix_doc
+from app.auth.controllers import login_required
 from os.path import dirname, join, realpath, isfile
 
 dir_path = dirname(dirname(realpath(__file__)))
@@ -33,6 +34,7 @@ indexer = Blueprint('indexer', __name__, url_prefix='/indexer')
 
 # Set the route and accepted methods
 @indexer.route("/", methods=["GET", "POST"])
+@login_required
 def index():
     num_db_entries = len(Urls.query.all())
     if request.method == "GET":
@@ -46,6 +48,7 @@ def index():
 '''
 
 @indexer.route("/from_crawl", methods=["GET","POST"])
+@login_required
 def from_crawl():
     keyword = "home" #hard-coded
     lang = LANG
@@ -69,6 +72,7 @@ def from_crawl():
 
 
 @indexer.route("/from_docs", methods=["POST"])
+@login_required
 def from_docs():
     print("DOC FILE:", request.files['file_source'])
     if request.files['file_source'].filename[-4:] == ".txt":
@@ -92,6 +96,7 @@ The URL indexing uses same progress as file.
 '''
 
 @indexer.route("/progress_crawl")
+@login_required
 def progress_crawl():
     print("Running progress crawl")
     urls, keywords, langs, errors = readUrls(join(dir_path, "urls_to_index.txt"))

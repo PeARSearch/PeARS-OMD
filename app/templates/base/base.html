@@ -41,8 +41,10 @@ SPDX-License-Identifier: AGPL-3.0-only
                     <hr class="d-lg-none text-white-50">
                 </li>
                 <li class="nav-item"><a class="nav-link" href="{{url_for('search.index')}}">Search</a></li>
+		{% if session.logged_in %}
                 <li class="nav-item"><a class="nav-link" href="{{url_for('indexer.index')}}">Indexer</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{url_for('admin.index')}}">DB admin</a></li>          
+		{% endif %}
             </ul>
             <ul class="nav navbar-nav navbar-right">
                 <li class="nav-item"><a class="nav-link" href="{{url_for('settings.index')}}">Settings</a></li>

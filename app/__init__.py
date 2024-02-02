@@ -11,8 +11,8 @@ from codecarbon import EmissionsTracker
 from decouple import Config, RepositoryEnv
 
 # Import flask and template operators
-from flask import Flask, render_template
-from flask_admin import Admin
+from flask import Flask, render_template, request
+from flask_admin import Admin, AdminIndexView
 
 # Import SQLAlchemy
 from flask_sqlalchemy import SQLAlchemy
@@ -78,6 +78,7 @@ db = SQLAlchemy(app)
 
 
 # Import a module / component using its blueprint handler variable (mod_auth)
+from app.auth.controllers import auth as auth_module
 from app.indexer.controllers import indexer as indexer_module
 from app.api.controllers import api as api_module
 from app.search.controllers import search as search_module
@@ -85,9 +86,9 @@ from app.pod_finder.controllers import pod_finder as pod_finder_module
 from app.orchard.controllers import orchard as orchard_module
 from app.pages.controllers import pages as pages_module
 from app.settings.controllers import settings as settings_module
-from app.auth.controllers import auth as auth_module
 
 # Register blueprint(s)
+app.register_blueprint(auth_module)
 app.register_blueprint(indexer_module)
 app.register_blueprint(api_module)
 app.register_blueprint(search_module)
@@ -95,7 +96,6 @@ app.register_blueprint(pod_finder_module)
 app.register_blueprint(orchard_module)
 app.register_blueprint(pages_module)
 app.register_blueprint(settings_module)
-app.register_blueprint(auth_module)
 # ..
 
 # Build the database:
@@ -112,9 +112,30 @@ from flask_admin import expose
 from flask_admin.contrib.sqla.view import ModelView
 from flask_admin.model.template import EndpointLinkRowAction
 
+from app.auth.controllers import login_required
+import requests
+
 # Flask and Flask-SQLAlchemy initialization here
 
-admin = Admin(app, name='PeARS DB', template_mode='bootstrap3')
+class MyAdminIndexView(AdminIndexView):
+    def is_accessible(self):
+        access_token = request.headers.get('Token')
+        if not access_token:     
+            access_token = request.cookies.get('OMD_SESSION_ID')  
+        if not access_token:
+            return False
+        if LOCAL_RUN:
+            url = 'http://localhost:9191/api' #Local test
+        else:
+            url = ' https://demo.onmydisk.net/signin/'
+        data = {'action': 'getUserInfo', 'session_id': access_token}
+        resp = requests.post(url, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
+        if resp.status_code == requests.codes.ok:
+            is_admin = resp.json()['isAdmin']
+        return is_admin # This does the trick rendering the view only if the user is admin
+
+
+admin = Admin(app, name='PeARS DB', template_mode='bootstrap3', index_view=MyAdminIndexView())
 
 class UrlsModelView(ModelView):
     list_template = 'admin/pears_list.html'
