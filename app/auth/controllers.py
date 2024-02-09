@@ -96,16 +96,22 @@ def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         access_token = request.headers.get('Token')
-        if not access_token:     
-            access_token = request.cookies.get('OMD_SESSION_ID')  
-        if not access_token:
-            session['logged_in'] = False
-            return render_template('search/anonymous.html')
-        if 'access_token' in getfullargspec(f).args:
+        if access_token:
+            #backend_to_backend
             if access_token == AUTH_TOKEN:
-                kwargs['access_token'] = access_token
+                if 'access_token' in getfullargspec(f).args:
+                    kwargs['access_token'] = access_token
+                    return f(*args, **kwargs)
             else:
                 return render_template('search/anonymous.html')
-        return f(*args, **kwargs)
+        else:
+            #user_to_backend
+            access_token = request.cookies.get('OMD_SESSION_ID')  
+            if not access_token:
+                session['logged_in'] = False
+                return render_template('search/anonymous.html')
+            if 'access_token' in getfullargspec(f).args:
+                kwargs['access_token'] = access_token
+                return f(*args, **kwargs)
     return decorated_function
 
