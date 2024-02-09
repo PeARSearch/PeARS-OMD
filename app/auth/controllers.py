@@ -98,20 +98,23 @@ def login_required(f):
         access_token = request.headers.get('Token')
         if access_token:
             #backend_to_backend
+            print("Backend to backend")
             if access_token == AUTH_TOKEN:
+                session['logged_in'] = True
                 if 'access_token' in getfullargspec(f).args:
                     kwargs['access_token'] = access_token
-                    return f(*args, **kwargs)
+                return f(*args, **kwargs)
             else:
                 return render_template('search/anonymous.html')
         else:
             #user_to_backend
+            print("User to backend")
             access_token = request.cookies.get('OMD_SESSION_ID')  
             if not access_token:
                 session['logged_in'] = False
                 return render_template('search/anonymous.html')
             if 'access_token' in getfullargspec(f).args:
                 kwargs['access_token'] = access_token
-                return f(*args, **kwargs)
+            return f(*args, **kwargs)
     return decorated_function
 
