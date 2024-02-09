@@ -9,6 +9,7 @@ from pathlib import Path
 from os.path import dirname, join, realpath
 from codecarbon import EmissionsTracker
 from decouple import Config, RepositoryEnv
+from dotenv import load_dotenv
 
 # Import flask and template operators
 from flask import Flask, render_template, request
@@ -71,6 +72,8 @@ app = Flask(__name__)
 
 # Configurations
 app.config.from_object('config')
+load_dotenv('app/static/conf/pears.ini')
+AUTH_TOKEN = os.getenv('AUTH_TOKEN')
 
 # Define the database object which is imported
 # by modules and controllers
