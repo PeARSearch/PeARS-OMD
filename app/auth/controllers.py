@@ -16,10 +16,11 @@ from app import app
 
 # Import utilities
 import re
+import os
 import requests
 from os.path import dirname, join, realpath, isfile
 from flask import jsonify, Response
-from app import LOCAL_RUN
+from app import LOCAL_RUN, AUTH_TOKEN
 
 # Define the blueprint:
 auth = Blueprint('auth', __name__, url_prefix='/auth')
@@ -101,7 +102,10 @@ def login_required(f):
             session['logged_in'] = False
             return render_template('search/anonymous.html')
         if 'access_token' in getfullargspec(f).args:
-            kwargs['access_token'] = access_token
+            if access_token == AUTH_TOKEN:
+                kwargs['access_token'] = access_token
+            else:
+                return render_template('search/anonymous.html')
         return f(*args, **kwargs)
     return decorated_function
 
