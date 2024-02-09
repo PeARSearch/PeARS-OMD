@@ -100,7 +100,6 @@ def login_required(f):
             #backend_to_backend
             print("Backend to backend")
             if access_token == AUTH_TOKEN:
-                session['logged_in'] = True
                 if 'access_token' in getfullargspec(f).args:
                     kwargs['access_token'] = access_token
                 return f(*args, **kwargs)
