@@ -52,7 +52,7 @@ def login():
         user_info = requests.post(url, json=data) 
         if user_info == None:
             msg = "Incorrect credentials"
-            return render_template( 'auth/login.html', form=form, msg=msg)
+            return render_template( 'auth/login.html', form=form, msg=msg), 401
         else:
             access_token = user_info.cookies.get('OMD_SESSION_ID')
             print(user_info.json())
@@ -60,6 +60,7 @@ def login():
             username = user_info.json()['username']
             # Create a new response object
             session['logged_in'] = True
+            session['username'] = username
             resp_frontend = make_response(render_template( 'search/user.html', welcome="Welcome "+username))
             # Transfer the cookies from backend response to frontend response
             for name, value in user_info.cookies.items():
@@ -69,7 +70,7 @@ def login():
             #return render_template('search/user.html', welcome="Welcome "+username)
     else:
        msg = "Unknown user"
-       return render_template( 'auth/login.html', form=form, msg=msg)
+       return render_template( 'auth/login.html', form=form, msg=msg), 401
 
 
 @auth.route('/logout', methods=['GET','POST'])
@@ -87,6 +88,7 @@ def logout():
         print("Logged out")
     # Create a new response object
     session['logged_in'] = False
+    session.pop('username', None)
     resp_frontend = make_response(render_template( 'search/anonymous.html'))
     resp_frontend.set_cookie('OMD_SESSION_ID', '', expires=0, samesite='Lax')
     return resp_frontend
