@@ -54,20 +54,24 @@ def login():
             msg = "Incorrect credentials"
             return render_template( 'auth/login.html', form=form, msg=msg), 401
         else:
-            access_token = user_info.cookies.get('OMD_SESSION_ID')
+            access_token = request.headers.get('Token')
+            if access_token:
+                if access_token != AUTH_TOKEN:
+                    msg="Incorrect access_token, redirecting to login page."
+                    return render_template( 'auth/login.html', form=form, msg=msg), 401
             print(user_info.json())
             print(user_info.cookies)
             username = user_info.json()['username']
-            # Create a new response object
+            # Fill in session info
             session['logged_in'] = True
             session['username'] = username
+            # Create a new response object
             resp_frontend = make_response(render_template( 'search/user.html', welcome="Welcome "+username))
             # Transfer the cookies from backend response to frontend response
             for name, value in user_info.cookies.items():
                 print("SETTING COOKIE:",name,value)
                 resp_frontend.set_cookie(name, value, samesite='Lax')
             return resp_frontend
-            #return render_template('search/user.html', welcome="Welcome "+username)
     else:
        msg = "Unknown user"
        return render_template( 'auth/login.html', form=form, msg=msg), 401
@@ -106,14 +110,14 @@ def login_required(f):
                     kwargs['access_token'] = access_token
                 return f(*args, **kwargs)
             else:
-                return render_template('search/anonymous.html')
+                return render_template('search/anonymous.html'), 401
         else:
             #user_to_backend
             print("User to backend")
             access_token = request.cookies.get('OMD_SESSION_ID')  
             if not access_token:
                 session['logged_in'] = False
-                return render_template('search/anonymous.html')
+                return render_template('search/anonymous.html'), 401
             if 'access_token' in getfullargspec(f).args:
                 kwargs['access_token'] = access_token
             return f(*args, **kwargs)

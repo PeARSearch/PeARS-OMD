@@ -51,7 +51,7 @@ def user(access_token):
     query = request.args.get('q')
     if not query:
         LOG.info("No query")
-        return render_template("search/user.html")
+        return render_template("search/user.html"), 200
     else:
 
         results = []
