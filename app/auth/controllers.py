@@ -119,7 +119,7 @@ def login_required(f):
            
         #Token is present and it is user's session token. Check if this token is already stored in session
 	#to avoid excess OMD api calls on every key press
-        if session['logged_in'] == True and  session['token'] == access_token:
+        if session.get('logged_in') == True and  session.get('token') == access_token:
                 if 'access_token' in getfullargspec(f).args:
                     kwargs['access_token'] = access_token
                 return f(*args, **kwargs)
