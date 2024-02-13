@@ -47,24 +47,23 @@ def login():
         if LOCAL_RUN:
             url = 'http://localhost:9191/api' #Local test
         else:
-            url = ' https://demo.onmydisk.net/signin/'
+            url = 'https://demo.onmydisk.net/signin/'
         data = {'action': 'signin', 'username': username, 'password': password}
         user_info = requests.post(url, json=data) 
         if user_info == None:
             msg = "Incorrect credentials"
             return render_template( 'auth/login.html', form=form, msg=msg), 401
         else:
-            access_token = request.headers.get('Token')
-            if access_token:
-                if access_token != AUTH_TOKEN:
-                    msg="Incorrect access_token, redirecting to login page."
-                    return render_template( 'auth/login.html', form=form, msg=msg), 401
+            if not user_info.json()['valid']:
+                msg="Incorrect credentials or session expired, redirecting to login page."
+                return render_template( 'auth/login.html', form=form, msg=msg), 401
             print(user_info.json())
             print(user_info.cookies)
             username = user_info.json()['username']
             # Fill in session info
             session['logged_in'] = True
             session['username'] = username
+            session['token'] = user_info.json()['session_id']		
             # Create a new response object
             resp_frontend = make_response(render_template( 'search/user.html', welcome="Welcome "+username))
             # Transfer the cookies from backend response to frontend response
@@ -83,7 +82,7 @@ def logout():
     if LOCAL_RUN:
         url = 'http://localhost:9191/api' #Local test
     else:
-        url = ' https://demo.onmydisk.net/signout/'
+        url = 'https://demo.onmydisk.net/signout/'
     data = {'action': 'signout', 'session_id': access_token}
     logout_confirmation = requests.post(url, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
     if logout_confirmation.status_code == requests.codes.ok:
@@ -101,25 +100,45 @@ def logout():
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        access_token = request.headers.get('Token')
+        access_token = request.headers.get('Token') #Get token from request header
         if access_token:
             #backend_to_backend
-            print("Backend to backend")
-            if access_token == AUTH_TOKEN:
+            if access_token == AUTH_TOKEN: #if it equals to system-wide security token, then it is call from OMD backend
+                print("Backend to backend")
                 if 'access_token' in getfullargspec(f).args:
                     kwargs['access_token'] = access_token
                 return f(*args, **kwargs)
-            else:
-                return render_template('search/anonymous.html'), 401
+
+        #Otherwise, it is frontend calling
+        if not access_token:
+           access_token = request.cookies.get('OMD_SESSION_ID')  
+        if not access_token: # still no token - relogin is needed
+           session['logged_in'] = False
+           session['token'] = ''
+           return render_template('search/anonymous.html'), 401 
+           
+        #Token is present and it is user's session token. Check if this token is already stored in session
+	#to avoid excess OMD api calls on every key press
+        if session.get('logged_in') == True and  session.get('token') == access_token:
+                if 'access_token' in getfullargspec(f).args:
+                    kwargs['access_token'] = access_token
+                return f(*args, **kwargs)
+        #Token is present but we need to check if OMD session is valid      
+        if LOCAL_RUN:
+            url = 'http://localhost:9191/api' #Local test
         else:
-            #user_to_backend
-            print("User to backend")
-            access_token = request.cookies.get('OMD_SESSION_ID')  
-            if not access_token:
-                session['logged_in'] = False
-                return render_template('search/anonymous.html'), 401
+            url = 'https://demo.onmydisk.net/signin/'
+        data = {'action': 'getUserInfo', 'session_id': access_token}
+        resp = requests.post(url, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
+        if resp.status_code == requests.codes.ok and resp.json()['valid']:
+            session['logged_in'] = True
+            session['username'] = resp.json()['username'] 
+            session['token'] = access_token #save token	in session	
             if 'access_token' in getfullargspec(f).args:
                 kwargs['access_token'] = access_token
             return f(*args, **kwargs)
+        else:
+            session['logged_in'] = False 	
+            return render_template('search/anonymous.html'), 401
     return decorated_function
 

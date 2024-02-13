@@ -42,7 +42,7 @@ def user(access_token):
     if LOCAL_RUN:
         url = 'http://localhost:9191/api' #Local test
     else:
-        url = ' https://demo.onmydisk.net/'
+        url = 'https://demo.onmydisk.net/'
 
     results = []
     if Urls.query.count() == 0:
@@ -82,7 +82,7 @@ def anonymous():
         if LOCAL_RUN:
             url = 'http://localhost:9090/static/testdocs/shared' #Local test
         else:
-            url = ' https://demo.onmydisk.net/shared'
+            url = 'https://demo.onmydisk.net/shared'
         results, pods = score_pages.run(query, pears, url_filter=[url])
         r = app.make_response(jsonify(results))
         r.mimetype = "application/json"
@@ -103,7 +103,7 @@ def index():
         if LOCAL_RUN:
             url = 'http://localhost:9191/api' #Local test
         else:
-            url = ' https://demo.onmydisk.net/'
+            url = 'https://demo.onmydisk.net/'
         print("CONNECTING TO:",url)
         data = {'action': 'getUserInfo', 'session_id': access_token}
         resp = requests.post(url, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
