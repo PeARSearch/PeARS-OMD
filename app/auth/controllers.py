@@ -55,7 +55,7 @@ def login():
             return render_template( 'auth/login.html', form=form, msg=msg), 401
         else:
             if not user_info.json()['valid']:
-            	msg="Incorrect credentials or session expired, redirecting to login page."
+                msg="Incorrect credentials or session expired, redirecting to login page."
                 return render_template( 'auth/login.html', form=form, msg=msg), 401
             print(user_info.json())
             print(user_info.cookies)
@@ -82,7 +82,7 @@ def logout():
     if LOCAL_RUN:
         url = 'http://localhost:9191/api' #Local test
     else:
-        url = ' https://demo.onmydisk.net/signout/'
+        url = 'https://demo.onmydisk.net/signout/'
     data = {'action': 'signout', 'session_id': access_token}
     logout_confirmation = requests.post(url, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
     if logout_confirmation.status_code == requests.codes.ok:
@@ -104,25 +104,25 @@ def login_required(f):
         if access_token:
             #backend_to_backend
             if access_token == AUTH_TOKEN: #if it equals to system-wide security token, then it is call from OMD backend
-	        print("Backend to backend")
+                print("Backend to backend")
                 if 'access_token' in getfullargspec(f).args:
                     kwargs['access_token'] = access_token
                 return f(*args, **kwargs)
 
         #Otherwise, it is frontend calling
         if not access_token:
-	   access_token = request.cookies.get('OMD_SESSION_ID')  
-	if not access_token: # still no token - relogin is needed
+           access_token = request.cookies.get('OMD_SESSION_ID')  
+        if not access_token: # still no token - relogin is needed
            session['logged_in'] = False
            session['token'] = ''
            return render_template('search/anonymous.html'), 401 
            
         #Token is present and it is user's session token. Check if this token is already stored in session
 	#to avoid excess OMD api calls on every key press
-        if session['logged_in'] == True and  session['token'] == access_token
-        	if 'access_token' in getfullargspec(f).args:
-                	kwargs['access_token'] = access_token
-            	return f(*args, **kwargs)
+        if session['logged_in'] == True and  session['token'] == access_token:
+                if 'access_token' in getfullargspec(f).args:
+                    kwargs['access_token'] = access_token
+                return f(*args, **kwargs)
         #Token is present but we need to check if OMD session is valid      
         if LOCAL_RUN:
             url = 'http://localhost:9191/api' #Local test
