@@ -74,6 +74,7 @@ app = Flask(__name__)
 app.config.from_object('config')
 load_dotenv('app/static/conf/pears.ini')
 AUTH_TOKEN = os.getenv('AUTH_TOKEN')
+OMD_PATH = os.getenv('OMD_PATH')
 
 # Define the database object which is imported
 # by modules and controllers
@@ -130,7 +131,7 @@ class MyAdminIndexView(AdminIndexView):
         if LOCAL_RUN:
             url = 'http://localhost:9191/api' #Local test
         else:
-            url = ' https://demo.onmydisk.net/signin/'
+            url = join(OMD_PATH, 'signin/')
         data = {'action': 'getUserInfo', 'session_id': access_token}
         resp = requests.post(url, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
         if resp.status_code == requests.codes.ok:

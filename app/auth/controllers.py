@@ -20,7 +20,7 @@ import os
 import requests
 from os.path import dirname, join, realpath, isfile
 from flask import jsonify, Response
-from app import LOCAL_RUN, AUTH_TOKEN
+from app import LOCAL_RUN, AUTH_TOKEN, OMD_PATH
 
 # Define the blueprint:
 auth = Blueprint('auth', __name__, url_prefix='/auth')
@@ -47,7 +47,7 @@ def login():
         if LOCAL_RUN:
             url = 'http://localhost:9191/api' #Local test
         else:
-            url = 'https://demo.onmydisk.net/signin/'
+            url = join(OMD_PATH, 'signin/')
         data = {'action': 'signin', 'username': username, 'password': password}
         user_info = requests.post(url, json=data) 
         if user_info == None:
@@ -82,7 +82,7 @@ def logout():
     if LOCAL_RUN:
         url = 'http://localhost:9191/api' #Local test
     else:
-        url = 'https://demo.onmydisk.net/signout/'
+        url = join(OMD_PATH, 'signout/')
     data = {'action': 'signout', 'session_id': access_token}
     logout_confirmation = requests.post(url, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
     if logout_confirmation.status_code == requests.codes.ok:
@@ -127,7 +127,7 @@ def login_required(f):
         if LOCAL_RUN:
             url = 'http://localhost:9191/api' #Local test
         else:
-            url = 'https://demo.onmydisk.net/signin/'
+            url = join(OMD_PATH, 'signin/')
         data = {'action': 'getUserInfo', 'session_id': access_token}
         resp = requests.post(url, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
         if resp.status_code == requests.codes.ok and resp.json()['valid']:
