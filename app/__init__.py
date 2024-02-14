@@ -134,8 +134,9 @@ class MyAdminIndexView(AdminIndexView):
             url = join(OMD_PATH, 'signin/')
         data = {'action': 'getUserInfo', 'session_id': access_token}
         resp = requests.post(url, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
-        if resp.status_code == requests.codes.ok:
-            is_admin = resp.json()['isAdmin']
+        is_admin = False
+        if resp.json().get('valid'):
+            is_admin = resp.json().get('isAdmin')
         return is_admin # This does the trick rendering the view only if the user is admin
 
 
