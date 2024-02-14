@@ -18,9 +18,13 @@ def omd_parse(current_url):
     fout = open(join(dir_path,'docs_to_index.txt'),'a')
     try:
         xml = requests.get(current_url, timeout=10, headers={'Authorization': AUTH_TOKEN}, stream =True).raw
+    except:
+        print(">> ERROR: SPIDER: OMD PARSE: Request failed. Moving on.")
+        return links
+    try:
         parse = xmltodict.parse(xml.read())
     except:
-        print("Request failed. Moving on.")
+        print(">> ERROR: SPIDER: OMD PARSE: File may have some bad XML. Could not parse.")
         return links
     docs = parse['omd_index']['doc']
     print("PARSE:",parse)
@@ -79,7 +83,7 @@ def omd_parse(current_url):
                 print("# DOC BODY:", body_str[:100])
                 fout.write("{{BODY}} "+body_str+"\n")
         else:
-            print("# DOC BODY: Skipping request: content is neither text/plain nor text/html.")
+            print(">> ERROR: SPIDER: OMD PARSE: DOC BODY: Skipping request: content is neither text/plain nor text/html.")
 
         fout.write("</doc>\n")
     fout.close()
@@ -117,6 +121,6 @@ def write_docs(base_url):
                     #print("Found href:",link)
                     pages_to_visit.append(link)
         except:
-            print(">> ERROR: Failed visiting current url!")
+            print(">> ERROR: SPIDER: OMD PARSE: Failed visiting current url!")
 
 
