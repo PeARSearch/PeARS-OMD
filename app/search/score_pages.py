@@ -98,7 +98,7 @@ def bestURLs(doc_scores, url_filter):
     best_urls = []
     c = 0
     for url in sorted(doc_scores, key=doc_scores.get, reverse=True):
-        if c < 100:
+        if c < 20:
             if doc_scores[url] > 0:
                 for f in url_filter:
                     if f in url:
