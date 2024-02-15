@@ -19,14 +19,14 @@ def auth():
 def api():
     def getuserinfo():
         print("Running getuserinfo")
-        info = {'username':'tester', 'displayname':'tester', 'profileimage':'iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P48/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==', 'email':'test@pearsproject.org', 'valid':True, 'isAdmin':False}
+        info = {'username':'tester', 'displayname':'tester', 'profileimage':'iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P48/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==', 'email':'test@pearsproject.org', 'valid':True, 'isAdmin':False, 'session_id':'qwerty'}
         r = app.make_response(jsonify(info))
         r.mimetype = "application/json"
         return r
    
     def signin():
         print("Running signin")
-        info = {'username':'tester', 'displayname':'tester', 'profileimage':'iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P48/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==', 'email':'test@pearsproject.org', 'valid':True, 'isAdmin':False}
+        info = {'username':'tester', 'displayname':'tester', 'profileimage':'iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P48/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==', 'email':'test@pearsproject.org', 'valid':True, 'isAdmin':False, 'session_id':'qwerty'}
         r = app.make_response(jsonify(info))
         return r
 
