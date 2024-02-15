@@ -49,9 +49,8 @@ def omd_parse(current_url):
         try:
             print("# DOC CONTENTTYPE: ", doc['@contentType'])
             content_type = doc['@contentType']
-            if content_type in ['folder','desktop']: #Folder / desktop won't have any other info, so continue
+            if content_type in ['folder','desktop']:
                 links.append(url)
-                continue
         except:
             print(" DOC CONTENTTYPE: No contentType")
 
@@ -76,7 +75,7 @@ def omd_parse(current_url):
         except:
             print("# DOC DESCRIPTION: No description")
     
-        # CONTENT
+        # CONTENT, ONLY DOCS (NOT FOLDERS)
         if content_type in ['text/plain','text/html']:
             title, body_str, snippet, cc, error = extract_html(url)
             if not error:
