@@ -13,9 +13,6 @@ from scipy.sparse import csr_matrix, load_npz
 from scipy.spatial import distance
 from app.api.models import Urls, Pods
 from app import db, tracker
-from app.utils_db import (
-    get_db_url_snippet, get_db_url_title, get_db_url_cc, get_db_url_pod, get_db_url_notes)
-
 from app.search.overlap_calculation import generic_overlap, completeness, posix
 from app.utils import cosine_similarity, hamming_similarity, convert_to_array, get_language, carbon_print
 from app.indexer.mk_page_vector import compute_query_vectors
@@ -82,16 +79,19 @@ def score_pods(query, query_vector, lang, username = None):
     podsum = csr_matrix(podsum)
 
     m_cosines = 1 - distance.cdist(query_vector, podsum.todense(), 'cosine')
+    print(podnames)
+    print(m_cosines)
 
     # For each pod, retrieve cosine to query
     pods = db.session.query(Pods).filter_by(language=lang).filter_by(registered=True).\
             filter(Pods.name.contains('.shared.u.')).all()
     for p in pods:
-        cosine_score = m_cosines[0][podnames.index(p.name)]
-        #print(">> Exact matches:", p.name, cosine_score)
-        if math.isnan(cosine_score):
-            cosine_score = 0
-        pod_scores[p.name] = cosine_score
+        if p.name in podnames:
+            cosine_score = m_cosines[0][podnames.index(p.name)]
+            print(">> Exact matches:", p.name, cosine_score)
+            if math.isnan(cosine_score):
+                cosine_score = 0
+            pod_scores[p.name] = cosine_score
     print("POD SCORES:",pod_scores)
     for k in sorted(pod_scores, key=pod_scores.get, reverse=True):
         if len(best_pods) < max_pods + 1:
@@ -150,7 +150,7 @@ def output(best_urls):
         for u in best_urls:
             url = db.session.query(Urls).filter_by(url=u).first().as_dict()
             results[u] = url
-            pod = get_db_url_pod(u)
+            pod = url.pod
             if pod not in pods:
                 pods.append(pod)
     return results, pods
