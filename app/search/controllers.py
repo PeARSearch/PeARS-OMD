@@ -21,6 +21,7 @@ from scipy import sparse
 import re
 import requests
 import logging
+from urllib.parse import quote_plus
 from os.path import dirname, join, realpath, isfile
 from flask import jsonify, Response, session
 from app.utils import init_podsum
@@ -113,6 +114,7 @@ def index():
             resp_frontend = make_response(render_template( 'search/user.html', welcome="Welcome "+username), 200)
             # Transfer the cookies from backend response to frontend response
             for name, value in request.cookies.items():
+                value = quote_plus(value)
                 print("SETTING COOKIE:",name,value)
                 resp_frontend.set_cookie(name, value, samesite='Lax')
             return resp_frontend

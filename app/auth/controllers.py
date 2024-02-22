@@ -10,6 +10,7 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
 from functools import wraps
 from inspect import getfullargspec
+from urllib.parse import quote_plus
 
 # Import the database object from the main app module
 from app import app
@@ -69,9 +70,11 @@ def login():
             resp_frontend = make_response(render_template( 'search/user.html', welcome="Welcome "+username))
             # Transfer the cookies from backend response to frontend response
             for name, value in user_info.cookies.items():
+                value = quote_plus(value)
                 print("SETTING COOKIE:",name,value)
                 resp_frontend.set_cookie(name, value, samesite='Lax')
             # Cookies returned from OMD may not work in some modern browsers, so make our own OMD_SESSION_ID cookie
+            session_token = quote_plus(value)
             resp_frontend.set_cookie('OMD_SESSION_ID', session_token, samesite='Lax')
             return resp_frontend
     else:
