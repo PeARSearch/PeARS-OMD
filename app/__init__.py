@@ -35,6 +35,10 @@ spm_vocab_path = os.environ.get("SPM_VOCAB", SPM_DEFAULT_VOCAB_PATH)
 SPM_DEFAULT_MODEL_PATH = f'app/api/models/{LANG}/{LANG}wiki.model'
 spm_model_path = os.environ.get("SPM_MODEL", SPM_DEFAULT_MODEL_PATH)
 
+# Make sure user data directories exist
+DEFAULT_PATH = f'app'
+Path(os.path.join(DEFAULT_PATH,'static/userdata')).mkdir(parents=True, exist_ok=True)
+
 # Define vector size
 from app.indexer.vectorizer import read_vocab
 
@@ -86,7 +90,6 @@ from app.auth.controllers import auth as auth_module
 from app.indexer.controllers import indexer as indexer_module
 from app.api.controllers import api as api_module
 from app.search.controllers import search as search_module
-from app.pod_finder.controllers import pod_finder as pod_finder_module
 from app.orchard.controllers import orchard as orchard_module
 from app.pages.controllers import pages as pages_module
 from app.settings.controllers import settings as settings_module
@@ -96,7 +99,6 @@ app.register_blueprint(auth_module)
 app.register_blueprint(indexer_module)
 app.register_blueprint(api_module)
 app.register_blueprint(search_module)
-app.register_blueprint(pod_finder_module)
 app.register_blueprint(orchard_module)
 app.register_blueprint(pages_module)
 app.register_blueprint(settings_module)

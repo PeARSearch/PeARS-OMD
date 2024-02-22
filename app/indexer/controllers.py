@@ -3,148 +3,131 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 # Import flask dependencies
-import logging
-import joblib
-import numpy as np
-from scipy import sparse
 from math import ceil
-from flask import (Blueprint,
-                   flash,
-                   request,
-                   render_template,
-                   Response)
+from os.path import dirname, join, realpath
+from flask import Blueprint, request, session, flash, render_template, Response, url_for
 
-from app import LANG, VEC_SIZE, tracker
-from app.api.models import Urls
-from app.indexer.neighbours import neighbour_urls
+from app import LANG, tracker
+from app.api.models import Urls, Pods
 from app.indexer import mk_page_vector, spider
-from app.utils import readDocs, readUrls, get_language, init_pod, init_podsum, carbon_print
-from app.utils_db import pod_from_file
-from app.indexer.htmlparser import extract_links, extract_html
+from app.utils import read_docs, read_urls, get_language, init_pod, carbon_print
+from app.utils_db import create_pod_in_db
 from app.indexer.posix import posix_doc
 from app.auth.controllers import login_required
-from os.path import dirname, join, realpath, isfile
 
-dir_path = dirname(dirname(realpath(__file__)))
-pod_dir = join(dir_path,'static','pods')
+app_dir_path = dirname(dirname(realpath(__file__)))
+pod_dir = join(app_dir_path,'static','pods')
+user_app_dir_path = join(app_dir_path,'static', 'userdata')
 
 # Define the blueprint:
 indexer = Blueprint('indexer', __name__, url_prefix='/indexer')
 
 
 # Set the route and accepted methods
-@indexer.route("/", methods=["GET", "POST"])
+@indexer.route("/", methods=["GET"])
 @login_required
 def index():
-    num_db_entries = len(Urls.query.all())
-    if request.method == "GET":
-        return render_template(
-            "indexer/index.html", num_entries=num_db_entries)
+    """Entry point for indexer.
+    Returns the index template with the number of entries
+    currently in the database for that user.
+    """
+    username = session['username']
+    pod = "home.u."+username
+    shared_pod = "home.shared.u."+username
+    num_db_entries = len(Urls.query.filter_by(pod=pod).all())
+    num_db_entries += len(Urls.query.filter_by(pod=shared_pod).all())
+    return render_template("indexer/index.html", num_entries=num_db_entries)
 
-
-'''
- Controllers for various ways to index
- (from file, from url)
-'''
 
 @indexer.route("/from_crawl", methods=["GET","POST"])
 @login_required
 def from_crawl():
-    keyword = "home" #hard-coded
+    """Entry point for crawl function.
+    Argument: url to a directory to start the crawl from.
+    Calls the crawler.
+    """
+    username = session['username']
+    init_pod(username)
     lang = LANG
-    init_pod(keyword)
-   
+    create_pod_in_db(username, lang)
+
     def process_start_url(u):
-        print("Now crawling", u)
-        f = open(join(dir_path, "urls_to_index.txt"), 'w')
-        f.write(u + ";" + keyword + ";" + lang +"\n")
-        f.close()
+        print(">> INDEXER: CONTROLLER: from_crawl: Now crawling", u)
+        user_url_file = join(user_app_dir_path, username+".toindex")
+        #Every contributor gets their own file to avoid race conditions
+        with open(user_url_file, 'w', encoding="utf8") as f:
+            f.write(u + "\n")
 
     if request.method == "POST":
         u = request.form['url']
         process_start_url(u)
         return render_template('indexer/progress_crawl.html')
-    else:
-        u = request.args['url']
-        process_start_url(u)
-        return progress_crawl()
+
+    u = request.args['url']
+    process_start_url(u)
+    return progress_crawl()
 
 
 
 @indexer.route("/from_docs", methods=["POST"])
 @login_required
 def from_docs():
+    """Entry point for indexing from docs.
+    Legacy. Not used in OMD but could be!
+    """
+    username = session['username']
     print("DOC FILE:", request.files['file_source'])
     if request.files['file_source'].filename[-4:] == ".txt":
         keyword = request.form['docs_keyword']
         keyword, lang = get_language(keyword)
         file = request.files['file_source']
-        file.save(join(dir_path, "docs_to_index.txt"))
-        f = open(join(dir_path, "keyword_lang.txt"), 'w')
-        f.write(keyword+'::'+lang+'\n')
-        f.close()
+        file.save(join(user_app_dir_path, username+".corpus"))
+        with open(join(app_dir_path, "keyword_lang.txt"), 'w', encoding="utf8") as f:
+            f.write(keyword+'::'+lang+'\n')
         return render_template('indexer/progress_docs.html')
-
-
-
-
-
-'''
-Controllers for progress pages.
-One controller per ways to index (file, crawl).
-The URL indexing uses same progress as file.
-'''
+    return url_for(indexer)
 
 @indexer.route("/progress_crawl")
 @login_required
 def progress_crawl():
+    """ Crawl function, called by from_crawl.
+    Reads the start URL given by the user and
+    recursively crawls down directories from there.
+    """
     print("Running progress crawl")
-    urls, keywords, langs, errors = readUrls(join(dir_path, "urls_to_index.txt"))
-    if urls:
-        url = urls[0]
-    else:
-        url = None
+    username = session['username']
+    # There will only be one path read, although we are using the standard
+    # PeARS read_urls function. Hence the [0].
+    url = read_urls(join(user_app_dir_path, username+".toindex"))[0]
     print("Calling spider on",url)
-    spider.write_docs(url) #Writing docs to docs_to_index.txt
+    spider.write_docs(url) #Writing docs to corpus
 
 
     def generate():
-        
-        kwd = 'home' #hard-coded - change if needed
         lang = LANG
         print("\n\n>>> INDEXER: CONTROLLER: READING DOCS")
-        urls, titles, snippets, descriptions, docs = readDocs(join(dir_path, "docs_to_index.txt"))
-        pod_name = kwd+'.npz'
-        pod_dir = join(dir_path,'static','pods')
-
-        #Checking matrix files
-        if not isfile(join(pod_dir,'podsum.npz')):
-            init_podsum()
-        if not isfile(join(pod_dir,pod_name)):
-            pod = np.zeros((1,VEC_SIZE))
-            pod = sparse.csr_matrix(pod)
-            sparse.save_npz(join(pod_dir,pod_name), pod)
+        urls, titles, snippets, descriptions, docs = \
+                read_docs(join(user_app_dir_path, username+".corpus"))
+        #pod_name = 'home.u.'+username.replace(' ','_')+'.npz'
 
         c = 0
-        if tracker != None:
+        if tracker is not None:
             task_name = "run indexing for "+str(len(urls))+" files"
             tracker.start_task(task_name)
-        for url, title, snippet, description, doc in zip(urls, titles, snippets, descriptions, docs):
+        for url, title, snippet, description, doc in \
+                zip(urls, titles, snippets, descriptions, docs):
             print("\n\n>>> INDEXER: CONTROLLER: PROGRESS CRAWL: INDEXING", url)
-            success, podsum, text, doc_id = mk_page_vector.compute_vectors_local_docs(url, title, snippet, description, doc, kwd, lang)
+            success, text, doc_id = mk_page_vector.compute_vectors_local_docs( \
+                    url, title, snippet, description, doc, username, lang)
             if success:
-                posix_doc(text, doc_id, kwd)
-                pod_from_file(kwd, lang, podsum)
+                posix_doc(text, doc_id, username)
             else:
                 print("\n\n>>> INDEXER: CONTROLLER: PROGRESS CRAWL: ERROR INDEXING", url)
             c += 1
             print('###', str(ceil(c / len(urls) * 100)))
             yield "data:" + str(ceil(c / len(urls) * 100)) + "\n\n"
-        if tracker != None:
+        if tracker is not None:
             search_emissions = tracker.stop_task()
             carbon_print(search_emissions, task_name)
 
     return Response(generate(), mimetype='text/event-stream')
-
-
-

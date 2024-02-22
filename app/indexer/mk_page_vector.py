@@ -5,7 +5,7 @@
 import re
 import numpy as np
 import string
-from app import db, VEC_SIZE
+from app import db, LOCAL_RUN, VEC_SIZE, OMD_PATH
 from app.api.models import Urls, installed_languages, sp
 from app.indexer.htmlparser import extract_html
 from app.indexer.vectorizer import vectorize_scale
@@ -31,35 +31,41 @@ def compute_vec(lang, text, pod_m):
     print("VEC",v,pod_m.shape)
     return pod_m
 
+def get_pod_name(target_url, username):
+    pod_name = 'home.u.'+username
+    if LOCAL_RUN:
+        if 'http://localhost:9090/static/testdocs/shared' in target_url:
+            pod_name = 'home.shared.u.'+username
+    else:
+        if join(OMD_PATH, 'shared') in target_url:
+            pod_name = 'home.shared.u.'+username
+    return pod_name
 
-def compute_vectors_local_docs(target_url, title, snippet, description, doc, keyword, lang):
+def compute_vectors_local_docs(target_url, title, snippet, description, doc, username, lang):
     cc = False
-    pod_m = load_npz(join(pod_dir,keyword+'.npz'))
-    #f = open(join(pod_dir,'corpus.tok'),'a')
-    print("Computing vectors for", target_url, "(",keyword,")",lang)
+    pod_name = get_pod_name(target_url, username)
+    pod_m = load_npz(join(pod_dir, pod_name+'.npz'))
+    print("Computing vectors for", target_url, "(",pod_name,")",lang)
     entry = db.session.query(Urls).filter_by(url=target_url).first()
     if entry:
         u = db.session.query(Urls).filter_by(url=target_url).first()
     else:
         u = Urls(url=target_url)
-    text = title + " " + description + " " + doc
-    #print(text)
+    filename = target_url.split('/')[-1]
+    text = filename + " " + title + " " + description + " " + doc
     text = tokenize_text(lang, text)
-    #f.write('\n\n'+title+'\n')
-    #f.write(text)
+    #print(text)
     pod_m = compute_vec(lang, text, pod_m)
     u.title = title
     u.snippet = snippet
     u.description = description[:100]
     u.vector = str(pod_m.shape[0]-1)
-    u.keyword = keyword
-    u.pod = keyword
+    u.pod = pod_name
     u.cc = cc
     db.session.add(u)
     db.session.commit()
-    save_npz(join(pod_dir,keyword+'.npz'),pod_m)
-    podsum = np.sum(pod_m, axis=0)
-    return True, podsum, text, u.vector
+    save_npz(join(pod_dir,pod_name+'.npz'),pod_m)
+    return True, text, u.vector
 
 
 

@@ -96,7 +96,6 @@ def delete_url(idx):
     #Recompute pod summary
     podsum = np.sum(pod_m, axis=0)
     p = db.session.query(Pods).filter_by(name=pod).first()
-    pod_from_file(pod, p.language, podsum)
     db.session.delete(u)
     db.session.commit()
     return "Deleted document with vector id"+str(vid)
@@ -144,36 +143,22 @@ def pod_from_json(pod, url):
         p.registered = False
     db.session.commit()
 
+def create_pod_in_db(contributor, lang):
+    '''If the pod does not exist, create it in the database.'''
 
-def pod_from_file(name, lang, podsum):
-    # TODO: pods can't be named any old thing,
-    # if they're going to be in localhost URLs
-    #url = "http://0.0.0.0:9090/api/pods/" + name.replace(' ', '+') # change hard-coded port
-    url = "http://dev.localhost:9090/api/pods/" + name.replace(' ', '+') # change hard-coded port
-    if not db.session.query(Pods).filter_by(url=url).all():
-        p = Pods(url=url)
-        p.name = name
-        p.description = name
-        p.language = lang
-        p.registered = True
-        p.DS_vector = str(len(db.session.query(Pods).all()))
-        db.session.add(p)
-        db.session.commit()
-    if type(podsum) != None or np.sum(podsum) != 0: # check necessary for cases where pod has been deleted before
-        print("UPDATING SUMMARY POD")
-        p = db.session.query(Pods).filter_by(url=url).first()
-        p.registered = True
-        print(podsum)
-        print(np.sum(podsum))
-        p_idx = int(p.DS_vector)
-        pod_m = load_npz(join(pod_dir,'podsum.npz'))
-        print("--- current shape",pod_m.shape)
-        if pod_m.shape[0] >= p_idx + 1:
-            pod_m[p_idx] = podsum
-        else:
-            pod_m = vstack((pod_m, csr_matrix(podsum)))
-        print("--- new shape",pod_m.shape)
-        save_npz(join(pod_dir,'podsum.npz'),pod_m)
-        db.session.commit()
+    def commit(url, name):
+        if not db.session.query(Pods).filter_by(url=url).all():
+            p = Pods(url=url)
+            p.name = name
+            p.description = name
+            p.language = lang
+            p.registered = True
+            db.session.add(p)
+            db.session.commit()
 
-
+    name_personal = 'home.u.'+contributor
+    name_shared = 'home.shared.u.'+contributor
+    url_personal = "http://localhost:8080/api/pods/" + name_personal.replace(' ', '+')
+    url_shared = "http://localhost:8080/api/pods/" + name_shared.replace(' ', '+')
+    commit(url_personal, name_personal)
+    commit(url_shared, name_shared)

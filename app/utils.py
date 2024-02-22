@@ -25,42 +25,25 @@ def carbon_print(tracker_results, task_name):
     with open(join(CARBON_DIR,filename),'a') as f:
         f.write(task_name+': '+str(tracker_results)+'\n')
 
-def _extract_url_and_kwd(line):
-    try:
-        url, kwd, lang = line.split(';')
-        #In case keyword or lang is not given, go back to defaults
-        if kwd == '':
-            kwd = 'home'
-        if lang == '':
-            lang = LANG
-        return url, kwd, lang
-    except:
-        print("ERROR: urls_to_index.txt does not have the right format.")
-        return None
 
-def readUrls(url_file):
-    urls = []
-    keywords = []
-    langs = []
-    errors = False
+def read_urls(url_file):
     with open(url_file) as fd:
-        for line in fd:
-            matches = _extract_url_and_kwd(line)
-            if matches:
-                urls.append(matches[0])
-                keywords.append(matches[1])
-                langs.append(matches[2])
-            else:
-                errors = True
-    return urls, keywords, langs, errors
+        urls = fd.read().splitlines() 
+    return urls
 
-def readDocs(doc_file):
+def read_docs(doc_file):
+    """ Function to read the pre-processed documents, as obtained
+    from crawling the OMD xml files.
+    Argument: the path to the document file.
+    Returns: paths, titles, snippets, descriptions and full bodies
+    of documents in the input file.
+    """
     urls = []
     titles = []
     snippets = []
     docs = []
     descriptions = []
-    with open(doc_file) as df:
+    with open(doc_file, 'r', encoding="utf-8") as df:
         description = ""
         doc = ""
         for l in df:
@@ -90,25 +73,6 @@ def readDocs(doc_file):
     return urls, titles, snippets, descriptions, docs
 
 
-def readBookmarks(bookmark_file, keyword):
-    print("READING BOOKMARKS")
-    urls = []
-    bs_obj = BeautifulSoup(open(bookmark_file), "html.parser")
-    dt = bs_obj.find_all('dt')
-    tag =''
-    for i in dt:
-        n = i.find_next()
-        if n.name == 'h3':
-            tag = n.text
-            continue
-        else:
-            if tag == keyword:
-                print(f'url = {n.get("href")}')
-                print(f'website name = {n.text}')
-                urls.append(n.get("href"))
-    return urls
-
-
 def readPods(pod_file):
     pods = []
     f = open(pod_file, 'r')
@@ -118,32 +82,27 @@ def readPods(pod_file):
     f.close()
     return pods
 
-def init_pod(pod_name):
+def init_pod(contributor):
+    """ Pod initialisation.
+    This should only happens once in the OMD setup, when
+    the user indexes for the first time.
+    """
     dir_path = dirname(dirname(realpath(__file__)))
     pod_dir = join(dir_path,'app', 'static','pods')
-    if not isfile(join(pod_dir,pod_name+'.npz')):
-        print("Making 0 CSR matrix for new pod")
-        pod = np.zeros((1,VEC_SIZE))
-        pod = csr_matrix(pod)
-        save_npz(join(pod_dir,pod_name+'.npz'), pod)
+    pod_path_personal = join(pod_dir,'home.u.'+contributor)
+    pod_path_shared = join(pod_dir,'home.shared.u.'+contributor)
+    for pod_path in [pod_path_personal, pod_path_shared]:
+        if not isfile(pod_path+'.npz'):
+            print("Making 0 CSR matrix for new pod")
+            pod = np.zeros((1,VEC_SIZE))
+            pod = csr_matrix(pod)
+            save_npz(pod_path+'.npz', pod)
 
-    if not isfile(join(pod_dir,pod_name+'.pos')):
-        print("Making empty positional index for new pod")
-        posindex = [{} for _ in range(len(vocab))]
-        joblib.dump(posindex, join(pod_dir,pod_name+'.pos'))
+        if not isfile(pod_path+'.pos'):
+            print("Making empty positional index for new pod")
+            posindex = [{} for _ in range(len(vocab))]
+            joblib.dump(posindex, pod_path+'.pos')
 
-
-def init_podsum():
-    dir_path = dirname(dirname(realpath(__file__)))
-    pod_dir = join(dir_path,'app','static','pods')
-    print("Create pods directory if needed")
-    print(LOCAL_RUN)
-    Path(pod_dir).mkdir(exist_ok=True, parents=True)
-    print("Making 0 CSR matrix for pod summaries")
-    print("POD DIR",pod_dir)
-    pod_summaries = np.zeros((1,VEC_SIZE))
-    pod_summaries = csr_matrix(pod_summaries)
-    save_npz(join(pod_dir,"podsum.npz"), pod_summaries)
 
 def normalise(v):
     norm = np.linalg.norm(v)

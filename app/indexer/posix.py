@@ -14,11 +14,11 @@ def dump_posix(posindex, pod_name):
     joblib.dump(posindex, join(posix_path,pod_name+'.pos'))
 
 
-def posix_doc(text, doc_id, pod_name):
+def posix_doc(text, doc_id, contributor):
+    pod_name = 'home.u.'+contributor
     posindex = load_posix(pod_name)
     for pos, token in enumerate(text.split()):
         if token not in vocab:
-            # tqdm.write(f"WARNING: token \"{token}\" not found in vocab")
             continue
         token_id = vocab[token]
         if doc_id in posindex[token_id]:
