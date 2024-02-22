@@ -4,7 +4,7 @@
 
 
 from os.path import dirname, join, realpath, basename
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, session, flash
 from app.utils_db import delete_url
 from app.api.models import Urls, Pods
 from app import db
@@ -39,22 +39,20 @@ def return_urls():
 
 @api.route('/urls/delete', methods=["GET","POST"])
 @login_required
-def return_delete(idx=None):
-    if idx is None:
-        path = request.args.get('path')
-    else:
-        path = None
-    #try:
-    if not path:
-        u = db.session.query(Urls).filter_by(vector=idx).first()
-    else:
-        u = db.session.query(Urls).filter_by(url=path).first()
-    pod = u.pod
+def return_url_delete(path):
+    u = db.session.query(Urls).filter_by(url=path).first()
+    pod_name = u.pod
+    pod_username = pod_name.split('.u.')[1]
+    try:
+        assert pod_username == session['username']
+    except AssertionError as err:
+        flash("You cannot delete other users' documents.")
+        return False
     vid = int(u.vector)
-    delete_url(vid)
-    #except:
-    #    return "Deletion failed"
-    return "Deleted document with vector id"+str(vid)+'\n'
+    pod = u.pod
+    delete_url(vid, pod)
+    print("Deleted document with vector id"+str(vid))
+    return True
 
 
 @api.route('/urls/move', methods=["GET","POST"])
