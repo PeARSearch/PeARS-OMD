@@ -2,13 +2,10 @@
 #
 # SPDX-License-Identifier: AGPL-3.0-only
 
-# Import flask dependencies
-from flask import Blueprint, jsonify, request
 
-import numpy as np
-from scipy.sparse import csr_matrix, vstack, save_npz, load_npz
 from os.path import dirname, join, realpath, basename
-from app.utils_db import pod_from_file, delete_url
+from flask import Blueprint, jsonify, request
+from app.utils_db import delete_url
 from app.api.models import Urls, Pods
 from app import db
 from app.auth.controllers import login_required

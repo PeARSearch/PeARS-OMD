@@ -24,7 +24,6 @@ import logging
 from urllib.parse import quote_plus
 from os.path import dirname, join, realpath, isfile
 from flask import jsonify, Response, session
-from app.utils import init_podsum
 from app import LOCAL_RUN, OMD_PATH
 
 LOG = logging.getLogger(__name__)
@@ -46,31 +45,25 @@ def user(access_token):
         url = OMD_PATH
 
     results = []
-    if Urls.query.count() == 0:
-        init_podsum()
 
     query = request.args.get('q')
     if not query:
         LOG.info("No query")
         return render_template("search/user.html"), 200
-    else:
 
-        results = []
-        query = query.lower()
-        pears = ['0.0.0.0']
-        username = session['username']
-        results, pods = score_pages.run(query, pears, url_filter=[ join(url,username), 'http://localhost:9090/static/']) #TODO: replace filter with correct OMD endpoint
-        r = app.make_response(jsonify(results))
-        r.mimetype = "application/json"
-        return r
+    results = []
+    query = query.lower()
+    username = session['username']
+    results, _ = score_pages.run(query, url_filter=[ join(url,username), 'http://localhost:9090/static/'])
+    r = app.make_response(jsonify(results))
+    r.mimetype = "application/json"
+    return r
 
 
 @search.route('/anonymous', methods=['POST','GET'])
 @cross_origin()
 def anonymous():  
     results = []
-    if Urls.query.count() == 0:
-        init_podsum()
 
     query = request.args.get('q')
     if not query:
@@ -79,12 +72,11 @@ def anonymous():
     else:
         results = []
         query = query.lower()
-        pears = ['0.0.0.0']
         if LOCAL_RUN:
             url = 'http://localhost:9090/static/testdocs/shared' #Local test
         else:
             url = join(OMD_PATH, 'shared')
-        results, pods = score_pages.run(query, pears, url_filter=[url])
+        results, _ = score_pages.run(query, url_filter=[url])
         r = app.make_response(jsonify(results))
         r.mimetype = "application/json"
         return r
@@ -94,8 +86,6 @@ def anonymous():
 @search.route('/', methods=['GET','POST'])
 @search.route('/index', methods=['GET','POST'])
 def index():
-    if Urls.query.count() == 0:
-        init_podsum()
     print("LOCAL",LOCAL_RUN)
     access_token = request.cookies.get('OMD_SESSION_ID')  
     if not access_token:
