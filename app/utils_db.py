@@ -15,54 +15,8 @@ from scipy.sparse import csr_matrix, vstack, save_npz, load_npz
 dir_path = dirname(dirname(realpath(__file__)))
 pod_dir = join(dir_path,'app','static','pods')
 
-def get_db_url_vector(url):
-    url_vec = Urls.query.filter(Urls.url == url).first().vector
-    return url_vec
-
-
-def get_db_url_snippet(url):
-    url_snippet = Urls.query.filter(Urls.url == url).first().snippet
-    return url_snippet
-
-
-def get_db_url_title(url):
-    url_title = Urls.query.filter(Urls.url == url).first().title
-    return url_title
-
-
-def get_db_url_cc(url):
-    url_cc = Urls.query.filter(Urls.url == url).first().cc
-    return url_cc
-
-
-def get_db_url_notes(url):
-    url_notes = Urls.query.filter(Urls.url == url).first().notes
-    return url_notes
-
-
-def get_db_pod_name(url):
-    pod_name = Pods.query.filter(Pods.url == url).first().name
-    return pod_name
-
-
-def get_db_url_pod(url):
-    url_pod = Urls.query.filter(Urls.url == url).first().pod
-    return url_pod
-
-
-def get_db_pod_description(url):
-    pod_description = Pods.query.filter(Pods.url == url).first().description
-    return pod_description
-
-
-def get_db_pod_language(url):
-    pod_language = Pods.query.filter(Pods.url == url).first().language
-    return pod_language
-
-
-def delete_url(idx):
-    u = db.session.query(Urls).filter_by(vector=idx).first()
-    pod = u.pod
+def delete_url(idx, pod):
+    u = db.session.query(Urls).filter_by(pod=pod).filter_by(vector=idx).first()
     vid = int(u.vector)
     #Remove document row from .npz matrix
     pod_m = load_npz(join(pod_dir,pod+'.npz'))
@@ -93,9 +47,7 @@ def delete_url(idx):
         new_posindex.append(tmp)
     dump_posix(new_posindex,pod)
 
-    #Recompute pod summary
-    podsum = np.sum(pod_m, axis=0)
-    p = db.session.query(Pods).filter_by(name=pod).first()
+    #Delete from database
     db.session.delete(u)
     db.session.commit()
     return "Deleted document with vector id"+str(vid)

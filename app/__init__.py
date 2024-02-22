@@ -12,7 +12,7 @@ from decouple import Config, RepositoryEnv
 from dotenv import load_dotenv
 
 # Import flask and template operators
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, flash
 from flask_admin import Admin, AdminIndexView
 
 # Import SQLAlchemy
@@ -112,7 +112,7 @@ with app.app_context():
 
 from flask_admin.contrib.sqla import ModelView
 from app.api.models import Pods, Urls
-from app.api.controllers import return_delete
+from app.api.controllers import return_url_delete
 
 from flask_admin import expose
 from flask_admin.contrib.sqla.view import ModelView
@@ -163,23 +163,22 @@ class UrlsModelView(ModelView):
         },
     }
     def delete_model(self, model):
+        success = True
         try:
             self.on_model_delete(model)
             print("DELETING",model.url,model.vector)
-            # Add your custom logic here and don't forget to commit any changes e.g.
-            print(return_delete(idx=model.vector))
-            self.session.commit()
+            success = return_url_delete(path=model.url)
+            if success:
+                self.session.commit()
+            else:
+                return False
         except Exception as ex:
             if not self.handle_view_exception(ex):
-                flash(gettext('Failed to delete record. %(error)s', error=str(ex)), 'error')
-                log.exception('Failed to delete record.')
-
+                flash('Failed to delete record. '+str(ex)+' error.')
             self.session.rollback()
-
             return False
         else:
             self.after_model_delete(model)
-
         return True
 
 
