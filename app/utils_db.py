@@ -3,100 +3,71 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import joblib
-from app import db, vocab, VEC_SIZE
+from app import LOCAL_RUN, OMD_PATH, db, vocab, VEC_SIZE
 from app.api.models import Urls, Pods
 from app.api.models import installed_languages
 from app.indexer.posix import load_posix, dump_posix
 from app.utils import convert_to_array, convert_string_to_dict, convert_to_string, normalise
 import numpy as np
-from os.path import dirname, realpath, join
+from os.path import dirname, realpath, join, isfile
 from scipy.sparse import csr_matrix, vstack, save_npz, load_npz
 
 dir_path = dirname(dirname(realpath(__file__)))
 pod_dir = join(dir_path,'app','static','pods')
 
-def delete_url(idx, pod):
-    u = db.session.query(Urls).filter_by(pod=pod).filter_by(vector=idx).first()
-    vid = int(u.vector)
-    #Remove document row from .npz matrix
-    pod_m = load_npz(join(pod_dir,pod+'.npz'))
-    m1 = pod_m[:vid]
-    m2 = pod_m[vid+1:]
-    pod_m = vstack((m1,m2))
-    save_npz(join(pod_dir,pod+'.npz'),pod_m)
-
-    #Correct indices in DB
-    urls = db.session.query(Urls).filter_by(pod=pod).all()
-    for url in urls:
-        if int(url.vector) > vid:
-            url.vector = str(int(url.vector)-1) #Decrease ID now that matrix row has gone
-        db.session.add(url)
-        db.session.commit()
-
-    #Remove doc from positional index
-    posindex = load_posix(pod)
-    new_posindex = []
-    for token in vocab:
-        token_id = vocab[token]
-        tmp = {}
-        for doc_id, posidx in posindex[token_id].items():
-            if doc_id != str(vid):
-                tmp[doc_id] = posidx
-            #else:
-            #    print("Deleting doc",doc_id,"from token",token,token_id)
-        new_posindex.append(tmp)
-    dump_posix(new_posindex,pod)
-
-    #Delete from database
-    db.session.delete(u)
-    db.session.commit()
-    return "Deleted document with vector id"+str(vid)
+def get_pod_name(target_url, username):
+    """ Retrieve correct pod given url and username.
+    In particular, checks whether the private or shared
+    pod should be used.
+    """
+    pod_name = 'home.u.'+username
+    if LOCAL_RUN:
+        if 'http://localhost:9090/static/testdocs/shared' in target_url:
+            pod_name = 'home.shared.u.'+username
+    else:
+        if join(OMD_PATH, 'shared') in target_url:
+            pod_name = 'home.shared.u.'+username
+    return pod_name
 
 
+def create_pod_npz_pos(contributor):
+    """ Pod npz and pos initialisation.
+    This should only happens once in the OMD setup, when
+    the user indexes for the first time.
+    """
+    # One idx to url dictionary per user
+    pod_path = join(pod_dir, contributor+'.idx')
+    if not isfile(pod_path):
+        print("Making idx dictionaries for new pod")
+        idx_to_url = [[],[]]
+        joblib.dump(idx_to_url, pod_path)
 
-def compute_pod_summary(name):
-    '''This function is very similar to 'self' in PeARS-pod'''
-    DS_vector = np.zeros(VEC_SIZE) 
-    for u in db.session.query(Urls).filter_by(pod=name).all():
-        DS_vector += convert_to_array(u.vector)
-    DS_vector = convert_to_string(normalise(DS_vector))
-    c = 0
-    return DS_vector
+    # Separate private from shared for other representations
+    pod_path_private = join(pod_dir,'home.u.'+contributor)
+    pod_path_shared = join(pod_dir,'home.shared.u.'+contributor)
+    for pod_path in [pod_path_private, pod_path_shared]:
+        if not isfile(pod_path+'.npz'):
+            print("Making 0 CSR matrix for new pod")
+            pod = np.zeros((1,VEC_SIZE))
+            pod = csr_matrix(pod)
+            save_npz(pod_path+'.npz', pod)
 
+        if not isfile(pod_path+'.pos'):
+            print("Making empty positional index for new pod")
+            posindex = [{} for _ in range(len(vocab))]
+            joblib.dump(posindex, pod_path+'.pos')
 
-def url_from_json(url, pod):
-    # print(url)
-    if not db.session.query(Urls).filter_by(url=url['url']).all():
-        u = Urls(url=url['url'])
-        u.url = url['url']
-        u.title = url['title']
-        u.vector = url['vector']
-        u.freqs = url['freqs']
-        u.snippet = url['snippet']
-        u.pod = pod
-        if url['cc']:
-            u.cc = True
-        db.session.add(u)
-        db.session.commit()
+        if not isfile(pod_path+'.npz.idx'):
+            print("Making idx dictionaries for new pod")
+            # Lists of lists to make deletions easier
+            npz_to_idx = [[0],[-1]] # For row 0 of the matrix
+            joblib.dump(npz_to_idx, pod_path+'.npz.idx')
 
-
-def pod_from_json(pod, url):
-    if not db.session.query(Pods).filter_by(url=url).all():
-        p = Pods(url=url)
-        db.session.add(p)
-        db.session.commit()
-    p = Pods.query.filter(Pods.url == url).first()
-    p.name = pod['name']
-    p.description = pod['description']
-    p.language = pod['language']
-    p.DS_vector = pod['DSvector']
-    p.word_vector = pod['wordvector']
-    if not p.registered:
-        p.registered = False
-    db.session.commit()
 
 def create_pod_in_db(contributor, lang):
-    '''If the pod does not exist, create it in the database.'''
+    """ Pod database initialisation.
+    If the pod does not exist, create it in the database.
+    """
 
     def commit(url, name):
         if not db.session.query(Pods).filter_by(url=url).all():
@@ -108,9 +79,215 @@ def create_pod_in_db(contributor, lang):
             db.session.add(p)
             db.session.commit()
 
-    name_personal = 'home.u.'+contributor
+    name_private = 'home.u.'+contributor
     name_shared = 'home.shared.u.'+contributor
-    url_personal = "http://localhost:8080/api/pods/" + name_personal.replace(' ', '+')
+    url_private = "http://localhost:8080/api/pods/" + name_private.replace(' ', '+')
     url_shared = "http://localhost:8080/api/pods/" + name_shared.replace(' ', '+')
-    commit(url_personal, name_personal)
+    commit(url_private, name_private)
     commit(url_shared, name_shared)
+
+
+def create_or_replace_url_in_db(target_url, title, snippet, description, username, lang):
+    cc = False
+    pod_name = get_pod_name(target_url, username)
+    entry = db.session.query(Urls).filter_by(url=target_url).first()
+    if entry:
+        u = db.session.query(Urls).filter_by(url=target_url).first()
+    else:
+        u = Urls(url=target_url)
+    u.title = title
+    u.snippet = snippet
+    u.description = description[:100]
+    u.pod = pod_name
+    u.cc = cc
+    db.session.add(u)
+    db.session.commit()
+
+def rename_idx_to_url(contributor, src, tgt):
+    pod_path = join(pod_dir, contributor+'.idx')
+    idx_to_url = joblib.load(pod_path)
+    i = idx_to_url[1].index(src)
+    idx_to_url[1][i] = tgt
+    joblib.dump(idx_to_url, pod_path)
+
+
+def add_to_idx_to_url(contributor, url):
+    pod_path = join(pod_dir, contributor+'.idx')
+    idx_to_url = joblib.load(pod_path)
+    idx = len(idx_to_url[0])
+    idx_to_url[0].append(idx)
+    idx_to_url[1].append(url)
+    joblib.dump(idx_to_url, pod_path)
+    return idx
+
+
+def rm_from_idx_to_url(contributor, url):
+    pod_path = join(pod_dir, contributor+'.idx')
+    idx_to_url = joblib.load(pod_path)
+    print("IDX_TO_URL BEFORE RM",idx_to_url)
+    i = idx_to_url[1].index(url)
+    idx = idx_to_url[0][i]
+    idx_to_url[0].pop(i)
+    idx_to_url[1].pop(i)
+    print("IDX_TO_URL AFTER RM",idx_to_url)
+    print("INDEX OF REMOVED ITEM",idx)
+    joblib.dump(idx_to_url, pod_path)
+    return idx
+
+
+def add_to_npz_to_idx(pod_name, vid, idx):
+    """Record the ID of the document given
+    its position in the npz matrix.
+    NB: the lists do not have to be in the
+    order of the matrix.
+    """
+    pod_path = join(pod_dir, pod_name+'.npz.idx')
+    npz_to_idx = joblib.load(pod_path)
+    npz_to_idx[0].append(vid)
+    npz_to_idx[1].append(idx)
+    joblib.dump(npz_to_idx, pod_path)
+
+
+def rm_from_npz_to_idx(pod_name, idx):
+    """Remove doc from npz to idx record.
+    NB: the lists do not have to be in the
+    order of the matrix.
+    """
+    pod_path = join(pod_dir, pod_name+'.npz.idx')
+    npz_to_idx = joblib.load(pod_path)
+    print("NPZ_TO_IDX BEFORE RM:",npz_to_idx)
+    i = npz_to_idx[1].index(idx)
+    npz_to_idx[1].pop(i)
+    npz_to_idx[0] = list(range(len(npz_to_idx[1])))
+    print("NPZ_TO_IDX AFTER RM:",npz_to_idx)
+    print("INDEX OF REMOVED ITEM",i)
+    joblib.dump(npz_to_idx, pod_path)
+    return i
+
+
+def rm_from_npz(vid, pod_name):
+    """ Remove vector from npz file.
+    Arguments:
+    vid: the row number of the vector
+    pod_path: the path to the pod containing the vector
+
+    Returns: the deleted vector
+    """
+    pod_path = join(pod_dir, pod_name+'.npz')
+    pod_m = load_npz(pod_path)
+    print("SHAPE OF NPZ MATRIX BEFORE RM:",pod_m.shape)
+    v = pod_m[vid]
+    print("CHECKING SHAPE OF DELETED VEC:",pod_m.shape)
+    m1 = pod_m[:vid]
+    m2 = pod_m[vid+1:]
+    pod_m = vstack((m1,m2))
+    print("SHAPE OF NPZ MATRIX AFTER RM:",pod_m.shape)
+    save_npz(pod_path, pod_m)
+    return v
+
+def add_to_npz(v, pod_path):
+    """ Add new pre-computed vector to npz matrix.
+    Arguments:
+    v: the vector to add
+    pod_path: the path to the target pod
+
+    Returns:
+    vid: the new row number for the vector
+    """
+    pod_m = load_npz(pod_path)
+    pod_m = vstack((pod_m,csr_matrix(v)))
+    save_npz(pod_path, pod_m)
+    vid = pod_m.shape[0]
+    return vid
+
+def rm_doc_from_pos(vid, pod):
+    """ Remove wordpieces from pos file.
+    Arguments:
+    vid: the ID of the vector recording the wordpieces
+    pod: the name of the pod
+
+    Returns: the content of the positional index for that vector.
+    """
+    posindex = load_posix(pod)
+    remaining_posindex = []
+    deleted_posindex = []
+    for token in vocab:
+        token_id = vocab[token]
+        tmp_remaining = {}
+        tmp_deleted = {}
+        for doc_id, posidx in posindex[token_id].items():
+            if doc_id != str(vid):
+                tmp_remaining[doc_id] = posidx
+            else:
+                tmp_deleted[doc_id] = posidx
+        remaining_posindex.append(tmp_remaining)
+        deleted_posindex.append(tmp_deleted)
+    dump_posix(remaining_posindex,pod)
+    return deleted_posindex
+
+
+def add_doc_to_pos(mini_posindex, pod):
+    """ Add positional info to a pod.
+    Arguments:
+    pos: the positional info to be added (like
+    a mini positional index).
+    pod: the name of the target pod.
+    """
+    posindex = load_posix(pod)
+    for token in vocab:
+        token_id = vocab[token]
+        if len(mini_posindex[token_id]) == 0:
+            continue
+        for doc_id, posidx in mini_posindex[token_id].items():
+            # Add new doc_id
+            posindex[token_id][doc_id] = posidx
+    dump_posix(posindex,pod)
+
+
+def delete_url(url):
+    """ Delete url with some url on some pod.
+    """
+    u = db.session.query(Urls).filter_by(url=url).first()
+    pod = u.pod
+    username = pod.split('.u.')[1]
+    print("POD",pod,"USER",username)
+    idx = rm_from_idx_to_url(username, url)
+    vid = rm_from_npz_to_idx(pod, idx)
+
+    #Remove document row from .npz matrix
+    rm_from_npz(vid, pod)
+
+    #Remove doc from positional index
+    rm_doc_from_pos(idx, pod)
+
+    #Delete from database
+    db.session.delete(u)
+    db.session.commit()
+    return "Deleted document with url "+url
+
+
+def move_npz_pos(src, tgt):
+    """ Move url between pods in the npz matrices.
+    This will be used when transferring URLs from
+    the private to the shared pod.
+    """
+    u = db.session.query(Urls).filter_by(url=src).first()
+    src_pod = u.pod
+    if 'shared' in src_pod:
+        tgt_pod = src_pod.replace('.shared.','.')
+    else:
+        tgt_pod = src_pod.replace('.u.','.shared.u.')
+
+    #Move document row from .npz matrix
+    npz_row = rm_from_npz(vid, join(pod_dir, src_pod+'.npz'))
+    new_vid = add_to_npz(npz_row, join(pod_dir, tgt_pod+'.npz'))
+    #rm_from_npz_to_idx(src_pod, idx)
+
+    #Move doc from positional index
+    pos_info = rm_doc_from_pos(vid, src_pod)
+    add_doc_to_pos(pos_info, tgt_pod)
+
+    #Correct DB
+    u.url = tgt
+    u.pod = tgt_pod
+    u.vector = new_vid
