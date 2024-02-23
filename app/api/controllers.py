@@ -4,7 +4,7 @@
 
 
 from os.path import dirname, join, realpath, basename
-from flask import Blueprint, jsonify, request, session, flash
+from flask import Blueprint, jsonify, request, session, flash, render_template
 from app.utils_db import delete_url, rename_idx_to_url, move_npz_pos
 from app.api.models import Urls, Pods
 from app import db, LOCAL_RUN, OMD_PATH
@@ -37,26 +37,32 @@ def return_urls():
     return jsonify(json_list=[i.serialize for i in Urls.query.all()])
 
 
-@api.route('/urls/delete', methods=["GET","POST"])
+@api.route('/urls/delete', methods=["GET"])
 @login_required
-def return_url_delete(path=None):
-    if not path:
-        path = request.args.get('path')
+def api_delete():
+    path = request.args.get('path')
+    success, message = return_url_delete(path)
+    print(success, message)
+    return render_template('search/user.html', welcome = message)
+
+
+def return_url_delete(path):
+    message =""
     try:
         u = db.session.query(Urls).filter_by(url=path).first()
         pod_name = u.pod
         pod_username = pod_name.split('.u.')[1]
     except AttributeError as err:
-        flash("URL not found in the database")
-        return False
+        message = "URL not found in the database"
+        return False, message
     try:
         assert pod_username == session['username']
     except AssertionError as err:
-        flash("You cannot delete other users' documents.")
-        return False
+        message = "You cannot delete other users' documents."
+        return False, message
     delete_url(u.url)
-    print("Deleted document with url "+u.url)
-    return True
+    message = "Deleted document with url "+u.url+'.'
+    return True, message
 
 
 @api.route('/urls/move', methods=["GET","POST"])
