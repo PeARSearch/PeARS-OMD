@@ -147,5 +147,5 @@ def posix(q, pod_name):
 
         final_score = posix_score_seq(positions)
         doc_scores[doc] = final_score
-        #print("\nFINAL SCORE FOR DOC", doc, final_score)
+        #print("FINAL SCORE FOR DOC", doc, final_score,"\n\n")
     return doc_scores

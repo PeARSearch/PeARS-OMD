@@ -7,6 +7,7 @@ import multiprocessing
 import math
 from glob import glob
 from flask import session
+import joblib
 from joblib import Parallel, delayed
 import numpy as np
 from scipy.sparse import csr_matrix, load_npz
@@ -23,8 +24,6 @@ pod_dir = join(dir_path,'static','pods')
 def compute_scores(query, query_vector, tokenized, pod_name):
     """ Compute different scores for a query.
     """
-    url_scores = {}
-    snippet_scores = {}
     vec_scores = {}
     completeness_scores = {}
     pod_m = load_npz(join(pod_dir,pod_name+'.npz'))
@@ -32,11 +31,22 @@ def compute_scores(query, query_vector, tokenized, pod_name):
     m_completeness = completeness(query_vector, pod_m.todense())
     posix_scores = posix(tokenized, pod_name)
 
-    for u in db.session.query(Urls).filter_by(pod=pod_name).all():
-        vec_scores[u.url] = m_cosines[0][int(u.vector)]
-        completeness_scores[u.url] = m_completeness[0][int(u.vector)]
-        snippet_scores[u.url] = generic_overlap(query, u.snippet)
-    return vec_scores, completeness_scores, snippet_scores, posix_scores
+    username = pod_name.split('.u.')[1]
+    idx_to_url = joblib.load(join(pod_dir, username+'.idx'))
+    npz_to_idx = joblib.load(join(pod_dir, pod_name+'.npz.idx'))
+    for i in range(pod_m.shape[0]):
+        cos =  m_cosines[0][i]
+        if  cos == 0 or math.isnan(cos):
+            continue
+        #Get doc idx for row i of the matrix
+        idx = npz_to_idx[1][i]
+        #Get list position of doc idx in idx_to_url
+        lspos = idx_to_url[0].index(idx)
+        #Retrieve corresponding URL
+        url = idx_to_url[1][lspos]
+        vec_scores[url] = cos
+        completeness_scores[url] = m_completeness[0][i]
+    return vec_scores, completeness_scores, posix_scores
 
 
 def score_pods(query, query_vector, lang, username = None):
@@ -68,8 +78,6 @@ def score_pods(query, query_vector, lang, username = None):
     podnames = []
     podsum = []
     npzs = glob(join(pod_dir,'*.shared.u.*npz'))
-    if len(npzs) == 0:
-        return best_pods
     for npz in npzs:
         podname = npz.split('/')[-1].replace('.npz','')
         s = np.sum(load_npz(npz).toarray(), axis=0)
@@ -77,10 +85,10 @@ def score_pods(query, query_vector, lang, username = None):
             podsum.append(s)
             podnames.append(podname)
     podsum = csr_matrix(podsum)
+    if np.sum(podsum) == 0:
+        return best_pods
 
     m_cosines = 1 - distance.cdist(query_vector, podsum.todense(), 'cosine')
-    print(podnames)
-    print(m_cosines)
 
     # For each pod, retrieve cosine to query
     pods = db.session.query(Pods).filter_by(language=lang).filter_by(registered=True).\
@@ -104,23 +112,32 @@ def score_pods(query, query_vector, lang, username = None):
 
 def score_docs(query, query_vector, tokenized, pod_name):
     '''Score documents for a query'''
+    print("SEARCH: SCORE_PAGES: score_docs: scoring on", pod_name)
     document_scores = {}  # Document scores
-    vec_scores, completeness_scores, snippet_scores, posix_scores = \
+    vec_scores, completeness_scores, posix_scores = \
             compute_scores(query, query_vector, tokenized, pod_name)
-    print("POSIX SCORES",posix_scores)
+    username = pod_name.split('.u.')[1]
+    idx_to_url = joblib.load(join(pod_dir, username+'.idx'))
+    print("IDX TO URL",idx_to_url)
     for url in list(vec_scores.keys()):
+        print(">>>",url)
+        print(url, vec_scores[url], completeness_scores[url])
+        i = idx_to_url[1].index(url)
+        idx = idx_to_url[0][i]
         document_scores[url] = 0.0
-        idx = db.session.query(Urls).filter_by(url=url).first().vector
         if idx in posix_scores:
             document_scores[url]+=posix_scores[idx]
         document_scores[url]+=completeness_scores[url]
-        document_scores[url]+=snippet_scores[url]
-        if snippet_scores[url] == 1:
-            document_scores[url]+=1 #bonus points
         if math.isnan(document_scores[url]) or completeness_scores[url] < 0.3:
             document_scores[url] = 0
         else:
-            print(url, document_scores[url], completeness_scores[url], snippet_scores[url])
+            u = db.session.query(Urls).filter_by(url=url).first()
+            snippet_score = generic_overlap(query, u.snippet)
+            document_scores[url]+=snippet_score
+            if idx in posix_scores:
+                print(url, vec_scores[url], posix_scores[idx], document_scores[url], completeness_scores[url], snippet_score)
+            else:
+                print(url, vec_scores[url], 0.0, document_scores[url], completeness_scores[url], snippet_score)
     return document_scores
 
 
@@ -150,13 +167,13 @@ def output(best_urls):
         for u in best_urls:
             url = db.session.query(Urls).filter_by(url=u).first().as_dict()
             results[u] = url
-            pod = url.pod
+            pod = url['pod']
             if pod not in pods:
                 pods.append(pod)
     return results, pods
 
 
-def run(query, url_filter=None):
+def run_search(query, url_filter=None):
     if tracker is not None:
         task_name = "run search"
         tracker.start_task(task_name)
@@ -166,13 +183,13 @@ def run(query, url_filter=None):
         username = None
     document_scores = {}
     query, lang = get_language(query)
-    q_dist, tokenized = compute_query_vectors(query, lang)
-    best_pods = score_pods(query, q_dist, lang, username)
-    print("Q:",query,"BEST PODS:",best_pods)
+    q_vector, tokenized = compute_query_vectors(query, lang)
+    best_pods = score_pods(query, q_vector, lang, username)
+    print("\tQ:",query,"BEST PODS:",best_pods)
 
     max_thread = int(multiprocessing.cpu_count() * 0.5)
     with Parallel(n_jobs=max_thread, prefer="threads") as parallel:
-        delayed_funcs = [delayed(score_docs)(query, q_dist, tokenized, pod) for pod in best_pods]
+        delayed_funcs = [delayed(score_docs)(query, q_vector, tokenized, pod) for pod in best_pods]
         scores = parallel(delayed_funcs)
     for dic in scores:
         document_scores.update(dic)

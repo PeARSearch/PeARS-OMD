@@ -73,36 +73,6 @@ def read_docs(doc_file):
     return urls, titles, snippets, descriptions, docs
 
 
-def readPods(pod_file):
-    pods = []
-    f = open(pod_file, 'r')
-    for line in f:
-        line = line.rstrip('\n')
-        pods.append(line)
-    f.close()
-    return pods
-
-def init_pod(contributor):
-    """ Pod initialisation.
-    This should only happens once in the OMD setup, when
-    the user indexes for the first time.
-    """
-    dir_path = dirname(dirname(realpath(__file__)))
-    pod_dir = join(dir_path,'app', 'static','pods')
-    pod_path_personal = join(pod_dir,'home.u.'+contributor)
-    pod_path_shared = join(pod_dir,'home.shared.u.'+contributor)
-    for pod_path in [pod_path_personal, pod_path_shared]:
-        if not isfile(pod_path+'.npz'):
-            print("Making 0 CSR matrix for new pod")
-            pod = np.zeros((1,VEC_SIZE))
-            pod = csr_matrix(pod)
-            save_npz(pod_path+'.npz', pod)
-
-        if not isfile(pod_path+'.pos'):
-            print("Making empty positional index for new pod")
-            posindex = [{} for _ in range(len(vocab))]
-            joblib.dump(posindex, pod_path+'.pos')
-
 
 def normalise(v):
     norm = np.linalg.norm(v)

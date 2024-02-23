@@ -10,8 +10,9 @@ from flask import Blueprint, request, session, flash, render_template, Response,
 from app import LANG, tracker
 from app.api.models import Urls, Pods
 from app.indexer import mk_page_vector, spider
-from app.utils import read_docs, read_urls, get_language, init_pod, carbon_print
-from app.utils_db import create_pod_in_db
+from app.utils import read_docs, read_urls, get_language, carbon_print
+from app.utils_db import (create_pod_in_db, create_pod_npz_pos, create_or_replace_url_in_db, 
+        add_to_idx_to_url, add_to_npz_to_idx)
 from app.indexer.posix import posix_doc
 from app.auth.controllers import login_required
 
@@ -47,9 +48,8 @@ def from_crawl():
     Calls the crawler.
     """
     username = session['username']
-    init_pod(username)
-    lang = LANG
-    create_pod_in_db(username, lang)
+    create_pod_npz_pos(username)
+    create_pod_in_db(username, LANG)
 
     def process_start_url(u):
         print(">> INDEXER: CONTROLLER: from_crawl: Now crawling", u)
@@ -108,7 +108,6 @@ def progress_crawl():
         print("\n\n>>> INDEXER: CONTROLLER: READING DOCS")
         urls, titles, snippets, descriptions, docs = \
                 read_docs(join(user_app_dir_path, username+".corpus"))
-        #pod_name = 'home.u.'+username.replace(' ','_')+'.npz'
 
         c = 0
         if tracker is not None:
@@ -117,12 +116,12 @@ def progress_crawl():
         for url, title, snippet, description, doc in \
                 zip(urls, titles, snippets, descriptions, docs):
             print("\n\n>>> INDEXER: CONTROLLER: PROGRESS CRAWL: INDEXING", url)
-            success, text, doc_id = mk_page_vector.compute_vectors_local_docs( \
-                    url, title, snippet, description, doc, username, lang)
-            if success:
-                posix_doc(text, doc_id, username)
-            else:
-                print("\n\n>>> INDEXER: CONTROLLER: PROGRESS CRAWL: ERROR INDEXING", url)
+            idx = add_to_idx_to_url(username, url)
+            pod_name, vid, tokenized_text = mk_page_vector.compute_vectors_local_docs( \
+                url, title, description, doc, username, lang)
+            posix_doc(tokenized_text, idx, username)
+            add_to_npz_to_idx(pod_name, vid, idx)
+            create_or_replace_url_in_db(url, title, snippet, description, username, lang)
             c += 1
             print('###', str(ceil(c / len(urls) * 100)))
             yield "data:" + str(ceil(c / len(urls) * 100)) + "\n\n"
