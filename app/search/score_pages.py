@@ -13,7 +13,7 @@ import numpy as np
 from scipy.sparse import csr_matrix, load_npz
 from scipy.spatial import distance
 from app.api.models import Urls, Pods
-from app import db, tracker
+from app import app, db, tracker
 from app.search.overlap_calculation import generic_overlap, completeness, posix
 from app.utils import cosine_similarity, hamming_similarity, convert_to_array, get_language, carbon_print
 from app.indexer.mk_page_vector import compute_query_vectors
@@ -112,33 +112,34 @@ def score_pods(query, query_vector, lang, username = None):
 
 def score_docs(query, query_vector, tokenized, pod_name):
     '''Score documents for a query'''
-    print("SEARCH: SCORE_PAGES: score_docs: scoring on", pod_name)
-    document_scores = {}  # Document scores
-    vec_scores, completeness_scores, posix_scores = \
-            compute_scores(query, query_vector, tokenized, pod_name)
-    username = pod_name.split('.u.')[1]
-    idx_to_url = joblib.load(join(pod_dir, username+'.idx'))
-    print("IDX TO URL",idx_to_url)
-    for url in list(vec_scores.keys()):
-        print(">>>",url)
-        print(url, vec_scores[url], completeness_scores[url])
-        i = idx_to_url[1].index(url)
-        idx = idx_to_url[0][i]
-        document_scores[url] = 0.0
-        if idx in posix_scores:
-            document_scores[url]+=posix_scores[idx]
-        document_scores[url]+=completeness_scores[url]
-        if math.isnan(document_scores[url]) or completeness_scores[url] < 0.3:
-            document_scores[url] = 0
-        else:
-            u = db.session.query(Urls).filter_by(url=url).first()
-            snippet_score = generic_overlap(query, u.snippet)
-            document_scores[url]+=snippet_score
+    with app.app_context():
+        print("SEARCH: SCORE_PAGES: score_docs: scoring on", pod_name)
+        document_scores = {}  # Document scores
+        vec_scores, completeness_scores, posix_scores = \
+                compute_scores(query, query_vector, tokenized, pod_name)
+        username = pod_name.split('.u.')[1]
+        idx_to_url = joblib.load(join(pod_dir, username+'.idx'))
+        print("IDX TO URL",idx_to_url)
+        for url in list(vec_scores.keys()):
+            print(">>>",url)
+            print(url, vec_scores[url], completeness_scores[url])
+            i = idx_to_url[1].index(url)
+            idx = idx_to_url[0][i]
+            document_scores[url] = 0.0
             if idx in posix_scores:
-                print(url, vec_scores[url], posix_scores[idx], document_scores[url], completeness_scores[url], snippet_score)
+                document_scores[url]+=posix_scores[idx]
+            document_scores[url]+=completeness_scores[url]
+            if math.isnan(document_scores[url]) or completeness_scores[url] < 0.3:
+                document_scores[url] = 0
             else:
-                print(url, vec_scores[url], 0.0, document_scores[url], completeness_scores[url], snippet_score)
-    return document_scores
+                u = db.session.query(Urls).filter_by(url=url).first()
+                snippet_score = generic_overlap(query, u.snippet)
+                document_scores[url]+=snippet_score
+                if idx in posix_scores:
+                    print(url, vec_scores[url], posix_scores[idx], document_scores[url], completeness_scores[url], snippet_score)
+                else:
+                    print(url, vec_scores[url], 0.0, document_scores[url], completeness_scores[url], snippet_score)
+        return document_scores
 
 
 
