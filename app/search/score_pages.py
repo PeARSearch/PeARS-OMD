@@ -162,15 +162,11 @@ def return_best_urls(doc_scores, url_filter):
 def output(best_urls):
     print(best_urls)
     results = {}
-    pods = []
     if len(best_urls) > 0:
         for u in best_urls:
             url = db.session.query(Urls).filter_by(url=u).first().as_dict()
             results[u] = url
-            pod = url['pod']
-            if pod not in pods:
-                pods.append(pod)
-    return results, pods
+    return results
 
 
 def run_search(query, url_filter=None):
