@@ -1,27 +1,17 @@
-# SPDX-FileCopyrightText: 2022 PeARS Project, <community@pearsproject.org>, 
+# SPDX-FileCopyrightText: 2024 PeARS Project, <community@pearsproject.org>, 
 #
 # SPDX-License-Identifier: AGPL-3.0-only
 
-# Import flask dependencies
-from flask import Blueprint, request, render_template, send_from_directory, make_response
-from flask import current_app, session
+from os.path import join
+from inspect import getfullargspec
+from functools import wraps
+import requests
+from flask import Blueprint, request, render_template, make_response, session
 from flask_cors import cross_origin
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
-from functools import wraps
-from inspect import getfullargspec
-from urllib.parse import quote_plus
-
-# Import the database object from the main app module
-from app import app
-
-# Import utilities
-import re
-import os
-import requests
-from os.path import dirname, join, realpath, isfile
-from flask import jsonify, Response
 from app import LOCAL_RUN, AUTH_TOKEN, OMD_PATH
+from app.utils import unquote_cookie
 
 # Define the blueprint:
 auth = Blueprint('auth', __name__, url_prefix='/auth')
@@ -61,7 +51,7 @@ def login():
             print(user_info.json())
             print(user_info.cookies)
             username = user_info.json()['username']
-            session_token = user_info.json()['session_id']
+            session_token = unquote_cookie(user_info.json()['session_id'])
             # Fill in session info
             session['logged_in'] = True
             session['username'] = username
@@ -70,28 +60,26 @@ def login():
             resp_frontend = make_response(render_template( 'search/user.html', welcome="Welcome "+username))
             # Transfer the cookies from backend response to frontend response
             for name, value in user_info.cookies.items():
-                value = quote_plus(value)
-                print("SETTING COOKIE:",name,value)
+                print("SETTING COOKIE:",name, unquote_cookie(value))
                 resp_frontend.set_cookie(name, value, samesite='Lax')
             # Cookies returned from OMD may not work in some modern browsers, so make our own OMD_SESSION_ID cookie
-            session_token = quote_plus(value)
             resp_frontend.set_cookie('OMD_SESSION_ID', session_token, samesite='Lax')
             return resp_frontend
     else:
-       msg = "Unknown user"
-       return render_template( 'auth/login.html', form=form, msg=msg), 401
+        msg = "Unknown user"
+        return render_template( 'auth/login.html', form=form, msg=msg), 401
 
 
 @auth.route('/logout', methods=['GET','POST'])
 def logout():
-    access_token = request.cookies.get('OMD_SESSION_ID')
+    access_token = unquote_cookie(request.cookies.get('OMD_SESSION_ID'))
     if LOCAL_RUN:
         url = 'http://localhost:9191/api' #Local test
     else:
         url = join(OMD_PATH, 'signout/')
     data = {'action': 'signout', 'session_id': access_token}
     logout_confirmation = requests.post(url, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
-    if logout_confirmation.status_code == requests.codes.ok:
+    if logout_confirmation.status_code < 400:
         print("Logging out")
     else:
         print("Logged out")
@@ -106,7 +94,7 @@ def logout():
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        access_token = request.headers.get('Token') #Get token from request header
+        access_token = unquote_cookie(request.headers.get('Token')) #Get token from request header
         if access_token:
             #backend_to_backend
             if access_token == AUTH_TOKEN: #if it equals to system-wide security token, then it is call from OMD backend
@@ -117,34 +105,32 @@ def login_required(f):
 
         #Otherwise, it is frontend calling
         if not access_token:
-           access_token = request.cookies.get('OMD_SESSION_ID')  
+            access_token = unquote_cookie(request.cookies.get('OMD_SESSION_ID'))
         if not access_token: # still no token - relogin is needed
-           session['logged_in'] = False
-           session['token'] = ''
-           return render_template('search/anonymous.html'), 401 
-           
+            session['logged_in'] = False
+            session['token'] = ''
+            return render_template('search/anonymous.html'), 401
+
         #Token is present and it is user's session token. Check if this token is already stored in session
 	#to avoid excess OMD api calls on every key press
-        if session.get('logged_in') == True and  session.get('token') == access_token:
-                if 'access_token' in getfullargspec(f).args:
-                    kwargs['access_token'] = access_token
-                return f(*args, **kwargs)
-        #Token is present but we need to check if OMD session is valid      
+        if bool(session.get('logged_in')) and  session.get('token') == access_token:
+            if 'access_token' in getfullargspec(f).args:
+                kwargs['access_token'] = access_token
+            return f(*args, **kwargs)
+        #Token is present but we need to check if OMD session is valid
         if LOCAL_RUN:
             url = 'http://localhost:9191/api' #Local test
         else:
             url = join(OMD_PATH, 'signin/')
         data = {'action': 'getUserInfo', 'session_id': access_token}
-        resp = requests.post(url, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
-        if resp.status_code == requests.codes.ok and resp.json()['valid']:
+        resp = requests.post(url, json=data, timeout=30, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
+        if resp.status_code < 400 and resp.json()['valid']:
             session['logged_in'] = True
-            session['username'] = resp.json()['username'] 
-            session['token'] = access_token #save token	in session	
+            session['username'] = resp.json()['username']
+            session['token'] = access_token #save token	in session
             if 'access_token' in getfullargspec(f).args:
                 kwargs['access_token'] = access_token
             return f(*args, **kwargs)
-        else:
-            session['logged_in'] = False 	
-            return render_template('search/anonymous.html'), 401
+        session['logged_in'] = False 	
+        return render_template('search/anonymous.html'), 401
     return decorated_function
-
