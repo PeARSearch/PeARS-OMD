@@ -74,29 +74,7 @@ def run_anonymous_search(query):
 @search.route('/', methods=['GET','POST'])
 @search.route('/index', methods=['GET','POST'])
 def index():
-    print("LOCAL",LOCAL_RUN)
     access_token = request.cookies.get('OMD_SESSION_ID')
     if not access_token:
         return render_template('search/anonymous.html')
-    if LOCAL_RUN:
-        url = 'http://localhost:9191/api' #Local test
-    else:
-        url = OMD_PATH
-    print("CONNECTING TO:",url)
-    data = {'action': 'getUserInfo', 'session_id': access_token}
-    resp = requests.post(url, timeout=10, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
-    if resp.status_code == requests.codes.ok:
-        username = resp.json()['username']
-        # Create a new response object
-        resp_frontend = make_response(render_template\
-                ( 'search/user.html', welcome="Welcome "+username), 200)
-        # Transfer the cookies from backend response to frontend response
-        for name, value in request.cookies.items():
-            value = quote_plus(value)
-            print("SETTING COOKIE:",name,value)
-            resp_frontend.set_cookie(name, value, samesite='Lax')
-        return resp_frontend
-    # Create a new response object
-    resp_frontend = make_response(render_template( 'search/anonymous.html'), 401)
-    resp_frontend.set_cookie('OMD_SESSION_ID', '', expires=0, samesite='Lax')
-    return resp_frontend
+    return render_template('search/user.html')
