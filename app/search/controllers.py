@@ -28,46 +28,47 @@ pod_dir = join(dir_path,'app','static','pods')
 @cross_origin()
 @login_required
 def user():
+    query = request.args.get('q')
+    if not query:
+        return render_template("search/user.html"), 200
+    results = run_user_search(query)
+    r = app.make_response(jsonify(results))
+    r.mimetype = "application/json"
+    return r
+
+def run_user_search(query):
     if LOCAL_RUN:
         url = 'http://localhost:9191/api' #Local test
     else:
         url = OMD_PATH
-
-    results = []
-
-    query = request.args.get('q')
-    if not query:
-        return render_template("search/user.html"), 200
-
     results = []
     query = query.lower()
     username = session['username']
-    results, _ = run_search(query, url_filter=[ join(url,username), 'http://localhost:9090/static/'])
-    r = app.make_response(jsonify(results))
-    r.mimetype = "application/json"
-    return r
+    results = run_search(query, url_filter=[ join(url,username), 'http://localhost:9090/static/'])
+    return results
 
 
 @search.route('/anonymous', methods=['POST','GET'])
 @cross_origin()
 def anonymous():  
-    results = []
-
     query = request.args.get('q')
     if not query:
-        LOG.info("No query")
-        return render_template("search/anonymous.html")
-    results = []
-    query = query.lower()
-    if LOCAL_RUN:
-        url = 'http://localhost:9090/static/testdocs/shared' #Local test
-    else:
-        url = join(OMD_PATH, 'shared')
-    results, _ = run_search(query, url_filter=[url])
+        return render_template("search/anonymous.html"), 200
+    results = run_anonymous_search(query)
     r = app.make_response(jsonify(results))
     r.mimetype = "application/json"
     return r
 
+
+def run_anonymous_search(query):
+    if LOCAL_RUN:
+        url = 'http://localhost:9090/static/testdocs/shared' #Local test
+    else:
+        url = join(OMD_PATH, 'shared')
+    results = []
+    query = query.lower()
+    results = run_search(query, url_filter=[url])
+    return results
 
 
 @search.route('/', methods=['GET','POST'])
