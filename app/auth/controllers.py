@@ -95,6 +95,7 @@ def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         access_token = unquote_cookie(request.headers.get('Token')) #Get token from request header
+        print(">> login_required: access_token: OMD_SESSION_ID", access_token)
         if access_token:
             #backend_to_backend
             if access_token == AUTH_TOKEN: #if it equals to system-wide security token, then it is call from OMD backend
@@ -106,6 +107,7 @@ def login_required(f):
         #Otherwise, it is frontend calling
         if not access_token:
             access_token = unquote_cookie(request.cookies.get('OMD_SESSION_ID'))
+            print(">> login_required: access_token: OMD_SESSION_ID", access_token)
         if not access_token: # still no token - relogin is needed
             session['logged_in'] = False
             session['token'] = ''
