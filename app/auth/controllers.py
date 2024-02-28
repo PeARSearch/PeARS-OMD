@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 from os.path import join
+from urllib.parse import quote_plus
 from inspect import getfullargspec
 from functools import wraps
 import requests
@@ -11,7 +12,6 @@ from flask_cors import cross_origin
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
 from app import LOCAL_RUN, AUTH_TOKEN, OMD_PATH
-from app.utils import unquote_cookie
 
 # Define the blueprint:
 auth = Blueprint('auth', __name__, url_prefix='/auth')
@@ -51,7 +51,7 @@ def login():
             print(user_info.json())
             print(user_info.cookies)
             username = user_info.json()['username']
-            session_token = unquote_cookie(user_info.json()['session_id'])
+            session_token = user_info.json()['session_id']
             # Fill in session info
             session['logged_in'] = True
             session['username'] = username
@@ -60,9 +60,10 @@ def login():
             resp_frontend = make_response(render_template( 'search/user.html', welcome="Welcome "+username))
             # Transfer the cookies from backend response to frontend response
             for name, value in user_info.cookies.items():
-                print("SETTING COOKIE:",name, unquote_cookie(value))
+                print("SETTING COOKIE:",name, value)
                 resp_frontend.set_cookie(name, value, samesite='Lax')
             # Cookies returned from OMD may not work in some modern browsers, so make our own OMD_SESSION_ID cookie
+            print("SESSION TOKEN JUST BEFORE SETTING COOKIE", session_token, type(session_token))
             resp_frontend.set_cookie('OMD_SESSION_ID', session_token, samesite='Lax')
             return resp_frontend
     else:
@@ -72,7 +73,7 @@ def login():
 
 @auth.route('/logout', methods=['GET','POST'])
 def logout():
-    access_token = unquote_cookie(request.cookies.get('OMD_SESSION_ID'))
+    access_token = request.cookies.get('OMD_SESSION_ID')
     if LOCAL_RUN:
         url = 'http://localhost:9191/api' #Local test
     else:
@@ -94,7 +95,7 @@ def logout():
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        access_token = unquote_cookie(request.headers.get('Token')) #Get token from request header
+        access_token = request.headers.get('Token') #Get token from request header
         print(">> login_required: access_token: OMD_SESSION_ID", access_token)
         if access_token:
             #backend_to_backend
@@ -106,7 +107,7 @@ def login_required(f):
 
         #Otherwise, it is frontend calling
         if not access_token:
-            access_token = unquote_cookie(request.cookies.get('OMD_SESSION_ID'))
+            access_token = request.cookies.get('OMD_SESSION_ID')
             print(">> login_required: access_token: OMD_SESSION_ID", access_token)
         if not access_token: # still no token - relogin is needed
             session['logged_in'] = False

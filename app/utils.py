@@ -12,14 +12,6 @@ from scipy.spatial import distance
 from app import LANG, CARBON_DIR
 
 
-def unquote_cookie(cookie):
-    """Fix for strange behaviour whereby cookies
-    get spuriously quoted."""
-    if cookie is not None:
-        new_cookie = cookie.replace('"','')
-        return new_cookie
-    return cookie
-
 
 def carbon_print(tracker_results, task_name):
     date = datetime.today().strftime('%Y-%m-%d')
