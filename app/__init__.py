@@ -52,16 +52,16 @@ vectorizer = CountVectorizer(vocabulary=vocab, lowercase=True, token_pattern='[^
 VEC_SIZE = len(vocab)
 
 # Assess whether the code is run locally or on the On My Disk server
-LOCAL_RUN = os.environ.get("LOCAL_RUN", "false").lower() == "true"
+#LOCAL_RUN = os.environ.get("LOCAL_RUN", "false").lower() == "true"
 
 # Read tokens
-try:
-    DOTENV_FILE = 'app/static/conf/pears.ini'
-    env_config = Config(RepositoryEnv(DOTENV_FILE))
-    AUTH_TOKEN = env_config.get('AUTH_TOKEN')
-except:
-    print(">>\tERROR: __init__.py: the pears.ini file is not present in the app/static/conf directory or incorrectly configured")
-    sys.exit()
+#try:
+#    DOTENV_FILE = 'app/static/conf/pears.ini'
+#    env_config = Config(RepositoryEnv(DOTENV_FILE))
+#    AUTH_TOKEN = env_config.get('AUTH_TOKEN')
+#except:
+#    print(">>\tERROR: __init__.py: the pears.ini file is not present in the app/static/conf directory or incorrectly configured")
+#    sys.exit()
 
 def configure_logging():
     # register root logging
@@ -73,12 +73,23 @@ configure_logging()
 
 # Define the WSGI application object
 app = Flask(__name__)
+#app.app_context().push()
 
 # Configurations
-app.config.from_object('config')
-load_dotenv('app/static/conf/pears.ini')
-AUTH_TOKEN = os.getenv('AUTH_TOKEN')
-OMD_PATH = os.getenv('OMD_PATH')
+try:
+    app.config.from_object('config')
+    load_dotenv('app/static/conf/pears.ini')
+    AUTH_TOKEN = os.getenv('AUTH_TOKEN')
+    OMD_PATH = os.getenv('OMD_PATH')
+    local_run = os.getenv('LOCAL').lower()
+    if local_run == "false":
+        LOCAL_RUN = False
+    else:
+        LOCAL_RUN = True
+    print(LOCAL_RUN)
+except:
+    print(">>\tERROR: __init__.py: the pears.ini file is not present in the app/static/conf directory or incorrectly configured")
+    sys.exit()
 
 # Define the database object which is imported
 # by modules and controllers
