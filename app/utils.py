@@ -1,35 +1,38 @@
-# SPDX-FileCopyrightText: 2023 PeARS Project, <community@pearsproject.org> 
+# SPDX-FileCopyrightText: 2024 PeARS Project, <community@pearsproject.org> 
 #
 # SPDX-License-Identifier: AGPL-3.0-only
 
-import joblib
-import logging
+from os.path import join
 import re
-import requests
-
-from bs4 import BeautifulSoup
-from math import sqrt
-import numpy as np
-from urllib.parse import urljoin
-from scipy.spatial import distance
-from scipy.sparse import csr_matrix, save_npz
-from os.path import dirname, join, realpath, isfile
-from pathlib import Path
 from datetime import datetime
-from app import VEC_SIZE, LOCAL_RUN, LANG, CARBON_DIR, vocab
+from math import sqrt
+import requests
+import numpy as np
+from scipy.spatial import distance
+from app import LANG, CARBON_DIR
+
+
+def unquote_cookie(cookie):
+    """Fix for strange behaviour whereby cookies
+    get spuriously quoted."""
+    if cookie is not None:
+        new_cookie = cookie.replace('"','')
+        return new_cookie
+    return cookie
 
 
 def carbon_print(tracker_results, task_name):
     date = datetime.today().strftime('%Y-%m-%d')
     filename = 'carbon.'+date+'.txt'
-    with open(join(CARBON_DIR,filename),'a') as f:
+    with open(join(CARBON_DIR,filename),'a', encoding="utf-8") as f:
         f.write(task_name+': '+str(tracker_results)+'\n')
 
 
 def read_urls(url_file):
-    with open(url_file) as fd:
-        urls = fd.read().splitlines() 
+    with open(url_file, 'r', encoding="utf-8") as fd:
+        urls = fd.read().splitlines()
     return urls
+
 
 def read_docs(doc_file):
     """ Function to read the pre-processed documents, as obtained
@@ -71,7 +74,6 @@ def read_docs(doc_file):
                 description = ""
                 doc = ""
     return urls, titles, snippets, descriptions, docs
-
 
 
 def normalise(v):
@@ -118,8 +120,10 @@ def cosine_similarity(v1, v2):
     den_b = np.dot(v2, v2)
     return num / (sqrt(den_a) * sqrt(den_b))
 
+
 def hamming_similarity(v1, v2):
     return 1 - distance.hamming(v1,v2)
+
 
 def cosine_to_matrix(q, M):
     qsqrt = sqrt(np.dot(q, q))
@@ -163,7 +167,6 @@ def sim_to_matrix(dm_dict, vec, n):
 def sim_to_matrix_url(url_dict, vec, n):
     cosines = {}
     for k, v in url_dict.items():
-        logging.exception(v.url)
         try:
             cos = cosine_similarity(vec, v.vector)
             cosines[k] = cos
@@ -183,10 +186,10 @@ def sim_to_matrix_url(url_dict, vec, n):
 
 
 def get_pod_info(url):
-    print("Fetching pod", urljoin(url, "api/self/"))
+    print("Fetching pod", join(url, "api/self/"))
     pod = None
     try:
-        r = requests.get(urljoin(url, "api/self/"))
+        r = requests.get(join(url, "api/self/"))
         if r.status_code == 200:
             pod = r.json()
     except Exception:
@@ -201,5 +204,3 @@ def get_language(query):
         query = m.group(1)
         lang = m.group(2)
     return query, lang
-
-
