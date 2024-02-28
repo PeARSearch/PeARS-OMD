@@ -77,7 +77,10 @@ def api_move():
 
 
 def return_move(src, target, username):
-    """ TODO: fix npz and posix when moving from personal to shared
+    """ TODO: 
+    - case where user is admin
+    - moving between pods
+    - filename changes
     """
     message = ""
     
