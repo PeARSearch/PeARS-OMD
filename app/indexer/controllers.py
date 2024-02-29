@@ -7,7 +7,7 @@ from math import ceil
 from os.path import dirname, join, realpath
 from flask import Blueprint, request, session, flash, render_template, Response, url_for
 
-from app import LANG, tracker
+from app import app, LANG, tracker
 from app.api.models import Urls, Pods
 from app.indexer import mk_page_vector, spider
 from app.utils import read_docs, read_urls, get_language, carbon_print
@@ -104,29 +104,30 @@ def progress_crawl():
 
 
     def generate():
-        lang = LANG
-        print("\n\n>>> INDEXER: CONTROLLER: READING DOCS")
-        urls, titles, snippets, descriptions, docs = \
-                read_docs(join(user_app_dir_path, username+".corpus"))
+        with app.app_context():
+            lang = LANG
+            print("\n\n>>> INDEXER: CONTROLLER: READING DOCS")
+            urls, titles, snippets, descriptions, docs = \
+                    read_docs(join(user_app_dir_path, username+".corpus"))
 
-        c = 0
-        if tracker is not None:
-            task_name = "run indexing for "+str(len(urls))+" files"
-            tracker.start_task(task_name)
-        for url, title, snippet, description, doc in \
-                zip(urls, titles, snippets, descriptions, docs):
-            print("\n\n>>> INDEXER: CONTROLLER: PROGRESS CRAWL: INDEXING", url)
-            idx = add_to_idx_to_url(username, url)
-            pod_name, vid, tokenized_text = mk_page_vector.compute_vectors_local_docs( \
-                url, title, description, doc, username, lang)
-            posix_doc(tokenized_text, idx, username)
-            add_to_npz_to_idx(pod_name, vid, idx)
-            create_or_replace_url_in_db(url, title, snippet, description, username, lang)
-            c += 1
-            print('###', str(ceil(c / len(urls) * 100)))
-            yield "data:" + str(ceil(c / len(urls) * 100)) + "\n\n"
-        if tracker is not None:
-            search_emissions = tracker.stop_task()
-            carbon_print(search_emissions, task_name)
+            c = 0
+            if tracker is not None:
+                task_name = "run indexing for "+str(len(urls))+" files"
+                tracker.start_task(task_name)
+            for url, title, snippet, description, doc in \
+                    zip(urls, titles, snippets, descriptions, docs):
+                print("\n\n>>> INDEXER: CONTROLLER: PROGRESS CRAWL: INDEXING", url)
+                idx = add_to_idx_to_url(username, url)
+                pod_name, vid, tokenized_text = mk_page_vector.compute_vectors_local_docs( \
+                    url, title, description, doc, username, lang)
+                posix_doc(tokenized_text, idx, username)
+                add_to_npz_to_idx(pod_name, vid, idx)
+                create_or_replace_url_in_db(url, title, snippet, description, username, lang)
+                c += 1
+                print('###', str(ceil(c / len(urls) * 100)))
+                yield "data:" + str(ceil(c / len(urls) * 100)) + "\n\n"
+            if tracker is not None:
+                search_emissions = tracker.stop_task()
+                carbon_print(search_emissions, task_name)
 
     return Response(generate(), mimetype='text/event-stream')
