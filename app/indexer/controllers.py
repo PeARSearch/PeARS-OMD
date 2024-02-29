@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 # Import flask dependencies
+import re
 from math import ceil
 from os.path import dirname, join, realpath
 from flask import Blueprint, request, session, flash, render_template, Response, url_for
@@ -45,57 +46,46 @@ def index():
 def from_crawl():
     """Entry point for crawl function.
     Argument: url to a directory to start the crawl from.
-    Calls the crawler.
+    Calls the crawler. GET method is for call from backend,
+    POST for call from frontend.
     """
-    username = session['username']
-    create_pod_npz_pos(username)
-    create_pod_in_db(username, LANG)
 
-    def process_start_url(u):
+    def process_start_url(url, username):
+        create_pod_npz_pos(username)
+        create_pod_in_db(username, LANG)
         print(">> INDEXER: CONTROLLER: from_crawl: Now crawling", u)
         user_url_file = join(user_app_dir_path, username+".toindex")
         #Every contributor gets their own file to avoid race conditions
         with open(user_url_file, 'w', encoding="utf8") as f:
-            f.write(u + "\n")
+            f.write(url + "\n")
+   
+    def get_username_from_url(url):
+        m = re.search(u'onmydisk.net/([^/]*)/', url)
+        if m:
+            username = m.group(1)
+        return username
 
     if request.method == "POST":
         u = request.form['url']
-        process_start_url(u)
-        return render_template('indexer/progress_crawl.html')
-
+        username = session['username']
+        process_start_url(u, username)
+        return render_template('indexer/progress_crawl.html', username=username)
     u = request.args['url']
-    process_start_url(u)
-    return progress_crawl()
+    username = get_username_from_url(u)
+    process_start_url(u, username)
+    return progress_crawl(username=username)
 
-
-
-@indexer.route("/from_docs", methods=["POST"])
-@login_required
-def from_docs():
-    """Entry point for indexing from docs.
-    Legacy. Not used in OMD but could be!
-    """
-    username = session['username']
-    print("DOC FILE:", request.files['file_source'])
-    if request.files['file_source'].filename[-4:] == ".txt":
-        keyword = request.form['docs_keyword']
-        keyword, lang = get_language(keyword)
-        file = request.files['file_source']
-        file.save(join(user_app_dir_path, username+".corpus"))
-        with open(join(app_dir_path, "keyword_lang.txt"), 'w', encoding="utf8") as f:
-            f.write(keyword+'::'+lang+'\n')
-        return render_template('indexer/progress_docs.html')
-    return url_for(indexer)
 
 @indexer.route("/progress_crawl")
 @login_required
-def progress_crawl():
+def progress_crawl(username=None):
     """ Crawl function, called by from_crawl.
     Reads the start URL given by the user and
     recursively crawls down directories from there.
     """
     print("Running progress crawl")
-    username = session['username']
+    if 'username' in session:
+        username = session['username']
     # There will only be one path read, although we are using the standard
     # PeARS read_urls function. Hence the [0].
     url = read_urls(join(user_app_dir_path, username+".toindex"))[0]
