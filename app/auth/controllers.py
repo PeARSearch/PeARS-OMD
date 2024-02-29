@@ -108,15 +108,6 @@ def login_required(f):
                 print("Backend to backend")
                 if 'access_token' in getfullargspec(f).args:
                     kwargs['access_token'] = access_token
-                #Token is present but we need to check if OMD session is valid
-                if 'username' not in session:
-                    data = {'action': 'getUserInfo', 'session_id': access_token}
-                    resp = requests.post(url, json=data, timeout=30, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
-                    if resp.status_code < 400 and resp.json()['valid']:
-                        session['logged_in'] = True
-                        session['username'] = resp.json()['username']
-                        session['token'] = access_token #save token	in session
-                        #return f(*args, **kwargs)
                 return f(*args, **kwargs)
 
         #Otherwise, it is frontend calling
