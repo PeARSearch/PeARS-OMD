@@ -18,21 +18,21 @@ pod_dir = join(dir_path,'static','pods')
 def tokenize_text(lang, text):
     sp.load(f'app/api/models/{lang}/{lang}wiki.model')
     text = ' '.join([wp for wp in sp.encode_as_pieces(text.lower())])
-    print("TOKENIZED",text)
+    #print("TOKENIZED",text)
     return text
 
 
 def compute_vec(lang, text, pod_m):
     v = vectorize_scale(lang, text, 5, VEC_SIZE) #log prob power 5, top words 100
     pod_m = vstack((pod_m,csr_matrix(v)))
-    print("VEC",v,pod_m.shape)
+    #print("VEC",v,pod_m.shape)
     return pod_m
 
 
 def compute_vectors_local_docs(target_url, title, description, doc, username, lang):
     pod_name = get_pod_name(target_url, username)
     pod_m = load_npz(join(pod_dir, pod_name+'.npz'))
-    print("Computing vectors for", target_url, "(",pod_name,")",lang)
+    #print("Computing vectors for", target_url, "(",pod_name,")",lang)
     filename = target_url.split('/')[-1]
     text = filename + " " + title + " " + description + " " + doc
     text = tokenize_text(lang, text)
