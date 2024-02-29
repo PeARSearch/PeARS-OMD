@@ -92,7 +92,6 @@ def progress_crawl(username=None):
     print("Calling spider on",url)
     spider.write_docs(url, username) #Writing docs to corpus
 
-
     def generate():
         with app.app_context():
             lang = LANG
