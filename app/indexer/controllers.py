@@ -90,7 +90,7 @@ def progress_crawl(username=None):
     # PeARS read_urls function. Hence the [0].
     url = read_urls(join(user_app_dir_path, username+".toindex"))[0]
     print("Calling spider on",url)
-    spider.write_docs(url) #Writing docs to corpus
+    spider.write_docs(url, username) #Writing docs to corpus
 
 
     def generate():

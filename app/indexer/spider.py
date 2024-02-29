@@ -100,7 +100,7 @@ def omd_parse(current_url, username):
     print("\n NEW LINKS:",links)
     return links
 
-def write_docs(base_url):
+def write_docs(base_url, username):
     """Write document corpus while crawling.
     Argument: base url, to start the crawl from.
     """
@@ -110,7 +110,6 @@ def write_docs(base_url):
 
     pages_to_visit = [base_url]
     pages_visited = []
-    username = session['username']
     corpus_path = join(user_app_dir_path, username+'.corpus')
 
     #Initialise user's corpus path
