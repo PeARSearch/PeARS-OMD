@@ -76,20 +76,19 @@ app = Flask(__name__)
 #app.app_context().push()
 
 # Configurations
-#try:
-app.config.from_object('config')
-load_dotenv('app/static/conf/pears.ini')
-AUTH_TOKEN = os.getenv('AUTH_TOKEN')
-OMD_PATH = os.getenv('OMD_PATH')
-local_run = os.getenv('LOCAL').lower()
-if local_run == "false":
-    LOCAL_RUN = False
-else:
-    LOCAL_RUN = True
-print(LOCAL_RUN)
-#except:
-#    print(">>\tERROR: __init__.py: the pears.ini file is not present in the app/static/conf directory or incorrectly configured")
-#    sys.exit()
+try:
+    app.config.from_object('config')
+    load_dotenv('app/static/conf/pears.ini')
+    AUTH_TOKEN = os.getenv('AUTH_TOKEN')
+    OMD_PATH = os.getenv('OMD_PATH')
+    local_run = os.getenv('LOCAL').lower()
+    if local_run == "false":
+        LOCAL_RUN = False
+    else:
+        LOCAL_RUN = True
+except:
+    print(">>\tERROR: __init__.py: the pears.ini file is not present in the app/static/conf directory or incorrectly configured")
+    sys.exit()
 
 # Define the database object which is imported
 # by modules and controllers
