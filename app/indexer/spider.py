@@ -7,11 +7,10 @@ from flask import session, url_for
 import xmltodict
 import requests
 from app.indexer.htmlparser import extract_html
-from app import LOCAL_RUN, AUTH_TOKEN
+from app import OMD_PATH, LOCAL_RUN, AUTH_TOKEN
 
 app_dir_path = dirname(dirname(realpath(__file__)))
 user_app_dir_path = join(app_dir_path,'static', 'userdata')
-
 
 def omd_parse(current_url, username):
     """ This function parses a url and writes the text content
@@ -35,7 +34,6 @@ def omd_parse(current_url, username):
         print(error)
         return links
     docs = parse['omd_index']['doc']
-    print("PARSE:",parse)
     if not isinstance(docs, list):
         docs = [docs]
     for doc in docs:
@@ -46,9 +44,12 @@ def omd_parse(current_url, username):
             url = doc['@url'][1:]
         else:
             url = doc['@url']
-        url = join(urldir, url)
-        print("# DOC URL:", url)
-        print("LOCAL",LOCAL_RUN)
+        print(">> INDEXER: SPIDER: omd_parse: doc url:", url)
+        if url.startswith('shared/'):
+            url = join(OMD_PATH, url)
+        else:
+            url = join(urldir, url)
+        print(">> INDEXER: SPIDER: omd_parse: doc url:", url)
         if LOCAL_RUN:
             if url[-1] == '/': #For local test only
                 url = join(url,'index.html')
@@ -77,9 +78,9 @@ def omd_parse(current_url, username):
 
         # DESCRIPTION
         try:
-            print("# DOC DESCRIPTION:", doc['description'][:100])
+            #print("# DOC DESCRIPTION:", doc['description'][:100])
             description = doc['description']
-            print("\t"+description+"\n")
+            #print("\t"+description+"\n")
             fout.write("{{DESCRIPTION}} "+description+"\n")
         except:
             print("# DOC DESCRIPTION: No description")
@@ -88,7 +89,7 @@ def omd_parse(current_url, username):
         if content_type in ['text/plain','text/html']:
             title, body_str, _, _, error = extract_html(url)
             if not error:
-                print("# DOC BODY:", body_str[:100])
+                #print("# DOC BODY:", body_str[:100])
                 fout.write("{{BODY}} "+body_str+"\n")
         else:
             print(">> ERROR: SPIDER: OMD PARSE: DOC BODY: Skipping request: \
