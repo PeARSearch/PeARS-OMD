@@ -95,6 +95,11 @@ def logout():
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        if LOCAL_RUN:
+            url = 'http://localhost:9191/api' #Local test
+        else:
+            url = join(OMD_PATH, 'signin/')
+        
         access_token = request.headers.get('Token') #Get token from request header
         print(">> login_required: access_token: OMD_SESSION_ID", access_token)
         if access_token:
@@ -103,6 +108,15 @@ def login_required(f):
                 print("Backend to backend")
                 if 'access_token' in getfullargspec(f).args:
                     kwargs['access_token'] = access_token
+                #Token is present but we need to check if OMD session is valid
+                if 'username' not in session:
+                    data = {'action': 'getUserInfo', 'session_id': access_token}
+                    resp = requests.post(url, json=data, timeout=30, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
+                    if resp.status_code < 400 and resp.json()['valid']:
+                        session['logged_in'] = True
+                        session['username'] = resp.json()['username']
+                        session['token'] = access_token #save token	in session
+                        #return f(*args, **kwargs)
                 return f(*args, **kwargs)
 
         #Otherwise, it is frontend calling
@@ -121,10 +135,6 @@ def login_required(f):
                 kwargs['access_token'] = access_token
             return f(*args, **kwargs)
         #Token is present but we need to check if OMD session is valid
-        if LOCAL_RUN:
-            url = 'http://localhost:9191/api' #Local test
-        else:
-            url = join(OMD_PATH, 'signin/')
         data = {'action': 'getUserInfo', 'session_id': access_token}
         resp = requests.post(url, json=data, timeout=30, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
         if resp.status_code < 400 and resp.json()['valid']:
