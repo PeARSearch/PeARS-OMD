@@ -44,7 +44,7 @@ def run_user_search(query):
     results = []
     query = query.lower()
     username = session['username']
-    results = run_search(query, url_filter=[ join(url,username), 'http://localhost:9090/static/'])
+    results = run_search(query, url_filter=[join(url,username), join(url,'shared'), 'http://localhost:9090/static/'])
     return results
 
 
