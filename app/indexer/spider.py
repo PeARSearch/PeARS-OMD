@@ -59,7 +59,8 @@ def omd_parse(current_url, username):
             print("# DOC CONTENTTYPE: ", doc['@contentType'])
             content_type = doc['@contentType']
             if content_type in ['folder','desktop']:
-                links.append(url)
+                if join(OMD_PATH,'shared') not in url:
+                    links.append(url)
         except RuntimeError as error:
             print(">> SPIDER: OMD_PARSE: DOC CONTENTTYPE: No contentType")
             print(error)
@@ -89,7 +90,7 @@ def omd_parse(current_url, username):
         if content_type in ['text/plain','text/html']:
             title, body_str, _, _, error = extract_html(url)
             if not error:
-                #print("# DOC BODY:", body_str[:100])
+                print("# DOC BODY:", body_str[:100])
                 fout.write("{{BODY}} "+body_str+"\n")
         else:
             print(">> ERROR: SPIDER: OMD PARSE: DOC BODY: Skipping request: \
