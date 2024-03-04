@@ -2,15 +2,12 @@
 #
 # SPDX-License-Identifier: AGPL-3.0-only
 
-# Import flask dependencies
-from flask import Blueprint, jsonify, request
 
-import numpy as np
-from scipy.sparse import csr_matrix, vstack, save_npz, load_npz
 from os.path import dirname, join, realpath, basename
-from app.utils_db import pod_from_file, delete_url
+from flask import Blueprint, jsonify, request, session, flash, render_template
+from app.utils_db import delete_url, rename_idx_to_url, move_npz_pos
 from app.api.models import Urls, Pods
-from app import db
+from app import db, LOCAL_RUN, OMD_PATH
 from app.auth.controllers import login_required
 
 # Define the blueprint:
@@ -40,47 +37,104 @@ def return_urls():
     return jsonify(json_list=[i.serialize for i in Urls.query.all()])
 
 
-@api.route('/urls/delete', methods=["GET","POST"])
+@api.route('/urls/delete', methods=["GET"])
 @login_required
-def return_delete(idx=None):
-    if idx is None:
-        path = request.args.get('path')
-    else:
-        path = None
-    #try:
-    if not path:
-        u = db.session.query(Urls).filter_by(vector=idx).first()
-    else:
+def api_delete():
+    path = request.args.get('path')
+    success, message = return_url_delete(path)
+    print(success, message)
+    return render_template('search/user.html', welcome = message)
+
+
+def return_url_delete(path):
+    message =""
+    try:
         u = db.session.query(Urls).filter_by(url=path).first()
-    pod = u.pod
-    vid = int(u.vector)
-    delete_url(vid)
-    #except:
-    #    return "Deletion failed"
-    return "Deleted document with vector id"+str(vid)+'\n'
+        pod_name = u.pod
+        pod_username = pod_name.split('.u.')[1]
+    except AttributeError as err:
+        message = "URL not found in the database"
+        return False, message
+    try:
+        assert pod_username == session['username']
+    except AssertionError as err:
+        message = "You cannot delete other users' documents."
+        return False, message
+    delete_url(u.url)
+    message = "Deleted document with url "+u.url+'.'
+    return True, message
 
 
 @api.route('/urls/move', methods=["GET","POST"])
 @login_required
-def return_rename():
+def api_move():
     src = request.args.get('src')
     target = request.args.get('target')
+    username = session['username']
+    success, message = return_move(src, target, username)
+    print(success, message)
+    return render_template('search/user.html', welcome = message)
+
+
+def return_move(src, target, username):
+    """ TODO: 
+    - case where user is admin
+    - moving between pods
+    - filename changes
+    """
+    message = ""
+    
+    if LOCAL_RUN:
+        path_personal = 'http://localhost:9090/static/testdocs/'+username
+        path_shared = 'http://localhost:9090/static/testdocs/shared'
+    else:
+        path_personal = join(OMD_PATH, username)
+        path_shared = join(OMD_PATH, 'shared')
+
+    #Check source url is in the database
+    u = db.session.query(Urls).filter_by(url=src).first()
+    if u is None:
+        print(">>ERROR The source url was not found in the database.")
+        message = "The source url was not found in the database."
+        return False, message
+
+    #Check source url belongs to user
+    pod_name = u.pod
+    pod_username = pod_name.split('.u.')[1]
     try:
-        u = db.session.query(Urls).filter_by(url=src).first()
+        assert pod_username == username
+    except AssertionError as err:
+        print(">>ERROR You cannot move other users' documents.")
+        message = "You cannot move other users' documents."
+        return False, message
 
-        #Rename in DB
-        src_name = basename(src)
-        print(src_name)
-        if target[-1] == '/':
-            target = join(target,src_name)
-        target_name = basename(target)
-        print(target_name)
-        u.url = target
-        if u.title == src_name:
-            u.title = target_name
+    #Check target url belongs to user or is shared
+    try:
+        assert path_personal in target or path_shared in target
+    except AssertionError as err:
+        print(">>ERROR You cannot move files to another user's directory.")
+        message = "You cannot move other users' documents."
+        return False, message
+  
+    #Check case where target is a directory
+    src_name = basename(src)
+    if target[-1] == '/':
+        target = join(target,src_name)
+    target_name = basename(target)
 
-        db.session.add(u)
-        db.session.commit()
-    except:
-        return "Moving failed"
-    return "Moved file "+src+" to "+target+'\n'
+    #The simple case: the file name has not changed and there is
+    #no moving between private and shared pods
+    if src_name == target_name:
+        print("Names are the same.")
+        print(src,target,path_personal)
+        if (path_personal in src and path_personal in target) or \
+            (path_shared in src and path_shared in target):
+            print("No moving across pods.")
+            rename_idx_to_url(username, src, target)
+            u.url = target
+            db.session.add(u)
+            db.session.commit()
+            message = "Moved file "+src+" to "+target+'.'
+            return True, message
+    message = "This is a complicated case. Ignoring it for now."
+    return False, message

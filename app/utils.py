@@ -1,66 +1,44 @@
-# SPDX-FileCopyrightText: 2023 PeARS Project, <community@pearsproject.org> 
+# SPDX-FileCopyrightText: 2024 PeARS Project, <community@pearsproject.org> 
 #
 # SPDX-License-Identifier: AGPL-3.0-only
 
-import joblib
-import logging
+from os.path import join
 import re
-import requests
-
-from bs4 import BeautifulSoup
-from math import sqrt
-import numpy as np
-from urllib.parse import urljoin
-from scipy.spatial import distance
-from scipy.sparse import csr_matrix, save_npz
-from os.path import dirname, join, realpath, isfile
-from pathlib import Path
 from datetime import datetime
-from app import VEC_SIZE, LOCAL_RUN, LANG, CARBON_DIR, vocab
+from math import sqrt
+import requests
+import numpy as np
+from scipy.spatial import distance
+from app import LANG, CARBON_DIR
+
 
 
 def carbon_print(tracker_results, task_name):
     date = datetime.today().strftime('%Y-%m-%d')
     filename = 'carbon.'+date+'.txt'
-    with open(join(CARBON_DIR,filename),'a') as f:
+    with open(join(CARBON_DIR,filename),'a', encoding="utf-8") as f:
         f.write(task_name+': '+str(tracker_results)+'\n')
 
-def _extract_url_and_kwd(line):
-    try:
-        url, kwd, lang = line.split(';')
-        #In case keyword or lang is not given, go back to defaults
-        if kwd == '':
-            kwd = 'home'
-        if lang == '':
-            lang = LANG
-        return url, kwd, lang
-    except:
-        print("ERROR: urls_to_index.txt does not have the right format.")
-        return None
 
-def readUrls(url_file):
-    urls = []
-    keywords = []
-    langs = []
-    errors = False
-    with open(url_file) as fd:
-        for line in fd:
-            matches = _extract_url_and_kwd(line)
-            if matches:
-                urls.append(matches[0])
-                keywords.append(matches[1])
-                langs.append(matches[2])
-            else:
-                errors = True
-    return urls, keywords, langs, errors
+def read_urls(url_file):
+    with open(url_file, 'r', encoding="utf-8") as fd:
+        urls = fd.read().splitlines()
+    return urls
 
-def readDocs(doc_file):
+
+def read_docs(doc_file):
+    """ Function to read the pre-processed documents, as obtained
+    from crawling the OMD xml files.
+    Argument: the path to the document file.
+    Returns: paths, titles, snippets, descriptions and full bodies
+    of documents in the input file.
+    """
     urls = []
     titles = []
     snippets = []
     docs = []
     descriptions = []
-    with open(doc_file) as df:
+    with open(doc_file, 'r', encoding="utf-8") as df:
         description = ""
         doc = ""
         for l in df:
@@ -89,61 +67,6 @@ def readDocs(doc_file):
                 doc = ""
     return urls, titles, snippets, descriptions, docs
 
-
-def readBookmarks(bookmark_file, keyword):
-    print("READING BOOKMARKS")
-    urls = []
-    bs_obj = BeautifulSoup(open(bookmark_file), "html.parser")
-    dt = bs_obj.find_all('dt')
-    tag =''
-    for i in dt:
-        n = i.find_next()
-        if n.name == 'h3':
-            tag = n.text
-            continue
-        else:
-            if tag == keyword:
-                print(f'url = {n.get("href")}')
-                print(f'website name = {n.text}')
-                urls.append(n.get("href"))
-    return urls
-
-
-def readPods(pod_file):
-    pods = []
-    f = open(pod_file, 'r')
-    for line in f:
-        line = line.rstrip('\n')
-        pods.append(line)
-    f.close()
-    return pods
-
-def init_pod(pod_name):
-    dir_path = dirname(dirname(realpath(__file__)))
-    pod_dir = join(dir_path,'app', 'static','pods')
-    if not isfile(join(pod_dir,pod_name+'.npz')):
-        print("Making 0 CSR matrix for new pod")
-        pod = np.zeros((1,VEC_SIZE))
-        pod = csr_matrix(pod)
-        save_npz(join(pod_dir,pod_name+'.npz'), pod)
-
-    if not isfile(join(pod_dir,pod_name+'.pos')):
-        print("Making empty positional index for new pod")
-        posindex = [{} for _ in range(len(vocab))]
-        joblib.dump(posindex, join(pod_dir,pod_name+'.pos'))
-
-
-def init_podsum():
-    dir_path = dirname(dirname(realpath(__file__)))
-    pod_dir = join(dir_path,'app','static','pods')
-    print("Create pods directory if needed")
-    print(LOCAL_RUN)
-    Path(pod_dir).mkdir(exist_ok=True, parents=True)
-    print("Making 0 CSR matrix for pod summaries")
-    print("POD DIR",pod_dir)
-    pod_summaries = np.zeros((1,VEC_SIZE))
-    pod_summaries = csr_matrix(pod_summaries)
-    save_npz(join(pod_dir,"podsum.npz"), pod_summaries)
 
 def normalise(v):
     norm = np.linalg.norm(v)
@@ -189,8 +112,10 @@ def cosine_similarity(v1, v2):
     den_b = np.dot(v2, v2)
     return num / (sqrt(den_a) * sqrt(den_b))
 
+
 def hamming_similarity(v1, v2):
     return 1 - distance.hamming(v1,v2)
+
 
 def cosine_to_matrix(q, M):
     qsqrt = sqrt(np.dot(q, q))
@@ -234,7 +159,6 @@ def sim_to_matrix(dm_dict, vec, n):
 def sim_to_matrix_url(url_dict, vec, n):
     cosines = {}
     for k, v in url_dict.items():
-        logging.exception(v.url)
         try:
             cos = cosine_similarity(vec, v.vector)
             cosines[k] = cos
@@ -254,10 +178,10 @@ def sim_to_matrix_url(url_dict, vec, n):
 
 
 def get_pod_info(url):
-    print("Fetching pod", urljoin(url, "api/self/"))
+    print("Fetching pod", join(url, "api/self/"))
     pod = None
     try:
-        r = requests.get(urljoin(url, "api/self/"))
+        r = requests.get(join(url, "api/self/"))
         if r.status_code == 200:
             pod = r.json()
     except Exception:
@@ -272,5 +196,3 @@ def get_language(query):
         query = m.group(1)
         lang = m.group(2)
     return query, lang
-
-
