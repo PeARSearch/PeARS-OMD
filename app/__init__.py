@@ -12,7 +12,7 @@ from decouple import Config, RepositoryEnv
 from dotenv import load_dotenv
 
 # Import flask and template operators
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, flash
 from flask_admin import Admin, AdminIndexView
 
 # Import SQLAlchemy
@@ -35,6 +35,10 @@ spm_vocab_path = os.environ.get("SPM_VOCAB", SPM_DEFAULT_VOCAB_PATH)
 SPM_DEFAULT_MODEL_PATH = f'app/api/models/{LANG}/{LANG}wiki.model'
 spm_model_path = os.environ.get("SPM_MODEL", SPM_DEFAULT_MODEL_PATH)
 
+# Make sure user data directories exist
+DEFAULT_PATH = f'app'
+Path(os.path.join(DEFAULT_PATH,'static/userdata')).mkdir(parents=True, exist_ok=True)
+
 # Define vector size
 from app.indexer.vectorizer import read_vocab
 
@@ -48,16 +52,16 @@ vectorizer = CountVectorizer(vocabulary=vocab, lowercase=True, token_pattern='[^
 VEC_SIZE = len(vocab)
 
 # Assess whether the code is run locally or on the On My Disk server
-LOCAL_RUN = os.environ.get("LOCAL_RUN", "false").lower() == "true"
+#LOCAL_RUN = os.environ.get("LOCAL_RUN", "false").lower() == "true"
 
 # Read tokens
-try:
-    DOTENV_FILE = 'app/static/conf/pears.ini'
-    env_config = Config(RepositoryEnv(DOTENV_FILE))
-    AUTH_TOKEN = env_config.get('AUTH_TOKEN')
-except:
-    print(">>\tERROR: __init__.py: the pears.ini file is not present in the app/static/conf directory or incorrectly configured")
-    sys.exit()
+#try:
+#    DOTENV_FILE = 'app/static/conf/pears.ini'
+#    env_config = Config(RepositoryEnv(DOTENV_FILE))
+#    AUTH_TOKEN = env_config.get('AUTH_TOKEN')
+#except:
+#    print(">>\tERROR: __init__.py: the pears.ini file is not present in the app/static/conf directory or incorrectly configured")
+#    sys.exit()
 
 def configure_logging():
     # register root logging
@@ -69,12 +73,22 @@ configure_logging()
 
 # Define the WSGI application object
 app = Flask(__name__)
+#app.app_context().push()
 
 # Configurations
-app.config.from_object('config')
-load_dotenv('app/static/conf/pears.ini')
-AUTH_TOKEN = os.getenv('AUTH_TOKEN')
-OMD_PATH = os.getenv('OMD_PATH')
+try:
+    app.config.from_object('config')
+    load_dotenv('app/static/conf/pears.ini')
+    AUTH_TOKEN = os.getenv('AUTH_TOKEN')
+    OMD_PATH = os.getenv('OMD_PATH')
+    local_run = os.getenv('LOCAL').lower()
+    if local_run == "false":
+        LOCAL_RUN = False
+    else:
+        LOCAL_RUN = True
+except:
+    print(">>\tERROR: __init__.py: the pears.ini file is not present in the app/static/conf directory or incorrectly configured")
+    sys.exit()
 
 # Define the database object which is imported
 # by modules and controllers
@@ -86,7 +100,6 @@ from app.auth.controllers import auth as auth_module
 from app.indexer.controllers import indexer as indexer_module
 from app.api.controllers import api as api_module
 from app.search.controllers import search as search_module
-from app.pod_finder.controllers import pod_finder as pod_finder_module
 from app.orchard.controllers import orchard as orchard_module
 from app.pages.controllers import pages as pages_module
 from app.settings.controllers import settings as settings_module
@@ -96,7 +109,6 @@ app.register_blueprint(auth_module)
 app.register_blueprint(indexer_module)
 app.register_blueprint(api_module)
 app.register_blueprint(search_module)
-app.register_blueprint(pod_finder_module)
 app.register_blueprint(orchard_module)
 app.register_blueprint(pages_module)
 app.register_blueprint(settings_module)
@@ -110,7 +122,7 @@ with app.app_context():
 
 from flask_admin.contrib.sqla import ModelView
 from app.api.models import Pods, Urls
-from app.api.controllers import return_delete
+from app.api.controllers import return_url_delete
 
 from flask_admin import expose
 from flask_admin.contrib.sqla.view import ModelView
@@ -161,23 +173,22 @@ class UrlsModelView(ModelView):
         },
     }
     def delete_model(self, model):
+        success = True
         try:
             self.on_model_delete(model)
             print("DELETING",model.url,model.vector)
-            # Add your custom logic here and don't forget to commit any changes e.g.
-            print(return_delete(idx=model.vector))
-            self.session.commit()
+            success = return_url_delete(path=model.url)
+            if success:
+                self.session.commit()
+            else:
+                return False
         except Exception as ex:
             if not self.handle_view_exception(ex):
-                flash(gettext('Failed to delete record. %(error)s', error=str(ex)), 'error')
-                log.exception('Failed to delete record.')
-
+                flash('Failed to delete record. '+str(ex)+' error.')
             self.session.rollback()
-
             return False
         else:
             self.after_model_delete(model)
-
         return True
 
 
