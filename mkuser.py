@@ -20,10 +20,10 @@ def write_index(d, content):
     with open(index_path,'w') as index:
         index.write(content+'\n')
 
-user_content = "<omd_index><doc url='localhost.localdomain/' contentType='desktop'><title></title></doc></omd_index>"
+user_content = "<omd_index><doc url='localhost.localdomain/' contentType='desktop' convertible='False'><title></title></doc></omd_index>"
 write_index(join("app/static/testdocs/",user),user_content)
 
-localdomain_content = "<omd_index><doc url='Documents/' contentType='folder'><title>Documents</title></doc></omd_index>"
+localdomain_content = "<omd_index><doc url='Documents/' contentType='folder' convertible='False'><title>Documents</title></doc></omd_index>"
 write_index(join("app/static/testdocs/",user,"localhost.localdomain"),localdomain_content)
 
 documents_content = "<omd_index>\n"
@@ -32,7 +32,7 @@ docs = glob(join(src_path,'*txt'))
 for doc in docs:
     shutil.copy2(doc, doc_path)
     docname = basename(doc)
-    doc_xml = f"<doc url='{docname}' contentType='text/plain'><title>{docname}</title></doc>\n"
+    doc_xml = f"<doc url='{docname}' contentType='text/plain' convertible='False'><title>{docname}</title></doc>\n"
     documents_content+=doc_xml
 
 documents_content+="</omd_index>\n"
