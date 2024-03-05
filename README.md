@@ -58,7 +58,11 @@ From the PeARS-lite directory, run:
 The PeARS authentification token is set in the *app/static/conf/pears.ini* file. Just replace *&lt;your auth token&gt;* with the string of your choice.
 
 
-##### 5. Run your pear!
+##### 5. Choose your languages
+
+The list of available languages is also set in *app/static/conf/pears.ini*. Currently, the languages that are available out-of-the-box are English, French, Russian, and Slovenian. If you would like all of these language to be available, enter "en,fr,ru,sl" as the value.
+
+##### 6. Run your pear!
 
 If you are running/testing PeARS-OMD locally (as opposed to the OMD server), first export the LOCAL_RUN variable and run the toy authentification server provided in *test-auth.py*:
 
