@@ -3,7 +3,8 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import joblib
-from app import LOCAL_RUN, OMD_PATH, db, vocab, VEC_SIZE
+from app import db, models
+from app import LOCAL_RUN, OMD_PATH, LANGS, VEC_SIZE
 from app.api.models import Urls, Pods
 from app.api.models import installed_languages
 from app.indexer.posix import load_posix, dump_posix
@@ -15,19 +16,21 @@ from scipy.sparse import csr_matrix, vstack, save_npz, load_npz
 dir_path = dirname(dirname(realpath(__file__)))
 pod_dir = join(dir_path,'app','static','pods')
 
-def get_pod_name(target_url, username):
+def get_pod_name(target_url, lang, username):
     """ Retrieve correct pod given url and username.
     In particular, checks whether the private or shared
     pod should be used.
     """
-    pod_name = 'home.u.'+username
+    pod_name = 'home.'+lang+'.u.'+username
     if LOCAL_RUN:
         if 'http://localhost:9090/static/testdocs/shared' in target_url:
-            pod_name = 'home.shared.u.'+username
+            pod_name = 'home.'+lang+'.shared.u.'+username
     else:
         if join(OMD_PATH, 'shared') in target_url:
-            pod_name = 'home.shared.u.'+username
+            pod_name = 'home.'+lang+'.shared.u.'+username
     return pod_name
+
+
 
 
 def create_pod_npz_pos(contributor):
@@ -43,25 +46,26 @@ def create_pod_npz_pos(contributor):
         joblib.dump(idx_to_url, pod_path)
 
     # Separate private from shared for other representations
-    pod_path_private = join(pod_dir,'home.u.'+contributor)
-    pod_path_shared = join(pod_dir,'home.shared.u.'+contributor)
-    for pod_path in [pod_path_private, pod_path_shared]:
-        if not isfile(pod_path+'.npz'):
-            print("Making 0 CSR matrix for new pod")
-            pod = np.zeros((1,VEC_SIZE))
-            pod = csr_matrix(pod)
-            save_npz(pod_path+'.npz', pod)
+    for lang in LANGS:
+        pod_path_private = join(pod_dir,'home.'+lang+'.u.'+contributor)
+        pod_path_shared = join(pod_dir,'home.'+lang+'.shared.u.'+contributor)
+        for pod_path in [pod_path_private, pod_path_shared]:
+            if not isfile(pod_path+'.npz'):
+                print("Making 0 CSR matrix for new pod")
+                pod = np.zeros((1,VEC_SIZE))
+                pod = csr_matrix(pod)
+                save_npz(pod_path+'.npz', pod)
 
-        if not isfile(pod_path+'.pos'):
-            print("Making empty positional index for new pod")
-            posindex = [{} for _ in range(len(vocab))]
-            joblib.dump(posindex, pod_path+'.pos')
+            if not isfile(pod_path+'.pos'):
+                print("Making empty positional index for new pod")
+                posindex = [{} for _ in range(VEC_SIZE)]
+                joblib.dump(posindex, pod_path+'.pos')
 
-        if not isfile(pod_path+'.npz.idx'):
-            print("Making idx dictionaries for new pod")
-            # Lists of lists to make deletions easier
-            npz_to_idx = [[0],[-1]] # For row 0 of the matrix
-            joblib.dump(npz_to_idx, pod_path+'.npz.idx')
+            if not isfile(pod_path+'.npz.idx'):
+                print("Making idx dictionaries for new pod")
+                # Lists of lists to make deletions easier
+                npz_to_idx = [[0],[-1]] # For row 0 of the matrix
+                joblib.dump(npz_to_idx, pod_path+'.npz.idx')
 
 
 def create_pod_in_db(contributor, lang):
@@ -79,8 +83,8 @@ def create_pod_in_db(contributor, lang):
             db.session.add(p)
             db.session.commit()
 
-    name_private = 'home.u.'+contributor
-    name_shared = 'home.shared.u.'+contributor
+    name_private = 'home.'+lang+'.u.'+contributor
+    name_shared = 'home.'+lang+'.shared.u.'+contributor
     url_private = "http://localhost:8080/api/pods/" + name_private.replace(' ', '+')
     url_shared = "http://localhost:8080/api/pods/" + name_shared.replace(' ', '+')
     commit(url_private, name_private)
@@ -89,7 +93,7 @@ def create_pod_in_db(contributor, lang):
 
 def create_or_replace_url_in_db(target_url, title, snippet, description, username, lang):
     cc = False
-    pod_name = get_pod_name(target_url, username)
+    pod_name = get_pod_name(target_url, lang, username)
     entry = db.session.query(Urls).filter_by(url=target_url).first()
     if entry:
         u = db.session.query(Urls).filter_by(url=target_url).first()
@@ -208,6 +212,8 @@ def rm_doc_from_pos(vid, pod):
 
     Returns: the content of the positional index for that vector.
     """
+    lang = pod.split('.')[1]
+    vocab = models[lang]['vocab']
     posindex = load_posix(pod)
     remaining_posindex = []
     deleted_posindex = []
@@ -233,6 +239,8 @@ def add_doc_to_pos(mini_posindex, pod):
     a mini positional index).
     pod: the name of the target pod.
     """
+    lang = pod.split('.')[1]
+    vocab = models[lang]['vocab']
     posindex = load_posix(pod)
     for token in vocab:
         token_id = vocab[token]

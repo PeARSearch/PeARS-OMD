@@ -76,7 +76,7 @@ def score_pods(query, query_vector, lang, username = None):
     
     best_pods = []
     if username is not None:
-        best_pods.append('home.u.'+username)
+        best_pods.append('home.'+lang+'.u.'+username)
 
     # Compute similarity of query to all pods
     podnames = []
@@ -125,10 +125,10 @@ def score_docs(query, query_vector, tokenized, pod_name):
             return document_scores
         username = pod_name.split('.u.')[1]
         idx_to_url = joblib.load(join(pod_dir, username+'.idx'))
-        print("IDX TO URL",idx_to_url)
+        #print("IDX TO URL",idx_to_url)
         for url in list(vec_scores.keys()):
-            print(">>>",url)
-            print(url, vec_scores[url], completeness_scores[url])
+            #print(">>>",url)
+            #print(url, vec_scores[url], completeness_scores[url])
             i = idx_to_url[1].index(url)
             idx = idx_to_url[0][i]
             document_scores[url] = 0.0
@@ -167,7 +167,7 @@ def return_best_urls(doc_scores, url_filter):
 
 
 def output(best_urls):
-    print(best_urls)
+    #print(best_urls)
     results = {}
     if len(best_urls) > 0:
         for u in best_urls:
@@ -186,6 +186,7 @@ def run_search(query, url_filter=None):
         username = None
     document_scores = {}
     query, lang = get_language(query)
+    print("QQ:",query,lang)
     q_vector, tokenized = compute_query_vectors(query, lang)
     best_pods = score_pods(query, q_vector, lang, username)
     print("\tQ:",query,"BEST PODS:",best_pods)

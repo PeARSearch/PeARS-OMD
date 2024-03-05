@@ -10,10 +10,10 @@ from app.indexer import detect_open
 from bs4 import BeautifulSoup
 from langdetect import detect
 from app.api.models import installed_languages
-from app import LANG, AUTH_TOKEN
+from app import LANGS, AUTH_TOKEN
 
 
-def remove_boilerplates(response):
+def remove_boilerplates(response, lang):
     text = ""
     paragraphs = justext.justext(
         response.content,
@@ -73,66 +73,61 @@ def extract_html(url):
     title = ""
     body_str = ""
     snippet = ""
-    cc = False
+    language = LANGS[0]
     error = None
-    language = LANG
-    try:
-        req = requests.head(url, timeout=10)
-        if "text/html" not in req.headers["content-type"]:
-            print("Not a HTML document, moving to .txt processing...")
-            title, body_str, snippet, cc = extract_txt(url)
-            return title, body_str, snippet, cc, error
-    except Exception:
-        error = "IGNORING URL: Not .html or .txt."
-        print(error)
-        return title, body_str, snippet, cc, error
-
     bs_obj, req = BS_parse(url)
     if not bs_obj:
-        error = "IGNORING URL: Failed to get BeautifulSoup object..."
-        print(error)
-        return title, body_str, snippet, cc, error
+        error = "\t>> ERROR: extract_html: Failed to get BeautifulSoup object."
+        return title, body_str, snippet, language, error
     if hasattr(bs_obj.title, 'string'):
         if url.startswith('http'):
-            title = bs_obj.title.string
-            if title is None:
-                title = ""
-            body_str = remove_boilerplates(req)
+            og_title = bs_obj.find("meta", property="og:title")
+            og_description = bs_obj.find("meta", property="og:description")
+            print("OG TITLE",og_title)
+            print("OG DESC",og_description)
+
+            # Process title
+            if not og_title:
+                title = bs_obj.title.string
+                if title is None:
+                    title = ""
+            else:
+                title = og_title['content']
+            title = ' '.join(title.split()[:11]) #11 to conform with EU regulations
+ 
+            # Get body string
+            body_str = remove_boilerplates(req, LANGS[0]) #Problematic...
             try:
                 language = detect(title + " " + body_str)
-                print("Language for", url, ":", language)
+                print("\t>> INFO: Language for", url, ":", language)
             except Exception:
-                error = "IGNORING URL: Could not detect page language"
-                print(error)
-                return title, body_str, snippet, cc, error
-
+                title = ""
+                error = "\t>> ERROR: extract_html: Couldn't detect page language."
+                return title, body_str, snippet, language, error
             if language not in installed_languages:
-                error = "IGNORING URL: Language is not supported."
-                print(error)
-                return title, body_str, snippet, cc, error
-            try:
-                cc = detect_open.is_cc(url, bs_obj)
-            except Exception:
-                print("Failed to get CC status for", url, "...")
-            if cc:
-                snippet = body_str[:200].replace(',', '-')
+                error = "\t>> ERROR: extract_html: language is not supported."
+                title = ""
+                return title, body_str, snippet, language, error
+            # Process snippet
+            if og_description:
+                snippet = og_description['content'][:1000]
             else:
-                snippet = body_str[:100].replace(',', '-')
-    return title, body_str, snippet, cc, error
+                snippet = ' '.join(body_str.split()[:11]) #11 to conform with EU regulations
+    return title, body_str, snippet, language, error
 
 
 def extract_txt(url):
     title = url.split('/')[-1]
     body_str = ""
     snippet = ""
-    cc = False
-    language = LANG
+    language = LANGS[0]
     print("EXTRACT",url)
     print("TITLE",title)
     try:
         req = requests.get(url, timeout=10, headers={'Authorization': AUTH_TOKEN})
+        req.encoding = 'utf-8'
     except Exception:
-        return title, body_str, snippet, cc
+        return title, body_str, snippet, language
     body_str = req.text
     print("BODY",body_str)
     try:
@@ -140,11 +135,11 @@ def extract_txt(url):
         print("Language for", url, ":", language)
     except Exception:
         print("Couldn't detect page language.")
-        return title, body_str, snippet, cc
+        return title, body_str, snippet, language
 
     if language not in installed_languages:
         print("Ignoring", url, "because language is not supported.")
         title = ""
-        return title, body_str, snippet, cc
+        return title, body_str, snippet, language
     snippet = body_str[:200].replace(',', '-')
-    return title, body_str, snippet, cc
+    return title, body_str, snippet, language
