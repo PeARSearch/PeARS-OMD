@@ -2,15 +2,13 @@
 #
 # SPDX-License-Identifier: AGPL-3.0-only
 
+from os.path import dirname, join, realpath
 from scipy.sparse import csr_matrix, vstack, save_npz, load_npz
 from app import db, LOCAL_RUN, VEC_SIZE, OMD_PATH
 from app.api.models import Urls, installed_languages, sp
-from app.indexer.htmlparser import extract_html
 from app.indexer.vectorizer import vectorize_scale
 from app.utils import convert_to_string, convert_dict_to_string, normalise
 from app.utils_db import get_pod_name
-from os.path import dirname, join, realpath
-
 
 dir_path = dirname(dirname(realpath(__file__)))
 pod_dir = join(dir_path,'static','pods')
@@ -30,7 +28,7 @@ def compute_vec(lang, text, pod_m):
 
 
 def compute_vectors_local_docs(target_url, title, description, doc, username, lang):
-    pod_name = get_pod_name(target_url, username)
+    pod_name = get_pod_name(target_url, lang, username)
     pod_m = load_npz(join(pod_dir, pod_name+'.npz'))
     #print("Computing vectors for", target_url, "(",pod_name,")",lang)
     filename = target_url.split('/')[-1]

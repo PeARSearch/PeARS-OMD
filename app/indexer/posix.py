@@ -14,8 +14,7 @@ def dump_posix(posindex, pod_name):
     joblib.dump(posindex, join(posix_path,pod_name+'.pos'))
 
 
-def posix_doc(text, doc_id, contributor):
-    pod_name = 'home.u.'+contributor
+def posix_doc(text, doc_id, pod_name, lang, contributor):
     posindex = load_posix(pod_name)
     for pos, token in enumerate(text.split()):
         if token not in vocab:

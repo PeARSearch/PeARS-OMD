@@ -11,10 +11,10 @@ from flask import Blueprint, request, render_template, make_response
 from flask_cors import cross_origin
 
 from app import app
-from app.utils import beautify_snippet, beautify_title
+from app.utils import get_language, beautify_snippet, beautify_title
 from app.search.score_pages import run_search
 from app.auth.controllers import login_required
-from app import LOCAL_RUN, OMD_PATH
+from app import LOCAL_RUN, OMD_PATH, LANGS
 
 LOG = logging.getLogger(__name__)
 
@@ -36,7 +36,6 @@ def user():
     results = run_user_search(query)
     if gui:
         displayresults = prepare_gui_results(query, results)
-        query = query.replace(' ','&nbsp;')
         return render_template('search/results.html', query=query, results=displayresults)
     r = app.make_response(jsonify(results))
     r.mimetype = "application/json"
@@ -47,10 +46,16 @@ def run_user_search(query):
         url = 'http://localhost:9191/api' #Local test
     else:
         url = OMD_PATH
-    results = []
-    query = query.lower()
+    results = {}
     username = session['username']
-    results = run_search(query, url_filter=[join(url,username), join(url,'shared'), 'http://localhost:9090/static/'])
+    query, lang = get_language(query.lower())
+    if lang is None:
+        languages = LANGS
+    else:
+        languages = [lang]
+    for lang in languages:
+        r = run_search(query+' -'+lang, url_filter=[join(url,username), join(url,'shared'), 'http://localhost:9090/static/'])
+        results.update(r)
     return results
 
 
@@ -66,7 +71,6 @@ def anonymous():
         results = None
     if gui:
         displayresults = prepare_gui_results(query, results)
-        query = query.replace(' ','&nbsp;')
         return render_template('search/results.html', query=query, results=displayresults)
     r = app.make_response(jsonify(results))
     r.mimetype = "application/json"
@@ -78,9 +82,15 @@ def run_anonymous_search(query):
         url = 'http://localhost:9090/static/testdocs/shared' #Local test
     else:
         url = join(OMD_PATH, 'shared')
-    results = []
-    query = query.lower()
-    results = run_search(query, url_filter=[url])
+    results = {}
+    query, lang = get_language(query.lower())
+    if lang is None:
+        languages = LANGS
+    else:
+        languages = [lang]
+    for lang in languages:
+        r = run_search(query+' -'+lang, url_filter=[url])
+        results.update(r)
     return results
 
 

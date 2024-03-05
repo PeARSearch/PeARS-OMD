@@ -28,41 +28,11 @@ if CARBON_TRACKING:
     Path(CARBON_DIR).mkdir(exist_ok=True, parents=True)
     tracker = EmissionsTracker(output_dir=CARBON_DIR, project_name="PeARS Lite, OMD emission tracking")
 
-# Get paths to SentencePiece model and vocab
-LANG = 'en' # hardcoded for now
-SPM_DEFAULT_VOCAB_PATH = f'app/api/models/{LANG}/{LANG}wiki.vocab'
-spm_vocab_path = os.environ.get("SPM_VOCAB", SPM_DEFAULT_VOCAB_PATH)
-SPM_DEFAULT_MODEL_PATH = f'app/api/models/{LANG}/{LANG}wiki.model'
-spm_model_path = os.environ.get("SPM_MODEL", SPM_DEFAULT_MODEL_PATH)
-
 # Make sure user data directories exist
 DEFAULT_PATH = f'app'
 Path(os.path.join(DEFAULT_PATH,'static/pods')).mkdir(parents=True, exist_ok=True)
 Path(os.path.join(DEFAULT_PATH,'static/userdata')).mkdir(parents=True, exist_ok=True)
 
-# Define vector size
-from app.indexer.vectorizer import read_vocab
-
-print(f"Loading SPM vocab from '{spm_vocab_path}' ...")
-vocab, _, _ = read_vocab(spm_vocab_path)
-from sklearn.feature_extraction.text import CountVectorizer
-
-print(f"Loading SPM vocab from '{spm_vocab_path}' ...")
-vocab, inverted_vocab, logprobs = read_vocab(spm_vocab_path)
-vectorizer = CountVectorizer(vocabulary=vocab, lowercase=True, token_pattern='[^ ]+')
-VEC_SIZE = len(vocab)
-
-# Assess whether the code is run locally or on the On My Disk server
-#LOCAL_RUN = os.environ.get("LOCAL_RUN", "false").lower() == "true"
-
-# Read tokens
-#try:
-#    DOTENV_FILE = 'app/static/conf/pears.ini'
-#    env_config = Config(RepositoryEnv(DOTENV_FILE))
-#    AUTH_TOKEN = env_config.get('AUTH_TOKEN')
-#except:
-#    print(">>\tERROR: __init__.py: the pears.ini file is not present in the app/static/conf directory or incorrectly configured")
-#    sys.exit()
 
 def configure_logging():
     # register root logging
@@ -83,6 +53,7 @@ try:
     AUTH_TOKEN = os.getenv('AUTH_TOKEN')
     OMD_PATH = os.getenv('OMD_PATH')
     local_run = os.getenv('LOCAL').lower()
+    LANGS = os.getenv('LANGUAGES').lower().split(',')
     if local_run == "false":
         LOCAL_RUN = False
     else:
@@ -90,6 +61,28 @@ try:
 except:
     print(">>\tERROR: __init__.py: the pears.ini file is not present in the app/static/conf directory or incorrectly configured")
     sys.exit()
+
+
+# Load pretrained models
+from app.readers import read_vocab
+from sklearn.feature_extraction.text import CountVectorizer
+
+models = dict()
+for LANG in LANGS:
+    models[LANG] = {}
+    spm_vocab_path = f'app/api/models/{LANG}/{LANG}wiki.vocab'
+    print(f"Loading SPM vocab from '{spm_vocab_path}' ...")
+    vocab, inverted_vocab, logprobs = read_vocab(spm_vocab_path)
+    vectorizer = CountVectorizer(vocabulary=vocab, lowercase=True, token_pattern='[^ ]+')
+    models[LANG]['vocab'] = vocab
+    models[LANG]['inverted_vocab'] = inverted_vocab
+    models[LANG]['logprobs'] = logprobs
+    models[LANG]['vectorizer'] = vectorizer
+
+# All vocabs have the same vector size
+VEC_SIZE = len(models[LANGS[0]]['vocab'])
+
+
 
 # Define the database object which is imported
 # by modules and controllers
