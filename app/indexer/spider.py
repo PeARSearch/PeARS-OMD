@@ -19,7 +19,7 @@ def omd_parse(current_url, username):
     """
     print("\n\nRunning OMD parse on", current_url)
     links = []
-    fout = open(join(user_app_dir_path, username+'.corpus'),'a')
+    fout = open(join(user_app_dir_path, username+'.corpus'),'a', encoding='utf-8')
     try:
         xml = requests.get(current_url, timeout=10, \
                 headers={'Authorization': AUTH_TOKEN}, stream =True).raw

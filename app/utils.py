@@ -196,3 +196,26 @@ def get_language(query):
         query = m.group(1)
         lang = m.group(2)
     return query, lang
+
+def beautify_title(title, doctype):
+    title = title[:70]
+    if doctype == 'stat':
+        title = '📈 '+title
+    if doctype == 'doc':
+        title = '📝 '+title
+    if doctype == 'url':
+        title = '🌏 '+title
+    if doctype == 'ind':
+        title = '☺️  '+title
+    if doctype == 'map':
+        title = '📍 '+title
+    return title
+
+def beautify_snippet(snippet, query):
+    if snippet[-3:] != '...':
+        snippet+='...'
+    tmp_snippet = snippet
+    for w in query.split():
+        tmp_snippet = tmp_snippet.replace(w,'<b>'+w+'</b>')
+        tmp_snippet = tmp_snippet.replace(w.title(),'<b>'+w.title()+'</b>')
+    return tmp_snippet

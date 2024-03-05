@@ -37,6 +37,7 @@ spm_model_path = os.environ.get("SPM_MODEL", SPM_DEFAULT_MODEL_PATH)
 
 # Make sure user data directories exist
 DEFAULT_PATH = f'app'
+Path(os.path.join(DEFAULT_PATH,'static/pods')).mkdir(parents=True, exist_ok=True)
 Path(os.path.join(DEFAULT_PATH,'static/userdata')).mkdir(parents=True, exist_ok=True)
 
 # Define vector size
