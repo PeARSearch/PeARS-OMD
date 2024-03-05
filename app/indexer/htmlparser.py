@@ -117,7 +117,8 @@ def extract_html(url):
 
 
 def extract_txt(url):
-    title = url.split('/')[-1]
+    
+    title = url.split('/')[-1].split("?")[0] # read after the last slash, title is everything until any parameters (e.g. "?totext")
     body_str = ""
     snippet = ""
     language = LANGS[0]

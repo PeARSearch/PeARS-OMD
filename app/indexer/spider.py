@@ -57,6 +57,17 @@ def omd_parse(current_url, username):
             if url[-1] == '/': #For local test only
                 url = join(url,'index.html')
 
+        # CONVERTIBILITY 
+        try: 
+            print("# DOC CONVERTIBILITY: ", doc['@convertible'])
+            convertible = doc['@convertible']
+            if convertible == "True":
+                url = join(url, "?totext")
+
+        except RuntimeError as error:
+            print(">> SPIDER: OMD_PARSE: DOC CONVERTIBILITY: No convertible")
+            print(error)
+
         # CONTENT TYPE
         try:
             print("# DOC CONTENTTYPE: ", doc['@contentType'])
