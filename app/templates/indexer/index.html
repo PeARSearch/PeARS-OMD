@@ -6,7 +6,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 {% extends "base/base.html" %}
 {% block body %}
-<div class="container">
   <div class="row">
     <div class="col">
       <div class="alert alert-success text-center">
@@ -16,7 +15,6 @@ SPDX-License-Identifier: AGPL-3.0-only
   </div>
 
   <div class="row p-3">
-
     <div class="col-md-12">
       <div class="card">
         <div class="card-header text-center"><b>Crawl</b></div>
@@ -27,7 +25,7 @@ SPDX-License-Identifier: AGPL-3.0-only
             action="{{url_for('indexer.from_crawl')}}">
             <div class="input-group p-2">
               <span class="input-group-text">URL</span>
-              <input required type="text" class="form-control" placeholder="Ex: http://localhost:9090/static/testdocs/root/Webpages/example.html" name='url' id='url'>
+              <input required type="text" class="form-control" placeholder="https://onmydisk.net/username/" name='url' id='url'>
             </div>
         </div>
         <div class="card-footer clearfix">
@@ -38,13 +36,5 @@ SPDX-License-Identifier: AGPL-3.0-only
         </form>
       </div>
     </div>
-
   </div>
-
-
-  </div>
-</div>
-
-
-</div><!-- /.container -->
 {% endblock %}

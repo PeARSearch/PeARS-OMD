@@ -8,7 +8,8 @@ from math import ceil
 from os.path import dirname, join, realpath
 from flask import Blueprint, request, session, flash, render_template, Response, url_for
 
-from app import app, LANG, tracker
+from app import app, tracker
+from app import LANGS
 from app.api.models import Urls, Pods
 from app.indexer import mk_page_vector, spider
 from app.utils import read_docs, read_urls, get_language, carbon_print
@@ -34,10 +35,12 @@ def index():
     currently in the database for that user.
     """
     username = session['username']
-    pod = "home.u."+username
-    shared_pod = "home.shared.u."+username
-    num_db_entries = len(Urls.query.filter_by(pod=pod).all())
-    num_db_entries += len(Urls.query.filter_by(pod=shared_pod).all())
+    num_db_entries = 0
+    pods = Pods.query.filter(Pods.name.contains('.u.'+username)).all()
+    print("PODS",pods)
+    for pod in pods:
+        print(pod.name)
+        num_db_entries += len(Urls.query.filter_by(pod=pod.name).all())
     return render_template("indexer/index.html", num_entries=num_db_entries)
 
 
@@ -52,7 +55,8 @@ def from_crawl():
 
     def process_start_url(url, username):
         create_pod_npz_pos(username)
-        create_pod_in_db(username, LANG)
+        for LANG in LANGS:
+            create_pod_in_db(username, LANG)
         print(">> INDEXER: CONTROLLER: from_crawl: Now crawling", u)
         user_url_file = join(user_app_dir_path, username+".toindex")
         #Every contributor gets their own file to avoid race conditions
@@ -94,22 +98,21 @@ def progress_crawl(username=None):
 
     def generate():
         with app.app_context():
-            lang = LANG
             print("\n\n>>> INDEXER: CONTROLLER: READING DOCS")
-            urls, titles, snippets, descriptions, docs = \
+            urls, titles, snippets, descriptions, languages, docs = \
                     read_docs(join(user_app_dir_path, username+".corpus"))
 
             c = 0
             if tracker is not None:
                 task_name = "run indexing for "+str(len(urls))+" files"
                 tracker.start_task(task_name)
-            for url, title, snippet, description, doc in \
-                    zip(urls, titles, snippets, descriptions, docs):
+            for url, title, snippet, description, lang, doc in \
+                    zip(urls, titles, snippets, descriptions, languages, docs):
                 print("\n\n>>> INDEXER: CONTROLLER: PROGRESS CRAWL: INDEXING", url)
                 idx = add_to_idx_to_url(username, url)
                 pod_name, vid, tokenized_text = mk_page_vector.compute_vectors_local_docs( \
                     url, title, description, doc, username, lang)
-                posix_doc(tokenized_text, idx, username)
+                posix_doc(tokenized_text, idx, pod_name, lang, username)
                 add_to_npz_to_idx(pod_name, vid, idx)
                 create_or_replace_url_in_db(url, title, snippet, description, username, lang)
                 c += 1

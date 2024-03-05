@@ -7,18 +7,21 @@ import requests
 from urllib.parse import urljoin
 from langdetect import detect
 from app.api.models import installed_languages
-from app import LANG, AUTH_TOKEN
+from app import LANGS, AUTH_TOKEN
 
 
 def extract_from_url(url):
+    """ Extract plain text from url"""
+    print(">> INDEXER: TXTPARSER: extract_from_url")
     title = url.split('/')[-1]
     body_str = ""
     snippet = ""
     cc = False
-    language = LANG
+    language = LANGS[0]
     try:
         req = requests.get(url, timeout=10, headers={'Authorization': AUTH_TOKEN})
     except Exception:
+        print(">> ERROR: INDEXER: TXTPARSER: issue requesting url")
         return title, body_str, snippet, cc
     body_str = req.text
     try:

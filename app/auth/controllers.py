@@ -7,55 +7,49 @@ from urllib.parse import quote_plus
 from inspect import getfullargspec
 from functools import wraps
 import requests
-from flask import Blueprint, request, render_template, make_response, session
+from flask import Blueprint, request, render_template, make_response, session, flash
 from flask_cors import cross_origin
-from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField
+from app.forms import LoginForm
 from app import LOCAL_RUN, AUTH_TOKEN, OMD_PATH
 
 # Define the blueprint:
 auth = Blueprint('auth', __name__, url_prefix='/auth')
-
-class LoginForm(FlaskForm):
-    username = StringField('Username')
-    password = PasswordField('Password')
-    submit = SubmitField('Submit')
 
 
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
     # Declare the login form using FlaskForm library
     form = LoginForm(request.form)
-    print(form)
-    # Flask message injected into the page, in case of any errors
-    msg = None
     # check if both http method is POST and form is valid on submit
     if form.validate_on_submit():
         # assign form data to variables
         username = request.form.get('username', '', type=str)
         password = request.form.get('password', '', type=str)
+        print(username, password)
         # send authorization message to on my disk
         if LOCAL_RUN:
             url = 'http://localhost:9191/api' #Local test
         else:
             url = join(OMD_PATH, 'signin/')
         data = {'action': 'signin', 'username': username, 'password': password}
-        user_info = requests.post(url, json=data) 
+        user_info = requests.post(url, timeout=30, json=data) 
         if user_info == None:
-            msg = "Incorrect credentials"
-            return render_template( 'auth/login.html', form=form, msg=msg), 401
+            flash("Incorrect credentials")
+            return render_template( 'auth/login.html', form=form), 401
         else:
             if not user_info.json()['valid']:
-                msg="Incorrect credentials or session expired, redirecting to login page."
-                return render_template( 'auth/login.html', form=form, msg=msg), 401
+                flash("Incorrect credentials or session expired, redirecting to login page.")
+                return render_template( 'auth/login.html', form=form), 401
             print(user_info.json())
             print(user_info.cookies)
             username = user_info.json()['username']
+            is_admin = user_info.json()['isAdmin']
             session_token = user_info.json()['session_id']
             # Fill in session info
             session['logged_in'] = True
             session['username'] = username
             session['token'] = session_token
+            session['admin'] = is_admin
             # Create a new response object
             resp_frontend = make_response(render_template( 'search/user.html', welcome="Welcome "+username))
             # Transfer the cookies from backend response to frontend response
@@ -67,8 +61,8 @@ def login():
             resp_frontend.set_cookie('OMD_SESSION_ID', session_token, samesite='Lax')
             return resp_frontend
     else:
-        msg = "Unknown user"
-        return render_template( 'auth/login.html', form=form, msg=msg), 401
+        flash("Hello, unknown user.")
+        return render_template( 'auth/login.html', form=form), 401
 
 
 @auth.route('/logout', methods=['GET','POST'])

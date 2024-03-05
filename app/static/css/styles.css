@@ -6,16 +6,22 @@
 
 
 :root {
-    --primary-color: #73b4eb;
-    --secondary-color: black;
+    --primary-color: #2996cc;
+    --secondary-color: #414141;
+    --link-color: black;
+    --hover-color: black;
  } 
 
 a {
-  color: var(--primary-color);
+  color: var(--link-color);
 }
 a:hover {
-  color: var(--secondary-color);
+  color: var(--hover-color);
 }
+
+.walkthrough a {
+  color: black;
+ }
 
 .navbar-light {
   background-color: var(--primary-color);
@@ -23,7 +29,12 @@ a:hover {
 
 .card {
   --bs-card-border-width: 0px;
-  border-width: 0px 0px 1px 0px;
+  border-width: 0px 0px 0px 0px;
+}
+
+.card.indexer {
+  --bs-card-border-width: 0px;
+  border-width: 1px 1px 1px 1px;
 }
 
 .alert-success {
@@ -32,8 +43,21 @@ a:hover {
     --bs-alert-border-color: #636464;
 }
 
+.alert-info {
+    --bs-alert-color: #636464;
+    --bs-alert-bg: #ffffff;
+    --bs-alert-border-color: #111111;
+}
+
 .navbar {
   background-color: var(--primary-color);
+}
+
+.nav-pills .nav-link.active {
+    background-color: var(--secondary-color);
+    color: #ffffff;
+    padding-left: 10px;
+    padding-right: 10px;
 }
 
 .btn-success {
@@ -41,6 +65,27 @@ a:hover {
   --bs-btn-border-color: var(--primary-color);
   --bs-btn-hover-bg: var(--secondary-color);
   --bs-btn-hover-border-color: var(--secondary-color);
+}
+
+.btn-outline-success {
+  --bs-btn-color: var(--secondary-color);
+  --bs-btn-border-color: var(--secondary-color);
+  --bs-btn-hover-bg: var(--secondary-color);
+  --bs-btn-hover-border-color: var(--secondary-color);
+}
+
+.btn-primary {
+  --bs-btn-bg: var(--primary-color);
+  --bs-btn-border-color: var(--primary-color);
+  --bs-btn-hover-bg: var(--secondary-color);
+  --bs-btn-hover-border-color: var(--secondary-color);
+}
+
+.btn-info {
+  --bs-btn-bg: white;
+  --bs-btn-border-color: white;
+  --bs-btn-hover-bg: white;
+  --bs-btn-hover-border-color: #F8F8F8;
 }
 
 .submit-color-button {
@@ -63,3 +108,13 @@ a:hover {
 .submit-color-button.active {
   box-shadow: 3px 3px 3px gray;
 }
+
+.results-emoji {
+  margin: 0;
+  color: transparent;
+  text-shadow: 0 0 1px grey;
+  font-size: 20px;
+  position: relative;
+  text-decoration: none;
+}
+

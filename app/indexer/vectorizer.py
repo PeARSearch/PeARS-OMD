@@ -6,25 +6,8 @@ import numpy as np
 from scipy.sparse import csr_matrix, vstack
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn import preprocessing
+from app import models
 
-def read_vocab(vocab_file):
-    c = 0
-    vocab = {}
-    reverse_vocab = {}
-    logprobs = []
-    with open(vocab_file) as f:
-        for l in f:
-            l = l.rstrip('\n')
-            wp = l.split('\t')[0]
-            logprob = -(float(l.split('\t')[1]))
-            #logprob = log(lp + 1.1)
-            if wp in vocab or wp == '':
-                continue
-            vocab[wp] = c
-            reverse_vocab[c] = wp
-            logprobs.append(logprob)
-            c+=1
-    return vocab, reverse_vocab, logprobs
 
 def wta_vectorized(feature_mat, k, percent=True):
     # thanks https://stackoverflow.com/a/59405060
@@ -71,7 +54,8 @@ def init_vectorizer(lang):
 
 def vectorize(lang, text, logprob_power, top_words):
     '''Takes input file and return vectorized /scaled dataset'''
-    vectorizer, logprobs = init_vectorizer(lang)
+    vectorizer = models[lang]['vectorizer']
+    logprobs = models[lang]['logprobs']
     dataset = read_n_encode_dataset(text, vectorizer, logprobs, logprob_power, top_words)
     dataset = dataset.todense()
     return np.asarray(dataset)
