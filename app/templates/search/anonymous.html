@@ -9,10 +9,11 @@ SPDX-License-Identifier: AGPL-3.0-only
   <div class="row">
     <div class="col-lg-2"></div>
     <div class="col-lg-8 text-center mt-5">
-      <a href="{{ url_for('search.anonymous')}}"><img width=350px; src="{{ url_for('static', filename='pears-logo.png')}}"></a>
+      <a href="{{ url_for('search.anonymous')}}"><img width=350px; src="{{ url_for('static', filename='pears-omd-logo.png')}}"></a>
       <form  action="{{url_for('search.anonymous')}}">
         <div class="input-group group mt-4" >
           <input class="form-control" title="Enter your Search Query." placeholder="Enter your Search Query" type="search" name='q' required>
+          <input class="form-control" title="Is this the GUI calling?" type="hidden" name='gui' value='true' required>
           <button class="btn btn-lg btn-success" type="submit">Search</button>
         </div>
       </form>
