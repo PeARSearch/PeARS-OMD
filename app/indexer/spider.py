@@ -7,7 +7,7 @@ from flask import session, url_for
 import xmltodict
 import requests
 from app.indexer.htmlparser import extract_txt
-from app import OMD_PATH, LOCAL_RUN, AUTH_TOKEN
+from app import LANGS, OMD_PATH, LOCAL_RUN, AUTH_TOKEN
 
 app_dir_path = dirname(dirname(realpath(__file__)))
 user_app_dir_path = join(app_dir_path,'static', 'userdata')
@@ -27,9 +27,6 @@ def omd_parse(current_url, username):
         print(">> ERROR: SPIDER: OMD PARSE: Request failed. Moving on.")
         print(error)
         return links
-    print(xml.read())
-    xml = requests.get(current_url, timeout=10, \
-            headers={'Authorization': AUTH_TOKEN}, stream =True).raw
     try:
         parse = xmltodict.parse(xml.read())
     except RuntimeError as error:
@@ -88,17 +85,19 @@ def omd_parse(current_url, username):
             print("# DOC DESCRIPTION: No description")
 
         # CONTENT, ONLY DOCS (NOT FOLDERS)
+        language = LANGS[0]
+        body_str = None
         if content_type == 'text/plain':
             title, body_str, _, language = extract_txt(url)
             print("# DOC BODY:", body_str[:100])
-            fout.write("<doc title='"+title+"' url='"+url+"' lang='"+language+"'>\n")
-            if description:
-                fout.write("{{DESCRIPTION}} "+description+"\n")
-            fout.write("{{BODY}} "+body_str+"\n")
         else:
             print(">> ERROR: SPIDER: OMD PARSE: DOC BODY: Skipping request: \
                     content is neither text/plain nor text/html.")
-
+        fout.write("<doc title='"+title+"' url='"+url+"' lang='"+language+"'>\n")
+        if description:
+            fout.write("{{DESCRIPTION}} "+description+"\n")
+        if body_str:
+            fout.write("{{BODY}} "+body_str+"\n")
         fout.write("</doc>\n")
     fout.close()
 
