@@ -99,7 +99,7 @@ def omd_parse(current_url, username):
             print("# DOC DESCRIPTION: No description")
 
         # CONTENT, ONLY DOCS (NOT FOLDERS)
-        if content_type == 'text/plain':
+        if content_type == 'text/plain' or convertible:
             title, body_str, _, language = extract_txt(url)
             print("# DOC BODY:", body_str[:100])
             fout.write("<doc title='"+title+"' url='"+url+"' lang='"+language+"'>\n")
