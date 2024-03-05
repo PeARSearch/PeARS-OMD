@@ -9,7 +9,7 @@ from math import sqrt
 import requests
 import numpy as np
 from scipy.spatial import distance
-from app import LANG, CARBON_DIR
+from app import LANGS, CARBON_DIR
 
 
 
@@ -38,6 +38,7 @@ def read_docs(doc_file):
     snippets = []
     docs = []
     descriptions = []
+    languages = []
     with open(doc_file, 'r', encoding="utf-8") as df:
         description = ""
         doc = ""
@@ -48,6 +49,8 @@ def read_docs(doc_file):
                 url = m.group(1)
                 m = re.search('title=\'([^\']*)\'',l)
                 title = m.group(1)
+                m = re.search('lang=\'([^\']*)\'',l)
+                language = m.group(1)
             elif "</doc" not in l:
                 if "{{DESCRIPTION}}" in l:
                     description = l.replace("{{DESCRIPTION}} ","")
@@ -62,10 +65,11 @@ def read_docs(doc_file):
                 titles.append(title)
                 snippets.append(snippet)
                 descriptions.append(description)
+                languages.append(language)
                 docs.append(description+' '+doc)
                 description = ""
                 doc = ""
-    return urls, titles, snippets, descriptions, docs
+    return urls, titles, snippets, descriptions, languages, docs
 
 
 def normalise(v):
@@ -190,9 +194,33 @@ def get_pod_info(url):
 
 
 def get_language(query):
-    lang = LANG #default
+    lang = None
     m = re.search('(.*) -(..\s*)$',query)
     if m:
+        print(m.group(1), m.group(2))
         query = m.group(1)
         lang = m.group(2)
     return query, lang
+
+def beautify_title(title, doctype):
+    title = title[:70]
+    if doctype == 'stat':
+        title = '📈 '+title
+    if doctype == 'doc':
+        title = '📝 '+title
+    if doctype == 'url':
+        title = '🌏 '+title
+    if doctype == 'ind':
+        title = '☺️  '+title
+    if doctype == 'map':
+        title = '📍 '+title
+    return title
+
+def beautify_snippet(snippet, query):
+    if snippet[-3:] != '...':
+        snippet+='...'
+    tmp_snippet = snippet
+    for w in query.split():
+        tmp_snippet = tmp_snippet.replace(w,'<b>'+w+'</b>')
+        tmp_snippet = tmp_snippet.replace(w.title(),'<b>'+w.title()+'</b>')
+    return tmp_snippet

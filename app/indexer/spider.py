@@ -6,7 +6,7 @@ from os.path import join, dirname, realpath
 from flask import session, url_for
 import xmltodict
 import requests
-from app.indexer.htmlparser import extract_html
+from app.indexer.htmlparser import extract_txt
 from app import OMD_PATH, LOCAL_RUN, AUTH_TOKEN
 
 app_dir_path = dirname(dirname(realpath(__file__)))
@@ -19,7 +19,7 @@ def omd_parse(current_url, username):
     """
     print("\n\nRunning OMD parse on", current_url)
     links = []
-    fout = open(join(user_app_dir_path, username+'.corpus'),'a')
+    fout = open(join(user_app_dir_path, username+'.corpus'),'a', encoding='utf-8')
     try:
         xml = requests.get(current_url, timeout=10, \
                 headers={'Authorization': AUTH_TOKEN}, stream =True).raw
@@ -27,6 +27,9 @@ def omd_parse(current_url, username):
         print(">> ERROR: SPIDER: OMD PARSE: Request failed. Moving on.")
         print(error)
         return links
+    print(xml.read())
+    xml = requests.get(current_url, timeout=10, \
+            headers={'Authorization': AUTH_TOKEN}, stream =True).raw
     try:
         parse = xmltodict.parse(xml.read())
     except RuntimeError as error:
@@ -74,24 +77,24 @@ def omd_parse(current_url, username):
             print(error)
         if title is None:
             title = ''
-        #print("<doc title='"+title+"' url='"+url+"'>\n")
-        fout.write("<doc title='"+title+"' url='"+url+"'>\n")
 
         # DESCRIPTION
+        description = None
         try:
             #print("# DOC DESCRIPTION:", doc['description'][:100])
-            description = doc['description']
+            description = title + ' ' + doc['description']
             #print("\t"+description+"\n")
-            fout.write("{{DESCRIPTION}} "+description+"\n")
         except:
             print("# DOC DESCRIPTION: No description")
 
         # CONTENT, ONLY DOCS (NOT FOLDERS)
-        if content_type in ['text/plain','text/html']:
-            title, body_str, _, _, error = extract_html(url)
-            if not error:
-                print("# DOC BODY:", body_str[:100])
-                fout.write("{{BODY}} "+body_str+"\n")
+        if content_type == 'text/plain':
+            title, body_str, _, language = extract_txt(url)
+            print("# DOC BODY:", body_str[:100])
+            fout.write("<doc title='"+title+"' url='"+url+"' lang='"+language+"'>\n")
+            if description:
+                fout.write("{{DESCRIPTION}} "+description+"\n")
+            fout.write("{{BODY}} "+body_str+"\n")
         else:
             print(">> ERROR: SPIDER: OMD PARSE: DOC BODY: Skipping request: \
                     content is neither text/plain nor text/html.")

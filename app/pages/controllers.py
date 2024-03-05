@@ -19,3 +19,7 @@ def return_faq():
 @pages.route('/acknowledgements/')
 def return_acknowledgements():
     return render_template("pages/acknowledgements.html")
+
+@pages.route('/contact/')
+def return_contact():
+    return render_template("pages/contact.html")
