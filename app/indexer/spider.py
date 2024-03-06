@@ -92,6 +92,9 @@ def omd_parse(current_url, username):
         else:
             print(">> ERROR: SPIDER: OMD PARSE: DOC BODY: Skipping request: \
                     content is neither text/plain nor text/html.")
+        # Hack. Revert to main language if needed
+        if language not in LANGS:
+            language = LANGS[0]
         fout.write("<doc title='"+title+"' url='"+url+"' lang='"+language+"'>\n")
         if description:
             fout.write("{{DESCRIPTION}} "+description+"\n")
