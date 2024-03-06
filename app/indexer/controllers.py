@@ -5,7 +5,8 @@
 # Import flask dependencies
 import re
 from math import ceil
-from os.path import dirname, join, realpath
+from os import remove
+from os.path import dirname, join, realpath, isfile
 from flask import Blueprint, request, session, flash, render_template, Response, url_for
 
 from app import app, tracker
@@ -99,8 +100,9 @@ def progress_crawl(username=None):
     def generate():
         with app.app_context():
             print("\n\n>>> INDEXER: CONTROLLER: READING DOCS")
+            corpus = join(user_app_dir_path, username+".corpus")
             urls, titles, snippets, descriptions, languages, docs = \
-                    read_docs(join(user_app_dir_path, username+".corpus"))
+                    read_docs(corpus)
             if len(urls) == 0:
                 yield "data:100\n\n"
 
@@ -123,5 +125,7 @@ def progress_crawl(username=None):
             if tracker is not None:
                 search_emissions = tracker.stop_task()
                 carbon_print(search_emissions, task_name)
+            if isfile(join(user_app_dir_path, username+".corpus")):
+                remove(join(user_app_dir_path, username+".corpus"))
 
     return Response(generate(), mimetype='text/event-stream')
