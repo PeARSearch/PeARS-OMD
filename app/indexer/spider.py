@@ -29,9 +29,8 @@ def omd_parse(current_url, username):
         return links
     try:
         parse = xmltodict.parse(xml.read())
-    except RuntimeError as error:
+    except:
         print(">> ERROR: SPIDER: OMD PARSE: File may have some bad XML. Could not parse.")
-        print(error)
         return links
     docs = parse['omd_index']['doc']
     if not isinstance(docs, list):
@@ -112,6 +111,9 @@ def write_docs(base_url, username):
         print("No url passed.")
         return url_for('indexer')
 
+    if not LOCAL_RUN and base_url[-1] != '/':
+        base_url+='/'
+
     pages_to_visit = [base_url]
     pages_visited = []
     corpus_path = join(user_app_dir_path, username+'.corpus')
@@ -121,22 +123,21 @@ def write_docs(base_url, username):
     fout.close()
 
     print("Starting crawl from",base_url)
-    while pages_to_visit != []:
+    while len(pages_to_visit) > 0:
         # Start from base url
         print("Pages to visit",pages_to_visit)
         url = pages_to_visit[0]
         pages_visited.append(url)
-        pages_to_visit = pages_to_visit[1:]
         try:
             print("\n\n#### Scraping:", url)
             links = omd_parse(url, username)
             for link in links:
-                #print(link,pages_visited)
+                print(link,pages_visited)
                 #print(link,pages_to_visit)
                 #print(link,urldir)
                 if link not in pages_visited and link not in pages_to_visit and '#' not in link:
                     #print("Found href:",link)
                     pages_to_visit.append(link)
-        except RuntimeError as error:
+        except:
             print(f">> ERROR: SPIDER: OMD PARSE: Failed visiting url: {url}")
-            print(error)
+        pages_to_visit = pages_to_visit[1:]

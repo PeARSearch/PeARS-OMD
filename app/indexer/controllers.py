@@ -101,6 +101,8 @@ def progress_crawl(username=None):
             print("\n\n>>> INDEXER: CONTROLLER: READING DOCS")
             urls, titles, snippets, descriptions, languages, docs = \
                     read_docs(join(user_app_dir_path, username+".corpus"))
+            if len(urls) == 0:
+                yield "data:100\n\n"
 
             c = 0
             if tracker is not None:

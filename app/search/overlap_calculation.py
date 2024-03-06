@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: AGPL-3.0-only
 
-from app import VEC_SIZE, vocab, inverted_vocab
+from app import VEC_SIZE, models
 import re
 import string
 import numpy as np
@@ -119,6 +119,11 @@ def posix_score_seq(posl, enforce_subwords=True):
         return np.max(scores)  # meaning: 1.0 if there is at least one pair of tokens that is consecutive both in the query and in the document. Otherwise a fraction of this. 
 
 def posix(q, pod_name):
+    doc_scores = {}
+    lang = pod_name.split('.')[1]
+    vocab = models[lang]['vocab']
+    inverted_vocab = models[lang]['inverted_vocab']
+
     posindex = load_posix(pod_name)
     print(q.split())
     query_vocab_ids = [vocab.get(wp) for wp in q.split()]
@@ -126,13 +131,13 @@ def posix(q, pod_name):
         print("WARNING: there were unknown tokens in the query")
         print(q.split(), query_vocab_ids)
         query_vocab_ids = [i for i in query_vocab_ids if i is not None]
+        return doc_scores
 
     idx = []
     for w in query_vocab_ids:
         idx.append(set(posindex[w].keys()))        # get docs containing token
 
     matching_docs = list(set.intersection(*idx))   # intersect doc lists to only retain the docs that contain *all* tokens
-    doc_scores = {}
     for doc in matching_docs:
         positions = []
         for w in query_vocab_ids:

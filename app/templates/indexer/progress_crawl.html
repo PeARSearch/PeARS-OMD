@@ -12,7 +12,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 		    <p><b>Crawl for user {{username}}</b></p>
             <p>Your crawl is in progress. The PeARS spider is crawling the links referenced from your folder and indexing them. The progress bar on your right
             will show you how many page have been indexed so far.</p>
-            <p>Once the progress bar indicates "Finished", you can leave this page and search the pages you have just indexed.</p>
+	    {% with messages = get_flashed_messages() %}
+            {% if messages %}
+               <div class="notification is-danger">
+               {{ messages[0] }}</a>
+               </div>
+            {% endif %}
+            {% endwith %}
             </div>
             </div>
             <div class="col-md-6">
