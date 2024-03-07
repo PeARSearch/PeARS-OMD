@@ -60,7 +60,7 @@ The PeARS authentification token is set in the *app/static/conf/pears.ini* file.
 
 ##### 5. Choose your languages
 
-The list of available languages is also set in *app/static/conf/pears.ini*. Currently, the languages that are available out-of-the-box are English, French, Russian, and Slovenian. If you would like all of these language to be available, enter "en,fr,ru,sl" as the value.
+The list of available languages is also set in *app/static/conf/pears.ini*. Currently, the languages that are available out-of-the-box are English, French, Russian, and Slovenian. If you would like all of these language to be available, enter "en,fr,ru,sl" as the value. Please note that the order of the language matters for certain things: it plays a role in the ordering of search results, and the first language in the list is used as a fallback if `langdetect` can't recognize a document's language as one of the installed languages.  
 
 ##### 6. Run your pear!
 
