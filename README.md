@@ -64,22 +64,17 @@ The list of available languages is also set in *app/static/conf/pears.ini*. Curr
 
 ##### 6. Run your pear!
 
-If you are running/testing PeARS-OMD locally (as opposed to the OMD server), first export the LOCAL_RUN variable and run the toy authentification server provided in *test-auth.py*:
+You can only use PeARS-OMD if you have an On My Disk account. You can create an account at: https://onmydisk.net/signup. Next, you will need to install a client so that you can add local folders to On My Disk. Download a client appropriate for your system here: https://onmydisk.com/downloads.html and follow the installation instructions. Once your client is installed, add some folders from your local drive -- these are now accessible from anywhere in the world using the On My Disk web client, and, importantly, they are now ready to be indexed using PeARS.  
+
+To start PeARS, run:
 
 ```
-export LOCAL_RUN=True
-python3 test-auth.py  & python3 run.py 
-```
-
-If you are the OMD admin, run:
-
-```
-export LOCAL_RUN=False
 python3 run.py
 ```
 
-You should now see the login page of PeARS at http://localhost:9090/. You can sign in, either with your On My Disk credentials on the server, or if you are running locally, with a test user (username: tester, password: pwd).
+You should now see the login page of PeARS at http://localhost:9090/; use your On My Disk credentials to sign in.
 
+Once logged in, you can go to the "/indexer" page, and enter the URL that points to a folder in On My Disk that you want to index. On My Disk URLs are structured as https://onmydisk.net/USER/DEVICE/path/to/folder/. For example: https://onmydisk.net/janedoe/jane-does-laptop/sample-documents/. Be sure to include the final slash. Click "start crawl" to recursively index the folder. Once indexing is complete, you can search these files.
 
 NB: whenever you want to come back to a clean install, manually delete your database and pods:
 
@@ -119,7 +114,7 @@ http://localhost:9090/static/testdocs/
 ```
 			
 
-NB: on the OMD server, the index.html files will be created on-the-fly at runtime.
+NB: on the OMD server, the index.html files are created on-the-fly at runtime.
  
 
 To recursively crawl from base url:
@@ -130,6 +125,7 @@ curl localhost:9090/indexer/from_crawl?url=http://localhost:9090/static/testdocs
 ```
 
 The commands above will index the files of user *tester*, as well as public shares. A user should be able to search their own files, as well as public shares. An anonymous user should only be able to search public files. There are two different checkpoints for search as a logged in user and an anonymous user, as the following example searches demonstrate.
+
 
 ### Searching in anonymous mode
 
