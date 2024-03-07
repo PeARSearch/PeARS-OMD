@@ -7,7 +7,8 @@ from flask import session, url_for
 import xmltodict
 import requests
 from app.indexer.htmlparser import extract_txt
-from app import LANGS, OMD_PATH, LOCAL_RUN, AUTH_TOKEN
+from app import (LANGS, OMD_PATH, LOCAL_RUN, 
+        AUTH_TOKEN, FILE_SIZE_LIMIT, IGNORED_EXTENSIONS)
 
 app_dir_path = dirname(dirname(realpath(__file__)))
 user_app_dir_path = join(app_dir_path,'static', 'userdata')
@@ -17,7 +18,7 @@ def omd_parse(current_url, username):
     to the user's corpus file.
     Arguments: the url path and a username.
     """
-    print("\n\nRunning OMD parse on", current_url)
+    print("\t>> INDEXER: SPIDER: omd_parse: Running OMD parse on", current_url)
     links = []
     fout = open(join(user_app_dir_path, username+'.corpus'),'a', encoding='utf-8')
     try:
@@ -43,34 +44,41 @@ def omd_parse(current_url, username):
             url = doc['@url'][1:]
         else:
             url = doc['@url']
-        print(">> INDEXER: SPIDER: omd_parse: doc url:", url)
+        #print(">> INDEXER: SPIDER: omd_parse: doc url:", url)
         if url.startswith('shared/'):
             url = join(OMD_PATH, url)
         else:
             url = join(urldir, url)
-        print(">> INDEXER: SPIDER: omd_parse: doc url:", url)
+        #print(">> INDEXER: SPIDER: omd_parse: doc url:", url)
         if LOCAL_RUN:
             if url[-1] == '/': #For local test only
                 url = join(url,'index.html')
+        
+        # EXTENSION
+        extension = '.'+url.split('/')[-1].split('.')[-1]
+        if extension in IGNORED_EXTENSIONS:
+            continue
 
         # CONTENT TYPE
         try:
-            print("# DOC CONTENTTYPE: ", doc['@contentType'])
+            print("# DOC CONTENTTYPE: ", extension, doc['@contentType'])
             content_type = doc['@contentType']
             if content_type in ['folder','desktop']:
                 if join(OMD_PATH,'shared') not in url:
                     links.append(url)
         except RuntimeError as error:
-            print(">> SPIDER: OMD_PARSE: DOC CONTENTTYPE: No contentType")
-            print(error)
+            #print(">> SPIDER: OMD_PARSE: DOC CONTENTTYPE: No contentType")
+            #print(error)
+            pass
 
         # TITLE
         try:
-            print("# DOC TITLE:", doc['title'])
+            #print("# DOC TITLE:", doc['title'])
             title = doc['title']
         except RuntimeError as error:
-            print(">> SPIDER: OMD_PARSE: DOC TITLE: No title")
-            print(error)
+            #print(">> SPIDER: OMD_PARSE: DOC TITLE: No title")
+            #print(error)
+            pass
         if title is None:
             title = ''
 
@@ -81,25 +89,30 @@ def omd_parse(current_url, username):
             description = title + ' ' + doc['description']
             #print("\t"+description+"\n")
         except:
-            print("# DOC DESCRIPTION: No description")
+            #print("# DOC DESCRIPTION: No description")
+            pass
 
         # CONTENT, ONLY DOCS (NOT FOLDERS)
         language = LANGS[0]
         body_str = None
-        if content_type == 'text/plain':
+        if content_type in ['text/plain', 'text/x-tex']:
             title, body_str, _, language = extract_txt(url)
-            print("# DOC BODY:", body_str[:100])
-        else:
-            print(">> ERROR: SPIDER: OMD PARSE: DOC BODY: Skipping request: \
-                    content is neither text/plain nor text/html.")
-        # Hack. Revert to main language if needed
+            #print("# DOC BODY:", body_str[:100])
+        #else:
+        #    print(">> ERROR: SPIDER: OMD PARSE: DOC BODY: Skipping request: \
+        #            content is not text/plain.")
+
+        # Hack. Revert to main language if language is not installed
         if language not in LANGS:
             language = LANGS[0]
+
+        # Write to temporary corpus file
         fout.write("<doc title='"+title+"' url='"+url+"' lang='"+language+"'>\n")
         if description:
             fout.write("{{DESCRIPTION}} "+description+"\n")
         if body_str:
-            fout.write("{{BODY}} "+body_str+"\n")
+            # Limit how much of the content will be indexed, to cope with storage limitations
+            fout.write("{{BODY}} "+body_str[:FILE_SIZE_LIMIT]+"\n")
         fout.write("</doc>\n")
     fout.close()
 
@@ -125,17 +138,17 @@ def write_docs(base_url, username):
     fout = open(corpus_path,'w', encoding="utf-8")
     fout.close()
 
-    print("Starting crawl from",base_url)
+    print(">> INDEXER: SPIDER: write_docs: Starting crawl from",base_url)
     while len(pages_to_visit) > 0:
         # Start from base url
-        print("Pages to visit",pages_to_visit)
+        #print("Pages to visit",pages_to_visit)
         url = pages_to_visit[0]
         pages_visited.append(url)
         try:
-            print("\n\n#### Scraping:", url)
+            print("\t#### Scraping:", url)
             links = omd_parse(url, username)
             for link in links:
-                print(link,pages_visited)
+                #print(link,pages_visited)
                 #print(link,pages_to_visit)
                 #print(link,urldir)
                 if link not in pages_visited and link not in pages_to_visit and '#' not in link:

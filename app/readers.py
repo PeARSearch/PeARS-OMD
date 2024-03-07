@@ -16,3 +16,13 @@ def read_vocab(vocab_file):
             logprobs.append(logprob)
             c+=1
     return vocab, reverse_vocab, logprobs
+
+def read_pearsignore():
+    ignored_extensions = []
+    with open('app/static/conf/.pearsignore') as f:
+        for l in f:
+            l = l.rstrip('\n')
+            if l == '' or '#' in l:
+                continue
+            ignored_extensions.append(l)
+    return ignored_extensions
