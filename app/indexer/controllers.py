@@ -94,7 +94,6 @@ def progress_crawl(username=None):
     # There will only be one path read, although we are using the standard
     # PeARS read_urls function. Hence the [0].
     url = read_urls(join(user_app_dir_path, username+".toindex"))[0]
-    print("Calling spider on",url)
     spider.write_docs(url, username) #Writing docs to corpus
 
     def generate():
@@ -112,7 +111,7 @@ def progress_crawl(username=None):
                 tracker.start_task(task_name)
             for url, title, snippet, description, lang, doc in \
                     zip(urls, titles, snippets, descriptions, languages, docs):
-                print("\n\n>>> INDEXER: CONTROLLER: PROGRESS CRAWL: INDEXING", url)
+                print("\t>>> INDEXER: CONTROLLER: PROGRESS CRAWL: INDEXING", url)
                 idx = add_to_idx_to_url(username, url)
                 pod_name, vid, tokenized_text = mk_page_vector.compute_vectors_local_docs( \
                     url, title, description, doc, username, lang)
