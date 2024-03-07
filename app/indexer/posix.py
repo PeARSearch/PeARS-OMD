@@ -1,6 +1,6 @@
 import joblib
 from os.path import join, dirname, realpath
-from app import vocab
+from app import models
 
 def load_posix(pod_name):
     dir_path = dirname(dirname(realpath(__file__)))
@@ -16,6 +16,7 @@ def dump_posix(posindex, pod_name):
 
 def posix_doc(text, doc_id, pod_name, lang, contributor):
     posindex = load_posix(pod_name)
+    vocab = models[lang]['vocab']
     for pos, token in enumerate(text.split()):
         if token not in vocab:
             continue
