@@ -38,28 +38,30 @@ def configure_logging():
     # register root logging
     logging.basicConfig(level=logging.DEBUG)
     logging.getLogger('werkzeug').setLevel(logging.INFO)
-
-
 configure_logging()
 
 # Define the WSGI application object
 app = Flask(__name__)
-#app.app_context().push()
 
-# Configurations
+# Read config file
 try:
     app.config.from_object('config')
     load_dotenv('app/static/conf/pears.ini')
+except:
+    print(">>\tERROR: __init__.py: the pears.ini file is not present in the app/static/conf directory.")
+    sys.exit()
+
+
+# Configurations
+try:
     AUTH_TOKEN = os.getenv('AUTH_TOKEN')
     OMD_PATH = os.getenv('OMD_PATH')
-    local_run = os.getenv('LOCAL').lower()
     LANGS = os.getenv('LANGUAGES').lower().split(',')
-    if local_run == "false":
-        LOCAL_RUN = False
-    else:
-        LOCAL_RUN = True
+    FILE_SIZE_LIMIT = int(os.getenv('FILE_SIZE_LIMIT'))
+    local_run = os.getenv('LOCAL').lower()
+    LOCAL_RUN = False if local_run == "false" else True
 except:
-    print(">>\tERROR: __init__.py: the pears.ini file is not present in the app/static/conf directory or incorrectly configured")
+    print(">>\tERROR: __init__.py: the pears.ini file in the app/static/conf directory is incorrectly configured.")
     sys.exit()
 
 
@@ -83,6 +85,10 @@ for LANG in LANGS:
 VEC_SIZE = len(models[LANGS[0]]['vocab'])
 
 
+# Load .pearsignore
+from app.readers import read_pearsignore
+IGNORED_EXTENSIONS = read_pearsignore()
+print("IGNORED EXTENSIONS:",  IGNORED_EXTENSIONS)
 
 # Define the database object which is imported
 # by modules and controllers
