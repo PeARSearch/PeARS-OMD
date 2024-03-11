@@ -59,8 +59,8 @@ def omd_parse(current_url, username):
 
         # CONVERTIBILITY 
         try: 
-            print("# DOC CONVERTIBILITY: ", doc['@convertible'])
-            convertible = doc['@convertible']
+            print("# DOC CONVERTIBILITY: ", doc.get('@convertible'))
+            convertible = doc.get("@convertible")
             if convertible == "True":
                 url = join(url, "?totext")
 
