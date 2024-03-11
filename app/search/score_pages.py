@@ -26,6 +26,7 @@ def compute_scores(query, query_vector, tokenized, pod_name):
     """
     vec_scores = {}
     completeness_scores = {}
+    posix_scores = {}
     try:
         pod_m = load_npz(join(pod_dir,pod_name+'.npz'))
     except:
@@ -33,7 +34,10 @@ def compute_scores(query, query_vector, tokenized, pod_name):
         return {}, {}, {}
     m_cosines = 1 - distance.cdist(query_vector, pod_m.todense(), 'cosine')
     m_completeness = completeness(query_vector, pod_m.todense())
-    posix_scores = posix(tokenized, pod_name)
+    try:
+        posix_scores = posix(tokenized, pod_name)
+    except:
+        print(">> SEARCH: SCORE_PAGES: compute_scores: issue in posix computation.")
 
     username = pod_name.split('.u.')[1]
     idx_to_url = joblib.load(join(pod_dir, username+'.idx'))

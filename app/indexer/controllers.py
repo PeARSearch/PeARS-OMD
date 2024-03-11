@@ -5,7 +5,8 @@
 # Import flask dependencies
 import re
 from math import ceil
-from os.path import dirname, join, realpath
+from os import remove
+from os.path import dirname, join, realpath, isfile
 from flask import Blueprint, request, session, flash, render_template, Response, url_for
 
 from app import app, tracker
@@ -93,14 +94,16 @@ def progress_crawl(username=None):
     # There will only be one path read, although we are using the standard
     # PeARS read_urls function. Hence the [0].
     url = read_urls(join(user_app_dir_path, username+".toindex"))[0]
-    print("Calling spider on",url)
     spider.write_docs(url, username) #Writing docs to corpus
 
     def generate():
         with app.app_context():
             print("\n\n>>> INDEXER: CONTROLLER: READING DOCS")
+            corpus = join(user_app_dir_path, username+".corpus")
             urls, titles, snippets, descriptions, languages, docs = \
-                    read_docs(join(user_app_dir_path, username+".corpus"))
+                    read_docs(corpus)
+            if len(urls) == 0:
+                yield "data:100\n\n"
 
             c = 0
             if tracker is not None:
@@ -108,7 +111,7 @@ def progress_crawl(username=None):
                 tracker.start_task(task_name)
             for url, title, snippet, description, lang, doc in \
                     zip(urls, titles, snippets, descriptions, languages, docs):
-                print("\n\n>>> INDEXER: CONTROLLER: PROGRESS CRAWL: INDEXING", url)
+                print("\t>>> INDEXER: CONTROLLER: PROGRESS CRAWL: INDEXING", url)
                 idx = add_to_idx_to_url(username, url)
                 pod_name, vid, tokenized_text = mk_page_vector.compute_vectors_local_docs( \
                     url, title, description, doc, username, lang)
@@ -121,5 +124,7 @@ def progress_crawl(username=None):
             if tracker is not None:
                 search_emissions = tracker.stop_task()
                 carbon_print(search_emissions, task_name)
+            if isfile(join(user_app_dir_path, username+".corpus")):
+                remove(join(user_app_dir_path, username+".corpus"))
 
     return Response(generate(), mimetype='text/event-stream')
