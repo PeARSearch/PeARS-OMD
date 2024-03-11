@@ -138,9 +138,5 @@ def extract_txt(url):
         print("Couldn't detect page language.")
         return title, body_str, snippet, language
 
-    if language not in installed_languages:
-        print("Ignoring", url, "because language is not supported.")
-        title = ""
-        return title, body_str, snippet, language
     snippet = body_str[:200].replace(',', '-')
     return title, body_str, snippet, language

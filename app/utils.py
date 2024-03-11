@@ -33,6 +33,8 @@ def read_docs(doc_file):
     Returns: paths, titles, snippets, descriptions and full bodies
     of documents in the input file.
     """
+    url = ""
+    title = ""
     urls = []
     titles = []
     snippets = []
@@ -60,15 +62,18 @@ def read_docs(doc_file):
                 else:
                     doc+=l+' '
             else:
-                snippet = doc[:200]
-                urls.append(url)
-                titles.append(title)
-                snippets.append(snippet)
-                descriptions.append(description)
-                languages.append(language)
-                docs.append(description+' '+doc)
-                description = ""
-                doc = ""
+                if url != "":
+                    snippet = doc[:200]
+                    urls.append(url)
+                    titles.append(title)
+                    snippets.append(snippet)
+                    descriptions.append(description)
+                    languages.append(language)
+                    docs.append(description+' '+doc)
+                    description = ""
+                    url = ""
+                    title = ""
+                    doc = ""
     return urls, titles, snippets, descriptions, languages, docs
 
 
@@ -217,8 +222,8 @@ def beautify_title(title, doctype):
     return title
 
 def beautify_snippet(snippet, query):
-    if snippet[-3:] != '...':
-        snippet+='...'
+    if snippet == '':
+        return snippet
     tmp_snippet = snippet
     for w in query.split():
         tmp_snippet = tmp_snippet.replace(w,'<b>'+w+'</b>')
