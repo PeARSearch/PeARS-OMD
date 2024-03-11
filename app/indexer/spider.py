@@ -64,7 +64,7 @@ def omd_parse(current_url, username):
             print("# DOC CONVERTIBILITY: ", doc.get('@convertible'))
             convertible = doc.get("@convertible")
             if convertible == "True":
-                url = join(url, "?totext")
+                url = url + "?totext"
 
         except RuntimeError as error:
             print(">> SPIDER: OMD_PARSE: DOC CONVERTIBILITY: No convertible")
