@@ -87,7 +87,7 @@ On My Disk URLs are structured as https://onmydisk.net/USER/DEVICE/path/to/folde
 
 You can do searches either through API calls (see below) or in the graphical user interface. Results will look like this:
 
-![Screenshot of the search results page](screenshot_seach.png)
+![Screenshot of the search results page](screenshot_search.png)
 
 The system will search both your files' metadata as well as their full text, if applicable: the contents from plain text files will be indexed directly; the contents of certain supported file types (`pdf``, `odt`, `docx`, `xlsx`, and `pptx`) will be automatically converted and made searchable.
 
