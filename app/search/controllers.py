@@ -6,6 +6,7 @@ from os.path import dirname, join, realpath
 from urllib.parse import quote_plus
 import logging
 import requests
+import numpy as np
 from flask import jsonify, session
 from flask import Blueprint, request, render_template, make_response
 from flask_cors import cross_origin
@@ -25,6 +26,15 @@ dir_path = dirname(dirname(dirname(realpath(__file__))))
 pod_dir = join(dir_path,'app','static','pods')
 
 
+@search.route('/', methods=['GET','POST'])
+@search.route('/index', methods=['GET','POST'])
+def index():
+    access_token = request.cookies.get('OMD_SESSION_ID')
+    if not access_token:
+        return render_template('search/anonymous.html')
+    return render_template('search/user.html')
+
+
 @search.route('/user', methods=['POST','GET'])
 @cross_origin()
 @login_required
@@ -40,23 +50,6 @@ def user():
     r = app.make_response(jsonify(results))
     r.mimetype = "application/json"
     return r
-
-def run_user_search(query):
-    if LOCAL_RUN:
-        url = 'http://localhost:9191/api' #Local test
-    else:
-        url = OMD_PATH
-    results = {}
-    username = session['username']
-    query, lang = get_language(query.lower())
-    if lang is None:
-        languages = LANGS
-    else:
-        languages = [lang]
-    for lang in languages:
-        r = run_search(query+' -'+lang, url_filter=[join(url,username), join(url,'shared'), 'http://localhost:9090/static/'])
-        results.update(r)
-    return results
 
 
 @search.route('/anonymous', methods=['POST','GET'])
@@ -77,21 +70,58 @@ def anonymous():
     return r
 
 
-def run_anonymous_search(query):
+def run_user_search(query):
     if LOCAL_RUN:
-        url = 'http://localhost:9090/static/testdocs/shared' #Local test
+        url = 'http://localhost:9191/api' #Local test
     else:
-        url = join(OMD_PATH, 'shared')
+        url = OMD_PATH
     results = {}
+    scores = []
+    username = session['username']
     query, lang = get_language(query.lower())
     if lang is None:
         languages = LANGS
     else:
         languages = [lang]
     for lang in languages:
-        r = run_search(query+' -'+lang, url_filter=[url])
+        r, s = run_search(query+' -'+lang, url_filter=[join(url,username), join(url,'shared'), 'http://localhost:9090/static/'])
         results.update(r)
+        scores.extend(s)
+    results = order_results(results, scores)
     return results
+
+
+
+def run_anonymous_search(query):
+    if LOCAL_RUN:
+        url = 'http://localhost:9090/static/testdocs/shared' #Local test
+    else:
+        url = join(OMD_PATH, 'shared')
+    results = {}
+    scores = []
+    query, lang = get_language(query.lower())
+    if lang is None:
+        languages = LANGS
+    else:
+        languages = [lang]
+    for lang in languages:
+        r, s = run_search(query+' -'+lang, url_filter=[url])
+        results.update(r)
+        scores.extend(s)
+    results = order_results(results, scores)
+    return results
+
+
+def order_results(results, scores):
+    print(results.keys())
+    print(scores)
+    sorted_scores = np.argsort(scores)[::-1]
+    sorted_results = {}
+    print(sorted_scores)
+    for i in sorted_scores:
+        url = list(results.keys())[i]
+        sorted_results[url] = results[url]
+    return sorted_results
 
 
 def prepare_gui_results(query, results):
@@ -105,10 +135,3 @@ def prepare_gui_results(query, results):
         displayresults.append(list(r.values()))
     return displayresults
 
-@search.route('/', methods=['GET','POST'])
-@search.route('/index', methods=['GET','POST'])
-def index():
-    access_token = request.cookies.get('OMD_SESSION_ID')
-    if not access_token:
-        return render_template('search/anonymous.html')
-    return render_template('search/user.html')
