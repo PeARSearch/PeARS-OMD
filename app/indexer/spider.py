@@ -18,11 +18,10 @@ def omd_parse(current_url, username):
     to the user's corpus file.
     Arguments: the url path and a username.
     """
-    print("\t>> INDEXER: SPIDER: omd_parse: Running OMD parse on", current_url)
+    print("\n>> INDEXER: SPIDER: omd_parse: Running OMD parse on", current_url)
     links = []
     fout = open(join(user_app_dir_path, username+'.corpus'),'a', encoding='utf-8')
     try:
-        print("TRYING TO GET", current_url)
         xml = requests.get(current_url, timeout=10, \
                 headers={'Authorization': AUTH_TOKEN}, stream =True).raw
     except RuntimeError as error:
@@ -63,7 +62,7 @@ def omd_parse(current_url, username):
         # CONVERTIBILITY 
         convertible = "False"
         try: 
-            print("# DOC CONVERTIBILITY: ", doc.get('@convertible'))
+            #print("# DOC CONVERTIBILITY: ", doc.get('@convertible'))
             convertible = doc.get("@convertible")
             if convertible == "True":
                 url = url + "?totext"
@@ -74,7 +73,7 @@ def omd_parse(current_url, username):
 
         # CONTENT TYPE
         try:
-            print("# DOC CONTENTTYPE: ", extension, doc['@contentType'])
+            #print("# DOC CONTENTTYPE: ", extension, doc['@contentType'])
             content_type = doc['@contentType']
             if content_type in ['folder','desktop']:
                 if join(OMD_PATH,'shared') not in url:
@@ -129,7 +128,7 @@ def omd_parse(current_url, username):
         fout.write("</doc>\n")
     fout.close()
 
-    print("\n NEW LINKS:",links)
+    #print("\n NEW LINKS:",links)
     return links
 
 def write_docs(base_url, username):
@@ -158,7 +157,6 @@ def write_docs(base_url, username):
         url = pages_to_visit[0]
         pages_visited.append(url)
         try:
-            print("\t#### Scraping:", url)
             links = omd_parse(url, username)
             for link in links:
                 #print(link,pages_visited)
