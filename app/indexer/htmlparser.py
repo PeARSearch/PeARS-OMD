@@ -119,7 +119,7 @@ def extract_txt(url):
     body_str = ""
     snippet = ""
     language = LANGS[0]
-    print("EXTRACT",url)
+    #print("EXTRACT",url)
     print("TITLE",title)
     try:
         req = requests.get(url, timeout=10, headers={'Authorization': AUTH_TOKEN})

@@ -25,7 +25,6 @@ def login():
         # assign form data to variables
         username = request.form.get('username', '', type=str)
         password = request.form.get('password', '', type=str)
-        print(username, password)
         # send authorization message to on my disk
         if LOCAL_RUN:
             url = 'http://localhost:9191/api' #Local test
@@ -40,8 +39,8 @@ def login():
             if not user_info.json()['valid']:
                 flash("Incorrect credentials or session expired, redirecting to login page.")
                 return render_template( 'auth/login.html', form=form), 401
-            print(user_info.json())
-            print(user_info.cookies)
+            #print(user_info.json())
+            #print(user_info.cookies)
             username = user_info.json()['username']
             is_admin = user_info.json()['isAdmin']
             session_token = user_info.json()['session_id']
@@ -99,7 +98,7 @@ def login_required(f):
         if access_token:
             #backend_to_backend
             if access_token == AUTH_TOKEN: #if it equals to system-wide security token, then it is call from OMD backend
-                print("Backend to backend")
+                #print("Backend to backend")
                 if 'access_token' in getfullargspec(f).args:
                     kwargs['access_token'] = access_token
                 return f(*args, **kwargs)

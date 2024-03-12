@@ -111,7 +111,7 @@ def progress_crawl(username=None):
                 tracker.start_task(task_name)
             for url, title, snippet, description, lang, doc in \
                     zip(urls, titles, snippets, descriptions, languages, docs):
-                print("\t>>> INDEXER: CONTROLLER: PROGRESS CRAWL: INDEXING", url)
+                #print("\t>>> INDEXER: CONTROLLER: PROGRESS CRAWL: INDEXING", url)
                 idx = add_to_idx_to_url(username, url)
                 pod_name, vid, tokenized_text = mk_page_vector.compute_vectors_local_docs( \
                     url, title, description, doc, username, lang)
@@ -119,7 +119,7 @@ def progress_crawl(username=None):
                 add_to_npz_to_idx(pod_name, vid, idx)
                 create_or_replace_url_in_db(url, title, snippet, description, username, lang)
                 c += 1
-                print('###', str(ceil(c / len(urls) * 100)))
+                #print('###', str(ceil(c / len(urls) * 100)))
                 yield "data:" + str(ceil(c / len(urls) * 100)) + "\n\n"
             if tracker is not None:
                 search_emissions = tracker.stop_task()

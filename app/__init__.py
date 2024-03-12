@@ -36,8 +36,8 @@ Path(os.path.join(DEFAULT_PATH,'static/userdata')).mkdir(parents=True, exist_ok=
 
 def configure_logging():
     # register root logging
-    logging.basicConfig(level=logging.DEBUG)
-    logging.getLogger('werkzeug').setLevel(logging.INFO)
+    logging.basicConfig(level=logging.ERROR)
+    logging.getLogger('werkzeug').setLevel(logging.ERROR)
 configure_logging()
 
 # Define the WSGI application object
