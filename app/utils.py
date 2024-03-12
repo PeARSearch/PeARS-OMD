@@ -205,6 +205,8 @@ def get_language(query):
         print(m.group(1), m.group(2))
         query = m.group(1)
         lang = m.group(2)
+        if lang not in LANGS:
+            lang = None
     return query, lang
 
 def beautify_title(title, doctype):
