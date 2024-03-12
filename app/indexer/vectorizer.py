@@ -46,11 +46,6 @@ def read_n_encode_dataset(doc=None, vectorizer=None, logprobs=None, power=None, 
             ks = [list(vectorizer.vocabulary.keys())[list(vectorizer.vocabulary.values()).index(k)] for k in np.squeeze(np.asarray(inds[i]))]
     return X
 
-def init_vectorizer(lang): 
-    spm_vocab = f"app/api/models/{lang}/{lang}wiki.vocab"
-    vocab, reverse_vocab, logprobs = read_vocab(spm_vocab)
-    vectorizer = CountVectorizer(vocabulary=vocab, lowercase=True, token_pattern='[^ ]+')
-    return vectorizer, logprobs
 
 def vectorize(lang, text, logprob_power, top_words):
     '''Takes input file and return vectorized /scaled dataset'''
