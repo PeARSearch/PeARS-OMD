@@ -139,7 +139,7 @@ def score_docs(query, query_vector, tokenized, pod_name):
             if idx in posix_scores:
                 document_scores[url]+=posix_scores[idx]
             document_scores[url]+=completeness_scores[url]
-            if math.isnan(document_scores[url]) or completeness_scores[url] < 0.3:
+            if math.isnan(document_scores[url]) or document_scores[url] < 1:
                 document_scores[url] = 0
             else:
                 u = db.session.query(Urls).filter_by(url=url).first()
@@ -155,6 +155,7 @@ def score_docs(query, query_vector, tokenized, pod_name):
 
 def return_best_urls(doc_scores, url_filter):
     best_urls = []
+    scores = []
     c = 0
     for url in sorted(doc_scores, key=doc_scores.get, reverse=True):
         if c < 20:
@@ -162,12 +163,13 @@ def return_best_urls(doc_scores, url_filter):
                 for f in url_filter:
                     if f in url:
                         best_urls.append(url)
+                        scores.append(doc_scores[url])
                         c += 1
             else:
                 break
         else:
             break
-    return best_urls
+    return best_urls, scores
 
 
 def output(best_urls):
@@ -201,9 +203,9 @@ def run_search(query, url_filter=None):
         scores = parallel(delayed_funcs)
     for dic in scores:
         document_scores.update(dic)
-    best_urls = return_best_urls(document_scores, url_filter)
+    best_urls, scores = return_best_urls(document_scores, url_filter)
     results = output(best_urls)
     if tracker is not None:
         search_emissions = tracker.stop_task()
         carbon_print(search_emissions, task_name)
-    return results
+    return results, scores
