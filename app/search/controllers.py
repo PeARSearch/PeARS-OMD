@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: AGPL-3.0-only
 
+import re
 from os.path import dirname, join, realpath
 from urllib.parse import quote_plus
 import logging
@@ -124,6 +125,11 @@ def order_results(results, scores):
     return sorted_results
 
 
+def remove_username_from_url(url):
+    # remove whatever comes immediately after "onmydisk.net/", until the next slash 
+    return re.sub(r"^(https://onmydisk.net/).+?/(.+)", r"\1\2", url)
+
+
 def prepare_gui_results(query, results):
     if results is None:
         return None
@@ -132,6 +138,8 @@ def prepare_gui_results(query, results):
         print(r)
         r['title'] = r['title'][:70]
         r['snippet'] = beautify_snippet(r['snippet'], query)
+        # remove username from URL so that link to OMD works correctly
+        r['url'] = remove_username_from_url(r['url'])
         displayresults.append(list(r.values()))
     return displayresults
 
