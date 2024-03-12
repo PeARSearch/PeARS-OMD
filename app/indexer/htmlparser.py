@@ -127,7 +127,7 @@ def extract_txt(url):
     except Exception:
         return title, body_str, snippet, language
     body_str = req.text
-    print("BODY",body_str)
+    #print("BODY",body_str)
     try:
         language = detect(body_str)
         print("Language for", url, ":", language)
