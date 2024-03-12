@@ -64,6 +64,7 @@ The list of available languages is also set in *app/static/conf/pears.ini*. Curr
 
 ##### 6. Run your pear!
 
+
 You can only use PeARS-OMD if you have an On My Disk account. You can create an account at: https://onmydisk.net/signup. Next, you will need to install a client so that you can add local folders to On My Disk. Download a client appropriate for your system here: https://onmydisk.com/downloads.html and follow the installation instructions. Once your client is installed, add some folders from your local drive -- these are now accessible from anywhere in the world using the On My Disk web client, and, importantly, they are now ready to be indexed using PeARS.  
 
 To start PeARS, run:
@@ -74,9 +75,25 @@ python3 run.py
 
 You should now see the login page of PeARS at http://localhost:9090/; use your On My Disk credentials to sign in.
 
-Once logged in, you can go to the "/indexer" page, and enter the URL that points to a folder in On My Disk that you want to index. On My Disk URLs are structured as https://onmydisk.net/USER/DEVICE/path/to/folder/. For example: https://onmydisk.net/janedoe/jane-does-laptop/sample-documents/. Be sure to include the final slash. Click "start crawl" to recursively index the folder. Once indexing is complete, you can search these files.
 
-NB: whenever you want to come back to a clean install, manually delete your database and pods:
+##### 7. Indexing & searching
+
+Once logged in, you can go to the "/indexer" page. The page will show you the number of pages that have already been indexed and prompt you to enter the URL that points to a folder in On My Disk that you want to index:
+
+![Screenshot of the indexing page](screenshot_indexing.png)
+
+On My Disk URLs are structured as https://onmydisk.net/USER/DEVICE/path/to/folder/. For example: https://onmydisk.net/janedoe/jane-does-laptop/sample-documents/. Be sure to include the final slash. Click "start crawl" to recursively index the folder. Once indexing is complete, you can search these files.
+
+
+You can do searches either through API calls (see below) or in the graphical user interface. Results will look like this:
+
+![Screenshot of the search results page](screenshot_seach.png)
+
+The system will search both your files' metadata as well as their full text, if applicable: the contents from plain text files will be indexed directly; the contents of certain supported file types (`pdf``, `odt`, `docx`, `xlsx`, and `pptx`) will be automatically converted and made searchable.
+
+
+##### 8. Cleaning your environment
+Whenever you want to come back to a clean install, manually delete your database and pods:
 
 ```
 rm -f app/static/db/app.db
