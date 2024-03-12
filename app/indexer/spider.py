@@ -22,6 +22,7 @@ def omd_parse(current_url, username):
     links = []
     fout = open(join(user_app_dir_path, username+'.corpus'),'a', encoding='utf-8')
     try:
+        print("TRYING TO GET", current_url)
         xml = requests.get(current_url, timeout=10, \
                 headers={'Authorization': AUTH_TOKEN}, stream =True).raw
     except RuntimeError as error:
@@ -60,6 +61,7 @@ def omd_parse(current_url, username):
             continue
 
         # CONVERTIBILITY 
+        convertible = "False"
         try: 
             print("# DOC CONVERTIBILITY: ", doc.get('@convertible'))
             convertible = doc.get("@convertible")
@@ -106,7 +108,7 @@ def omd_parse(current_url, username):
         # CONTENT, ONLY DOCS (NOT FOLDERS)
         language = LANGS[0]
         body_str = None
-        if convertible or content_type in ['text/plain', 'text/x-tex']:
+        if convertible == "True" or content_type in ['text/plain', 'text/x-tex']:
             title, body_str, _, language = extract_txt(url)
             #print("# DOC BODY:", body_str[:100])
         #else:
