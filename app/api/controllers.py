@@ -7,7 +7,7 @@ from os.path import dirname, join, realpath, basename
 from flask import Blueprint, jsonify, request, session, flash, render_template
 from app.utils_db import delete_url, rename_idx_to_url, move_npz_pos
 from app.api.models import Urls, Pods
-from app import db, LOCAL_RUN, OMD_PATH
+from app import db, LOCAL_RUN, OMD_PATH, AUTH_TOKEN
 from app.auth.controllers import login_required
 
 # Define the blueprint:
@@ -55,6 +55,13 @@ def return_url_delete(path):
     except AttributeError as err:
         message = "URL not found in the database"
         return False, message
+    access_token = request.headers.get('Token') #Get token from request header
+    print(">> return_url_delete: access_token: OMD_SESSION_ID", access_token)
+    if access_token:
+        if access_token == AUTH_TOKEN: #if it equals to system-wide security token, then it is call from OMD backend
+            delete_url(u.url)
+            message = "Deleted document with url "+u.url+'.'
+            return True, message
     try:
         assert pod_username == session['username']
     except AssertionError as err:
