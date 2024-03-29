@@ -114,11 +114,8 @@ def run_anonymous_search(query):
 
 
 def order_results(results, scores):
-    print(results.keys())
-    print(scores)
     sorted_scores = np.argsort(scores)[::-1]
     sorted_results = {}
-    print(sorted_scores)
     for i in sorted_scores:
         url = list(results.keys())[i]
         sorted_results[url] = results[url]
@@ -134,8 +131,7 @@ def prepare_gui_results(query, results):
     if results is None:
         return None
     displayresults = []
-    for url, r in results.items():
-        print(r)
+    for _, r in results.items():
         r['title'] = r['title'][:70]
         r['snippet'] = beautify_snippet(r['snippet'], query)
         # remove username from URL so that link to OMD works correctly

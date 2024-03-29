@@ -125,8 +125,11 @@ def posix(q, pod_name):
     inverted_vocab = models[lang]['inverted_vocab']
 
     posindex = load_posix(pod_name)
-    print(q.split())
     query_vocab_ids = [vocab.get(wp) for wp in q.split()]
+
+    # This bit is important! Will fire for languages that do not
+    # correspond to the query and return null doc_scores, which
+    # halts further computation of scores in score_pages.py
     if any([i is None for i in query_vocab_ids]):
         print("WARNING: there were unknown tokens in the query")
         print(q.split(), query_vocab_ids)

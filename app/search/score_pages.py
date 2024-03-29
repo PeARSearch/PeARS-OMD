@@ -39,6 +39,10 @@ def compute_scores(query, query_vector, tokenized, pod_name):
     except:
         print(">> SEARCH: SCORE_PAGES: compute_scores: issue in posix computation.")
 
+    #If no document were found through posix, just exit
+    if len(posix_scores) == 0:
+        return vec_scores, completeness_scores, posix_scores
+
     username = pod_name.split('.u.')[1]
     idx_to_url = joblib.load(join(pod_dir, username+'.idx'))
     npz_to_idx = joblib.load(join(pod_dir, pod_name+'.npz.idx'))
@@ -79,13 +83,15 @@ def score_pods(query, query_vector, lang, username = None):
     pod_scores = {}
     
     best_pods = []
-    if username is not None:
-        best_pods.append('home.'+lang+'.u.'+username)
 
     # Compute similarity of query to all pods
     podnames = []
     podsum = []
-    npzs = glob(join(pod_dir,'*.shared.u.*npz'))
+    npzs = []
+    userhome = 'home.'+lang+'.u.'+username
+    if username is not None:
+        npzs.append(join(pod_dir, userhome+'.npz'))
+    npzs.extend(glob(join(pod_dir,'*.'+lang+'.shared.u.*npz')))
     for npz in npzs:
         podname = npz.split('/')[-1].replace('.npz','')
         s = np.sum(load_npz(npz).toarray(), axis=0)
@@ -99,8 +105,9 @@ def score_pods(query, query_vector, lang, username = None):
     m_cosines = 1 - distance.cdist(query_vector, podsum.todense(), 'cosine')
 
     # For each pod, retrieve cosine to query
-    pods = db.session.query(Pods).filter_by(language=lang).filter_by(registered=True).\
-            filter(Pods.name.contains('.shared.u.')).all()
+    pods = [db.session.query(Pods).filter_by(name=userhome).first()]
+    pods.extend(db.session.query(Pods).filter_by(language=lang).filter_by(registered=True).\
+            filter(Pods.name.contains('.shared.u.')).all())
     for p in pods:
         if p.name in podnames:
             cosine_score = m_cosines[0][podnames.index(p.name)]
@@ -111,8 +118,9 @@ def score_pods(query, query_vector, lang, username = None):
     print("POD SCORES:",pod_scores)
     for k in sorted(pod_scores, key=pod_scores.get, reverse=True):
         if len(best_pods) < max_pods + 1:
-            print("Appending pod",k)
-            best_pods.append(k)
+            if pod_scores[k] > 0:
+                print("Appending pod",k)
+                best_pods.append(k)
         else:
             break
     return best_pods
@@ -121,7 +129,7 @@ def score_pods(query, query_vector, lang, username = None):
 def score_docs(query, query_vector, tokenized, pod_name):
     '''Score documents for a query'''
     with app.app_context():
-        print("SEARCH: SCORE_PAGES: score_docs: scoring on", pod_name)
+        print("\nSEARCH: SCORE_PAGES: score_docs: scoring on", pod_name)
         document_scores = {}  # Document scores
         vec_scores, completeness_scores, posix_scores = \
                 compute_scores(query, query_vector, tokenized, pod_name)
@@ -145,10 +153,10 @@ def score_docs(query, query_vector, tokenized, pod_name):
                 u = db.session.query(Urls).filter_by(url=url).first()
                 snippet_score = generic_overlap(query, u.snippet)
                 document_scores[url]+=snippet_score
-                if idx in posix_scores:
-                    print(url, vec_scores[url], posix_scores[idx], document_scores[url], completeness_scores[url], snippet_score)
-                else:
-                    print(url, vec_scores[url], 0.0, document_scores[url], completeness_scores[url], snippet_score)
+                #if idx in posix_scores:
+                #    print(url, vec_scores[url], posix_scores[idx], document_scores[url], completeness_scores[url], snippet_score)
+                #else:
+                #    print(url, vec_scores[url], 0.0, document_scores[url], completeness_scores[url], snippet_score)
         return document_scores
 
 
@@ -192,7 +200,7 @@ def run_search(query, url_filter=None):
         username = None
     document_scores = {}
     query, lang = get_language(query)
-    print("QQ:",query,lang)
+    print("Query/language:",query,lang)
     q_vector, tokenized = compute_query_vectors(query, lang)
     best_pods = score_pods(query, q_vector, lang, username)
     print("\tQ:",query,"BEST PODS:",best_pods)
