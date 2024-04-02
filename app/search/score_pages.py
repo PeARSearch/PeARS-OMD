@@ -152,8 +152,12 @@ def score_docs(query, query_vector, tokenized, pod_name):
                 document_scores[url] = 0
             else:
                 u = db.session.query(Urls).filter_by(url=url).first()
-                snippet_score = generic_overlap(query, u.snippet)
-                document_scores[url]+=snippet_score
+                if u:
+                    snippet_score = generic_overlap(query, u.snippet)
+                    document_scores[url]+=snippet_score
+                else:
+                    print("ERROR: SEARCH: SCORE_PAGES: score_docs: could not find url in database")
+                    print(url)
                 #if idx in posix_scores:
                 #    print(url, vec_scores[url], posix_scores[idx], document_scores[url], completeness_scores[url], snippet_score)
                 #else:
