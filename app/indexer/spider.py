@@ -6,6 +6,7 @@ from os.path import join, dirname, realpath
 from flask import session, url_for
 import xmltodict
 import requests
+from langdetect import detect
 from app.indexer.htmlparser import extract_txt
 from app import (LANGS, OMD_PATH, LOCAL_RUN, 
         AUTH_TOKEN, FILE_SIZE_LIMIT, IGNORED_EXTENSIONS)
@@ -23,7 +24,7 @@ def omd_parse(current_url, username):
     fout = open(join(user_app_dir_path, username+'.corpus'),'a', encoding='utf-8')
     try:
         xml = requests.get(current_url, timeout=10, \
-                headers={'Authorization': AUTH_TOKEN}, stream =True).raw
+            headers={'Authorization': AUTH_TOKEN}, stream =True).raw
     except RuntimeError as error:
         print(">> ERROR: SPIDER: OMD PARSE: Request failed. Moving on.")
         print(error)
@@ -83,6 +84,7 @@ def omd_parse(current_url, username):
             #print(error)
             pass
 
+        
         # TITLE
         try:
             #print("# DOC TITLE:", doc['title'])
@@ -93,6 +95,7 @@ def omd_parse(current_url, username):
             pass
         if title is None:
             title = ''
+        
 
         # DESCRIPTION
         description = None
@@ -103,9 +106,15 @@ def omd_parse(current_url, username):
         except:
             #print("# DOC DESCRIPTION: No description")
             pass
+       
+        
+        # FIRST GO AT LANGUAGE DETECTION
+        if description is not None:
+            language = detect(description)
+        else:
+            language = LANGS[0]
 
         # CONTENT, ONLY DOCS (NOT FOLDERS)
-        language = LANGS[0]
         body_str = None
         if convertible == "True" or content_type in ['text/plain', 'text/x-tex']:
             title, body_str, _, language = extract_txt(url)
