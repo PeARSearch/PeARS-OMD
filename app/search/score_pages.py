@@ -86,11 +86,13 @@ def score_pods(query, query_vector, lang, username = None):
 
     # Compute similarity of query to all pods
     podnames = []
+    pods = []
     podsum = []
     npzs = []
-    userhome = 'home.'+lang+'.u.'+username
     if username is not None:
+        userhome = 'home.'+lang+'.u.'+username
         npzs.append(join(pod_dir, userhome+'.npz'))
+        pods.append(db.session.query(Pods).filter_by(name=userhome).first())
     npzs.extend(glob(join(pod_dir,'*.'+lang+'.shared.u.*npz')))
     for npz in npzs:
         podname = npz.split('/')[-1].replace('.npz','')
@@ -105,7 +107,6 @@ def score_pods(query, query_vector, lang, username = None):
     m_cosines = 1 - distance.cdist(query_vector, podsum.todense(), 'cosine')
 
     # For each pod, retrieve cosine to query
-    pods = [db.session.query(Pods).filter_by(name=userhome).first()]
     pods.extend(db.session.query(Pods).filter_by(language=lang).filter_by(registered=True).\
             filter(Pods.name.contains('.shared.u.')).all())
     for p in pods:
