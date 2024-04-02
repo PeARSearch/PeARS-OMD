@@ -81,7 +81,9 @@ def read_docs(doc_file):
                     description = ""
                     url = ""
                     title = ""
+                    snippet = ""
                     doc = ""
+                    language = LANGS[0]
     return urls, titles, snippets, descriptions, languages, docs
 
 
