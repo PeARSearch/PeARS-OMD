@@ -188,10 +188,13 @@ def return_best_urls(doc_scores, url_filter):
 def output(best_urls):
     #print(best_urls)
     results = {}
-    if len(best_urls) > 0:
-        for u in best_urls:
+    for u in best_urls:
+        try:
             url = db.session.query(Urls).filter_by(url=u).first().as_dict()
             results[u] = url
+        except:
+            print("ERROR: SEARCH: SCORE_PAGES: output: url not found in database.")
+            print(u)
     return results
 
 
