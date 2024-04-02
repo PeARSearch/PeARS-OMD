@@ -86,8 +86,13 @@ def run_user_search(query):
         languages = [lang]
     for lang in languages:
         r, s = run_search(query+' -'+lang, url_filter=[join(url,username), join(url,'shared'), 'http://localhost:9090/static/'])
-        results.update(r)
-        scores.extend(s)
+        for k,v in r.items():
+            if v is not None:
+                i = list(r.keys()).index(k)
+                #print(i,k,s[i])
+                results[k] = v
+                scores.append(s[i])
+    #print("UNIT TEST LEN RESULTS",len(results), "LEN SCORES", len(scores))
     results = order_results(results, scores)
     return results
 

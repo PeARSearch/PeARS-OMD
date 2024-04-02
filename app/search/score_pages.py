@@ -188,13 +188,14 @@ def return_best_urls(doc_scores, url_filter):
 def output(best_urls):
     #print(best_urls)
     results = {}
-    for u in best_urls:
+    for i in range(len(best_urls)):
+        u = best_urls[i]
         try:
             url = db.session.query(Urls).filter_by(url=u).first().as_dict()
-            results[u] = url
         except:
-            print("ERROR: SEARCH: SCORE_PAGES: output: url not found in database.")
-            print(u)
+            url = None
+            print("ERROR: SEARCH: SCORE_PAGES: output: could not find url in database")
+        results[u] = url
     return results
 
 
@@ -220,7 +221,9 @@ def run_search(query, url_filter=None):
     for dic in scores:
         document_scores.update(dic)
     best_urls, scores = return_best_urls(document_scores, url_filter)
+    #print("UNIT TEST: LEN BEST URLS", len(best_urls), "LEN SCORES", len(scores))
     results = output(best_urls)
+    #print("UNIT TEST: LEN BEST URLS", len(best_urls), "LEN SCORES", len(scores), "LEN RESULTS", len(results))
     if tracker is not None:
         search_emissions = tracker.stop_task()
         carbon_print(search_emissions, task_name)
