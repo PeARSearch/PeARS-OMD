@@ -23,7 +23,7 @@ def omd_parse(current_url, username):
     links = []
     fout = open(join(user_app_dir_path, username+'.corpus'),'a', encoding='utf-8')
     try:
-        xml = requests.get(current_url, timeout=10, \
+        xml = requests.get(current_url, timeout=60, \
             headers={'Authorization': AUTH_TOKEN}, stream =True).raw
     except RuntimeError as error:
         print(">> ERROR: SPIDER: OMD PARSE: Request failed. Moving on.")
