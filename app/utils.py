@@ -33,14 +33,21 @@ def read_docs(doc_file):
     Returns: paths, titles, snippets, descriptions and full bodies
     of documents in the input file.
     """
+
+    # Initializations
     url = ""
     title = ""
+    snippet = ""
+    description = ""
+    language = LANGS[0]
+
     urls = []
     titles = []
     snippets = []
     docs = []
     descriptions = []
     languages = []
+
     with open(doc_file, 'r', encoding="utf-8") as df:
         description = ""
         doc = ""
@@ -56,6 +63,7 @@ def read_docs(doc_file):
             elif "</doc" not in l:
                 if "{{DESCRIPTION}}" in l:
                     description = l.replace("{{DESCRIPTION}} ","")
+                    print("DOC WITH DESCRIPTION",description)
                 elif "{{BODY}}" in l:
                     l = l.replace("{{BODY}} ","")
                     doc+=l+' '
