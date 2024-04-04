@@ -237,4 +237,5 @@ class PodsModelView(ModelView):
 admin.add_view(PodsModelView(Pods, db.session))
 admin.add_view(UrlsModelView(Urls, db.session))
 
-
+from app.cli.controllers import pears as pears_module
+app.register_blueprint(pears_module)
