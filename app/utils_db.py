@@ -119,7 +119,7 @@ def add_to_idx_to_url(contributor, url):
     pod_path = join(pod_dir, contributor+'.idx')
     idx_to_url = joblib.load(pod_path)
     idx = len(idx_to_url[0])
-    idx_to_url[0].append(idx)
+    idx_to_url[0].append(idx) #CHECK: ARE WE GETTING DUPLICATES?
     idx_to_url[1].append(url)
     joblib.dump(idx_to_url, pod_path)
     return idx
@@ -147,7 +147,7 @@ def add_to_npz_to_idx(pod_name, vid, idx):
     """
     pod_path = join(pod_dir, pod_name+'.npz.idx')
     npz_to_idx = joblib.load(pod_path)
-    npz_to_idx[0].append(vid)
+    npz_to_idx[0].append(vid) #CHECK: SHOULD THIS SIMPLY BE A RANGE?
     npz_to_idx[1].append(idx)
     joblib.dump(npz_to_idx, pod_path)
 
@@ -222,7 +222,7 @@ def rm_doc_from_pos(vid, pod):
         tmp_remaining = {}
         tmp_deleted = {}
         for doc_id, posidx in posindex[token_id].items():
-            if doc_id != str(vid):
+            if doc_id != vid:
                 tmp_remaining[doc_id] = posidx
             else:
                 tmp_deleted[doc_id] = posidx
@@ -274,28 +274,3 @@ def delete_url(url):
     return "Deleted document with url "+url
 
 
-def move_npz_pos(src, tgt):
-    """ Move url between pods in the npz matrices.
-    This will be used when transferring URLs from
-    the private to the shared pod.
-    """
-    u = db.session.query(Urls).filter_by(url=src).first()
-    src_pod = u.pod
-    if 'shared' in src_pod:
-        tgt_pod = src_pod.replace('.shared.','.')
-    else:
-        tgt_pod = src_pod.replace('.u.','.shared.u.')
-
-    #Move document row from .npz matrix
-    npz_row = rm_from_npz(vid, join(pod_dir, src_pod+'.npz'))
-    new_vid = add_to_npz(npz_row, join(pod_dir, tgt_pod+'.npz'))
-    #rm_from_npz_to_idx(src_pod, idx)
-
-    #Move doc from positional index
-    pos_info = rm_doc_from_pos(vid, src_pod)
-    add_doc_to_pos(pos_info, tgt_pod)
-
-    #Correct DB
-    u.url = tgt
-    u.pod = tgt_pod
-    u.vector = new_vid
