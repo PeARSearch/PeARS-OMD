@@ -55,7 +55,11 @@ def check_idx_to_url(username):
 
 def check_db_vs_idx_to_url(username):
     print("\t>> CHECKING DB VS IDX_TO_URL")
-    urls = Urls.query.all()
+    urls = []
+    pods = Pods.query.all()
+    pods = [p for p in pods if p.name.split('.u.')[1] == username]
+    for pod in pods:
+        urls.extend(Urls.query.filter_by(pod=pod.name).all())
     pod_path = join(pod_dir, username+'.idx')
     idx_to_url = joblib.load(pod_path)
     if len(urls) != len(idx_to_url[0]):
@@ -92,7 +96,7 @@ def check_npz_to_idx_vs_idx_to_url(pod, username):
         print("\t\t> ERROR: idx in npz_to_idx is not a subset of idx in idx_to_url")
 
 
-def check_npz_vs_npz_to_idx(pod, username):
+def check_npz_vs_npz_to_idx(pod):
     print("\t>> CHECKING NPZ_TO_IDX VS IDX_TO_URL")
     pod_path = join(pod_dir, pod+'.npz')
     pod_m = load_npz(pod_path)
@@ -135,7 +139,7 @@ def checkconsistency(username):
         print(">> CLI: UNITTEST: CONSISTENCY: CHECKING POD:", pod.name)
         check_npz_to_idx(pod.name)
         check_npz_to_idx_vs_idx_to_url(pod.name, username)
-        check_npz_vs_npz_to_idx(pod.name, username)
+        check_npz_vs_npz_to_idx(pod.name)
         check_pos_vs_npz_to_idx(pod.name)
 
         
