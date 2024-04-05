@@ -118,8 +118,15 @@ def rename_idx_to_url(contributor, src, tgt):
 def add_to_idx_to_url(contributor, url):
     pod_path = join(pod_dir, contributor+'.idx')
     idx_to_url = joblib.load(pod_path)
-    idx = len(idx_to_url[0])
-    idx_to_url[0].append(idx) #CHECK: ARE WE GETTING DUPLICATES?
+    urls = idx_to_url[1]
+    if url in urls:
+        idx = urls.index(url)
+        return idx
+    if len(idx_to_url[0]) > 0:
+        idx = max(idx_to_url[0])+1
+    else:
+        idx = 0
+    idx_to_url[0].append(idx)
     idx_to_url[1].append(url)
     joblib.dump(idx_to_url, pod_path)
     return idx
