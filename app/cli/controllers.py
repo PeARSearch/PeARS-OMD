@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import joblib
+from collections import Counter
 from shutil import copy2, copytree
 from os.path import dirname, realpath, join
 from datetime import datetime
@@ -72,8 +73,55 @@ def check_duplicates_idx_to_url(username):
     print("\t>> CHECKING DUPLICATES IN IDX_TO_URL")
     pod_path = join(pod_dir, username+'.idx')
     idx_to_url = joblib.load(pod_path)
+    if len(idx_to_url[0]) > len(list(set(idx_to_url[0]))):
+        print("\t\t> ERROR: Duplicates in idx_to_url (idx)")
     if len(idx_to_url[1]) > len(list(set(idx_to_url[1]))):
-        print("\t\t> ERROR: Duplicates in idx_to_url")
+        print("\t\t> ERROR: Duplicates in idx_to_url (urls)")
+
+
+def repair_duplicates_idx_to_url(username):
+    print("\t>> DELETE DUPLICATES IN IDX_TO_URL")
+    pod_path = join(pod_dir, username+'.idx')
+    idx_to_url = joblib.load(pod_path)
+    idx = idx_to_url[0]
+    urls = idx_to_url[1]
+    duplicate_urls = [k for k,v in Counter(urls).items() if v>1]
+    for dup in duplicate_urls:
+        while dup in urls:
+            i = urls.index(dup)
+            idx.pop(i)
+            urls.pop(i)
+    duplicate_idx = [k for k,v in Counter(idx).items() if v>1]
+    for dup in duplicate_idx:
+        while dup in idx: #several entries could have the same idx
+            i = idx.index(dup)
+            duplicate_urls.append(urls[i])
+            idx.pop(i)
+            urls.pop(i)
+    joblib.dump([idx,urls], pod_path)
+    return duplicate_urls
+
+
+def repair_npz_to_idx_vs_idx_to_url(pod, username):
+    print("\t>> DELETE NPZ_TO_IDX ENTRIES NOT IN IDX_TO_URL")
+    pod_path = join(pod_dir, username+'.idx')
+    idx_to_url = joblib.load(pod_path)
+    pod_path = join(pod_dir, pod+'.npz.idx')
+    npz_to_idx = joblib.load(pod_path)
+    idx1 = idx_to_url[0]
+    idx2 = npz_to_idx[1][1:] #Ignore first value, which is -1
+    idx = npz_to_idx[1]
+    diff = list(set(idx2)-set(idx1))
+    for d in diff:
+        while d in idx:  #several entries could have the same idx
+            i = idx.index(d)
+            idx.pop(i)
+    npz = list(range(len(idx)))
+    print(npz)
+    print(idx)
+    joblib.dump([npz, idx], pod_path)
+
+
 
 
 def check_npz_to_idx(pod):
@@ -142,7 +190,24 @@ def checkconsistency(username):
         check_npz_vs_npz_to_idx(pod.name)
         check_pos_vs_npz_to_idx(pod.name)
 
-        
+
+@pears.cli.command('repair')
+@click.argument('username')
+def repair(username):
+    print("\n>> CLI: REPAIR")
+    pods = Pods.query.all()
+    usernames = [p.name.split('.u.')[1] for p in pods]
+    if username not in usernames:
+        print("\t> ERROR: no username",username)
+        return 0
+    repair_duplicates_idx_to_url(username)
+    pods = Pods.query.all()
+    pods = [p for p in pods if p.name.split('.u.')[1] == username]
+    for pod in pods:
+        print(">> CLI: REPAIR: ", pod.name)
+        repair_npz_to_idx_vs_idx_to_url(pod.name, username)
+
+
 @pears.cli.command('show')
 @click.argument('username')
 @click.argument('indexfile')
