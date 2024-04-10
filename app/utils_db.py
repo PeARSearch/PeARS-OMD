@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: AGPL-3.0-only
 
+import logging
 import joblib
 from app import db, models
 from app import LOCAL_RUN, OMD_PATH, LANGS, VEC_SIZE
@@ -118,35 +119,38 @@ def rename_idx_to_url(contributor, src, tgt):
 def add_to_idx_to_url(contributor, url):
     pod_path = join(pod_dir, contributor+'.idx')
     idx_to_url = joblib.load(pod_path)
+    idx = idx_to_url[0]
     urls = idx_to_url[1]
+    new = True #was there an old version of this URL in the index?
     if url in urls:
-        idx = urls.index(url)
-        return idx
+        i = idx[urls.index(url)]
+        new = False
+        return new, i
     if len(idx_to_url[0]) > 0:
-        idx = max(idx_to_url[0])+1
+        i = max(idx_to_url[0])+1
     else:
-        idx = 0
-    idx_to_url[0].append(idx)
+        i = 0
+    idx_to_url[0].append(i)
     idx_to_url[1].append(url)
     joblib.dump(idx_to_url, pod_path)
-    return idx
+    return new, i
 
 
 def rm_from_idx_to_url(contributor, url):
     pod_path = join(pod_dir, contributor+'.idx')
     idx_to_url = joblib.load(pod_path)
-    print("IDX_TO_URL BEFORE RM",idx_to_url)
+    logging.debug("IDX_TO_URL BEFORE RM",idx_to_url)
     i = idx_to_url[1].index(url)
     idx = idx_to_url[0][i]
     idx_to_url[0].pop(i)
     idx_to_url[1].pop(i)
-    print("IDX_TO_URL AFTER RM",idx_to_url)
-    print("INDEX OF REMOVED ITEM",idx)
+    logging.debug("IDX_TO_URL AFTER RM",idx_to_url)
+    logging.debug("INDEX OF REMOVED ITEM",idx)
     joblib.dump(idx_to_url, pod_path)
     return idx
 
 
-def add_to_npz_to_idx(pod_name, vid, idx):
+def add_to_npz_to_idx(pod_name, idx):
     """Record the ID of the document given
     its position in the npz matrix.
     NB: the lists do not have to be in the
@@ -154,9 +158,10 @@ def add_to_npz_to_idx(pod_name, vid, idx):
     """
     pod_path = join(pod_dir, pod_name+'.npz.idx')
     npz_to_idx = joblib.load(pod_path)
-    npz_to_idx[0].append(vid) #CHECK: SHOULD THIS SIMPLY BE A RANGE?
-    npz_to_idx[1].append(idx)
-    joblib.dump(npz_to_idx, pod_path)
+    if idx not in npz_to_idx[1]:
+        npz_to_idx[1].append(idx)
+        npz_to_idx[0] = list(range(len(npz_to_idx[1])))
+        joblib.dump(npz_to_idx, pod_path)
 
 
 def rm_from_npz_to_idx(pod_name, idx):
@@ -166,14 +171,16 @@ def rm_from_npz_to_idx(pod_name, idx):
     """
     pod_path = join(pod_dir, pod_name+'.npz.idx')
     npz_to_idx = joblib.load(pod_path)
-    print("NPZ_TO_IDX BEFORE RM:",npz_to_idx)
-    i = npz_to_idx[1].index(idx)
-    npz_to_idx[1].pop(i)
-    npz_to_idx[0] = list(range(len(npz_to_idx[1])))
-    print("NPZ_TO_IDX AFTER RM:",npz_to_idx)
-    print("INDEX OF REMOVED ITEM",i)
-    joblib.dump(npz_to_idx, pod_path)
-    return i
+    if idx in npz_to_idx[1]:
+        logging.debug("NPZ_TO_IDX BEFORE RM:",npz_to_idx)
+        i = npz_to_idx[1].index(idx)
+        npz_to_idx[1].pop(i)
+        npz_to_idx[0] = list(range(len(npz_to_idx[1])))
+        logging.debug("NPZ_TO_IDX AFTER RM:",npz_to_idx)
+        logging.debug("INDEX OF REMOVED ITEM",i)
+        joblib.dump(npz_to_idx, pod_path)
+        return i
+    return -1
 
 
 def rm_from_npz(vid, pod_name):
@@ -186,13 +193,13 @@ def rm_from_npz(vid, pod_name):
     """
     pod_path = join(pod_dir, pod_name+'.npz')
     pod_m = load_npz(pod_path)
-    print("SHAPE OF NPZ MATRIX BEFORE RM:",pod_m.shape)
+    logging.debug("SHAPE OF NPZ MATRIX BEFORE RM:",pod_m.shape)
     v = pod_m[vid]
-    print("CHECKING SHAPE OF DELETED VEC:",pod_m.shape)
+    logging.debug("CHECKING SHAPE OF DELETED VEC:",pod_m.shape)
     m1 = pod_m[:vid]
     m2 = pod_m[vid+1:]
     pod_m = vstack((m1,m2))
-    print("SHAPE OF NPZ MATRIX AFTER RM:",pod_m.shape)
+    logging.debug("SHAPE OF NPZ MATRIX AFTER RM:",pod_m.shape)
     save_npz(pod_path, pod_m)
     return v
 
@@ -214,7 +221,7 @@ def add_to_npz(v, pod_path):
 def rm_doc_from_pos(vid, pod):
     """ Remove wordpieces from pos file.
     Arguments:
-    vid: the ID of the vector recording the wordpieces
+    vid: the ID of the document recording the wordpieces
     pod: the name of the pod
 
     Returns: the content of the positional index for that vector.
