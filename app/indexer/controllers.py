@@ -4,6 +4,7 @@
 
 # Import flask dependencies
 import re
+import logging
 from math import ceil
 from os import remove
 from os.path import dirname, join, realpath, isfile
@@ -15,7 +16,7 @@ from app.api.models import Urls, Pods
 from app.indexer import mk_page_vector, spider
 from app.utils import read_docs, read_urls, get_language, carbon_print
 from app.utils_db import (create_pod_in_db, create_pod_npz_pos, create_or_replace_url_in_db, 
-        add_to_idx_to_url, add_to_npz_to_idx)
+        add_to_idx_to_url, add_to_npz_to_idx, rm_doc_from_pos, rm_from_npz_to_idx, rm_from_npz)
 from app.indexer.posix import posix_doc
 from app.auth.controllers import login_required
 
@@ -111,12 +112,18 @@ def progress_crawl(username=None):
                 tracker.start_task(task_name)
             for url, title, snippet, description, lang, doc in \
                     zip(urls, titles, snippets, descriptions, languages, docs):
-                #print("\t>>> INDEXER: CONTROLLER: PROGRESS CRAWL: INDEXING", url)
-                idx = add_to_idx_to_url(username, url)
-                pod_name, vid, tokenized_text = mk_page_vector.compute_vectors_local_docs( \
+                logging.info("\t>>> INDEXER: CONTROLLER: PROGRESS CRAWL: INDEXING", url)
+                new, idx = add_to_idx_to_url(username, url)
+                pod_name, _, tokenized_text = mk_page_vector.compute_vectors_local_docs( \
                     url, title, description, doc, username, lang)
+                if not new:
+                    logging.info("\t>>> INDEXER: CONTROLLER: PROGRESS CRAWL: URL PREVIOUSLY KNOWN:", url)
+                    rm_doc_from_pos(idx, pod_name) #in case old version is there
+                    vid = rm_from_npz_to_idx(pod_name, idx)
+                    if vid != -1:
+                        rm_from_npz(vid, pod_name)
                 posix_doc(tokenized_text, idx, pod_name, lang, username)
-                add_to_npz_to_idx(pod_name, vid, idx)
+                add_to_npz_to_idx(pod_name, idx)
                 create_or_replace_url_in_db(url, title, snippet, description, username, lang)
                 c += 1
                 #print('###', str(ceil(c / len(urls) * 100)))
