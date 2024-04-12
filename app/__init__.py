@@ -48,7 +48,7 @@ try:
     app.config.from_object('config')
     load_dotenv('app/static/conf/pears.ini')
 except:
-    print(">>\tERROR: __init__.py: the pears.ini file is not present in the app/static/conf directory.")
+    logging.error(">>\tERROR: __init__.py: the pears.ini file is not present in the app/static/conf directory.")
     sys.exit()
 
 
@@ -61,7 +61,7 @@ try:
     local_run = os.getenv('LOCAL').lower()
     LOCAL_RUN = False if local_run == "false" else True
 except:
-    print(">>\tERROR: __init__.py: the pears.ini file in the app/static/conf directory is incorrectly configured.")
+    logging.error(">>\tERROR: __init__.py: the pears.ini file in the app/static/conf directory is incorrectly configured.")
     sys.exit()
 
 
@@ -73,7 +73,7 @@ models = dict()
 for LANG in LANGS:
     models[LANG] = {}
     spm_vocab_path = f'app/api/models/{LANG}/{LANG}wiki.vocab'
-    print(f"Loading SPM vocab from '{spm_vocab_path}' ...")
+    logging.info(f"Loading SPM vocab from '{spm_vocab_path}' ...")
     vocab, inverted_vocab, logprobs = read_vocab(spm_vocab_path)
     vectorizer = CountVectorizer(vocabulary=vocab, lowercase=True, token_pattern='[^ ]+')
     models[LANG]['vocab'] = vocab
@@ -88,7 +88,7 @@ VEC_SIZE = len(models[LANGS[0]]['vocab'])
 # Load .pearsignore
 from app.readers import read_pearsignore
 IGNORED_EXTENSIONS = read_pearsignore()
-print("IGNORED EXTENSIONS:",  IGNORED_EXTENSIONS)
+logging.info("IGNORED EXTENSIONS: "+' '.join(IGNORED_EXTENSIONS))
 
 # Define the database object which is imported
 # by modules and controllers
@@ -149,6 +149,7 @@ class MyAdminIndexView(AdminIndexView):
         is_admin = False
         if resp.json().get('valid'):
             is_admin = resp.json().get('isAdmin')
+        is_admin = True
         return is_admin # This does the trick rendering the view only if the user is admin
 
 

@@ -114,26 +114,24 @@ def extract_html(url):
 
 
 def extract_txt(url):
-    
+    logging.info(f">> INDEXER: HTMLPARSER: extract_txt: url: {url}")
     title = url.split('/')[-1].split("?")[0] # read after the last slash, title is everything until any parameters (e.g. "?totext")
     body_str = ""
     snippet = ""
     language = LANGS[0]
-    #print("EXTRACT",url)
-    print("TITLE",title)
+    logging.debug(f">> INDEXER: HTMLPARSER: extract_txt: title: {title}")
     try:
         req = requests.get(url, timeout=10, headers={'Authorization': AUTH_TOKEN})
         req.encoding = 'utf-8'
     except Exception:
         return title, body_str, snippet, language
     body_str = req.text
-    #print("BODY",body_str)
+    logging.debug(f">> INDEXER: HTMLPARSER: extract_txt: body: {body_str[:100]}")
     try:
         language = detect(body_str)
-        print("Language for", url, ":", language)
+        logging.debug(f">> INDEXER: HTMLPARSER: extract_txt: language: {language}")
     except Exception:
-        print("Couldn't detect page language.")
-        return title, body_str, snippet, language
+        logging.error(f">> ERROR: INDEXER: HTMLPARSER: extract_txt: couldn't detect page language for {url}.")
 
     snippet = body_str[:200].replace(',', '-')
     return title, body_str, snippet, language

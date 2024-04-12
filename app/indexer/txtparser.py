@@ -12,7 +12,7 @@ from app import LANGS, AUTH_TOKEN
 
 def extract_from_url(url):
     """ Extract plain text from url"""
-    print(">> INDEXER: TXTPARSER: extract_from_url")
+    logging.info(">> INDEXER: TXTPARSER: extract_from_url")
     title = url.split('/')[-1]
     body_str = ""
     snippet = ""
@@ -21,19 +21,15 @@ def extract_from_url(url):
     try:
         req = requests.get(url, timeout=10, headers={'Authorization': AUTH_TOKEN})
     except Exception:
-        print(">> ERROR: INDEXER: TXTPARSER: issue requesting url")
+        logging.error(">> ERROR: INDEXER: TXTPARSER: issue requesting url")
         return title, body_str, snippet, cc
     body_str = req.text
     try:
         language = detect(body_str)
-        print("Language for", url, ":", language)
+        logging.info(f">> INDEXER: TXTPARSER: Language for {url}: {language}")
     except Exception:
-        print("Couldn't detect page language.")
+        logging.error(">> ERROR: INDEXER: TXTPARSER: Couldn't detect page language for {url}.")
         return title, body_str, snippet, cc
 
-    if language not in installed_languages:
-        print("Ignoring", url, "because language is not supported.")
-        title = ""
-        return title, body_str, snippet, cc
     snippet = body_str[:200].replace(',', '-')
     return title, body_str, snippet, cc

@@ -112,12 +112,12 @@ def progress_crawl(username=None):
                 tracker.start_task(task_name)
             for url, title, snippet, description, lang, doc in \
                     zip(urls, titles, snippets, descriptions, languages, docs):
-                logging.info("\t>>> INDEXER: CONTROLLER: PROGRESS CRAWL: INDEXING", url)
+                logging.debug("\t>>> INDEXER: CONTROLLER: PROGRESS CRAWL: INDEXING "+url)
                 new, idx = add_to_idx_to_url(username, url)
                 pod_name, _, tokenized_text = mk_page_vector.compute_vectors_local_docs( \
                     url, title, description, doc, username, lang)
                 if not new:
-                    logging.info("\t>>> INDEXER: CONTROLLER: PROGRESS CRAWL: URL PREVIOUSLY KNOWN:", url)
+                    logging.info("\t>>> INDEXER: CONTROLLER: PROGRESS CRAWL: URL PREVIOUSLY KNOWN: "+url)
                     rm_doc_from_pos(idx, pod_name) #in case old version is there
                     vid = rm_from_npz_to_idx(pod_name, idx)
                     if vid != -1:
