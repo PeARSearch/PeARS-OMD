@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: AGPL-3.0-only
 
+import logging
 from os.path import join
 import re
 from datetime import datetime
@@ -63,7 +64,7 @@ def read_docs(doc_file):
             elif "</doc" not in l:
                 if "{{DESCRIPTION}}" in l:
                     description = l.replace("{{DESCRIPTION}} ","")
-                    print("DOC WITH DESCRIPTION",description)
+                    logging.debug("DOC WITH DESCRIPTION: {description}")
                 elif "{{BODY}}" in l:
                     l = l.replace("{{BODY}} ","")
                     doc+=l+' '

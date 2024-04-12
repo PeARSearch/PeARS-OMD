@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: AGPL-3.0-only
 
+import logging
 from os.path import join, dirname, realpath
 from flask import session, url_for
 import xmltodict
@@ -19,22 +20,30 @@ def omd_parse(current_url, username):
     to the user's corpus file.
     Arguments: the url path and a username.
     """
-    print("\n>> INDEXER: SPIDER: omd_parse: Running OMD parse on", current_url)
+    logging.info("\n>> INDEXER: SPIDER: omd_parse: Running OMD parse on "+current_url)
     links = []
     fout = open(join(user_app_dir_path, username+'.corpus'),'a', encoding='utf-8')
     try:
         xml = requests.get(current_url, timeout=60, \
             headers={'Authorization': AUTH_TOKEN}, stream =True).raw
     except RuntimeError as error:
-        print(">> ERROR: SPIDER: OMD PARSE: Request failed. Moving on.")
-        print(error)
+        logging.error(">> ERROR: SPIDER: OMD PARSE: Request failed. Moving on.")
+        logging.error(error)
         return links
+    #print(xml.read())
+    #xml = requests.get(current_url, timeout=60, \
+    #    headers={'Authorization': AUTH_TOKEN}, stream =True).raw
     try:
         parse = xmltodict.parse(xml.read())
     except:
-        print(">> ERROR: SPIDER: OMD PARSE: File may have some bad XML. Could not parse.")
+        logging.error(">> ERROR: SPIDER: OMD PARSE: File may have some bad XML. Could not parse.")
         return links
-    docs = parse['omd_index']['doc']
+    try:
+        docs = parse['omd_index']['doc']
+    except:
+        logging.error(">> ERROR: SPIDER: OMD PARSE: No documents found in the XML.")
+        return links
+
     if not isinstance(docs, list):
         docs = [docs]
     for doc in docs:
@@ -45,12 +54,11 @@ def omd_parse(current_url, username):
             url = doc['@url'][1:]
         else:
             url = doc['@url']
-        #print(">> INDEXER: SPIDER: omd_parse: doc url:", url)
         if url.startswith('shared/'):
             url = join(OMD_PATH, url)
         else:
             url = join(urldir, url)
-        #print(">> INDEXER: SPIDER: omd_parse: doc url:", url)
+        logging.info(">> INDEXER: SPIDER: omd_parse: doc url: "+url)
         if LOCAL_RUN:
             if url[-1] == '/': #For local test only
                 url = join(url,'index.html')
@@ -60,38 +68,38 @@ def omd_parse(current_url, username):
         if extension in IGNORED_EXTENSIONS:
             continue
 
-        # CONVERTIBILITY 
+        # CONVERTIBILITY
         convertible = "False"
-        try: 
-            #print("# DOC CONVERTIBILITY: ", doc.get('@convertible'))
+        try:
+            logging.info(">> SPIDER: OMD_PARSE: DOC CONVERTIBILITY: ", doc.get('@convertible'))
             convertible = doc.get("@convertible")
             if convertible == "True":
                 url = url + "?totext"
 
         except RuntimeError as error:
-            print(">> SPIDER: OMD_PARSE: DOC CONVERTIBILITY: No convertible")
-            print(error)
+            logging.info(">> SPIDER: OMD_PARSE: DOC CONVERTIBILITY: No convertible")
+            logging.info(error)
 
         # CONTENT TYPE
         try:
-            #print("# DOC CONTENTTYPE: ", extension, doc['@contentType'])
+            logging.info(">> SPIDER: OMD_PARSE: DOC CONTENTTYPE: "+extension+" "+doc['@contentType'])
             content_type = doc['@contentType']
             if content_type in ['folder','desktop']:
                 if join(OMD_PATH,'shared') not in url:
                     links.append(url)
         except RuntimeError as error:
-            #print(">> SPIDER: OMD_PARSE: DOC CONTENTTYPE: No contentType")
-            #print(error)
+            logging.info(">> SPIDER: OMD_PARSE: DOC CONTENTTYPE: No contentType")
+            logging.info(error)
             pass
 
         
         # TITLE
         try:
-            #print("# DOC TITLE:", doc['title'])
+            logging.info(">> SPIDER: OMD_PARSE: DOC TITLE: "+doc['title'])
             title = doc['title']
         except RuntimeError as error:
-            #print(">> SPIDER: OMD_PARSE: DOC TITLE: No title")
-            #print(error)
+            logging.info(">> SPIDER: OMD_PARSE: DOC TITLE: No title")
+            logging.info(error)
             pass
         if title is None:
             title = ''
@@ -100,11 +108,11 @@ def omd_parse(current_url, username):
         # DESCRIPTION
         description = None
         try:
-            #print("# DOC DESCRIPTION:", doc['description'][:100])
+            logging.info(">> SPIDER: DOC DESCRIPTION: "+doc['description'][:100])
             description = title + ' ' + doc['description']
-            #print("\t"+description+"\n")
+            logging.info("\t"+description+"\n")
         except:
-            #print("# DOC DESCRIPTION: No description")
+            logging.info(">> SPIDER: DOC DESCRIPTION: No description")
             pass
        
         
@@ -118,16 +126,14 @@ def omd_parse(current_url, username):
         body_str = None
         if convertible == "True" or content_type in ['text/plain', 'text/x-tex']:
             title, body_str, _, language = extract_txt(url)
-            #print("# DOC BODY:", body_str[:100])
-        #else:
-        #    print(">> ERROR: SPIDER: OMD PARSE: DOC BODY: Skipping request: \
-        #            content is not text/plain.")
 
         # Hack. Revert to main language if language is not installed
         if language not in LANGS:
+            logging.info(">> SPIDER: LANGUAGE: language is not in LANGS, reverting to default.")
             language = LANGS[0]
 
         # Write to temporary corpus file
+        logging.info(">> SPIDER: WRITING CORPUS")
         fout.write("<doc title='"+title+"' url='"+url+"' lang='"+language+"'>\n")
         if description:
             fout.write("{{DESCRIPTION}} "+description+"\n")
@@ -165,7 +171,7 @@ def write_docs(base_url, username):
         #print("Pages to visit",pages_to_visit)
         url = pages_to_visit[0]
         pages_visited.append(url)
-        try:
+        try:    
             links = omd_parse(url, username)
             for link in links:
                 #print(link,pages_visited)
@@ -174,6 +180,6 @@ def write_docs(base_url, username):
                 if link not in pages_visited and link not in pages_to_visit and '#' not in link:
                     #print("Found href:",link)
                     pages_to_visit.append(link)
-        except:
-            print(f">> ERROR: SPIDER: OMD PARSE: Failed visiting url: {url}")
+        except: 
+            print(f">> ERROR: SPIDER: OMD PARSE: exceptions in parsing: {url}")
         pages_to_visit = pages_to_visit[1:]
