@@ -69,12 +69,12 @@ def omd_parse(current_url, username):
             continue
 
         # CONVERTIBILITY
-        convertible = "False"
+        convertible = False
         try:
             logging.info(">> SPIDER: OMD_PARSE: DOC CONVERTIBILITY: ", doc.get('@convertible'))
-            convertible = doc.get("@convertible")
-            if convertible == "True":
-                url = url + "?totext"
+            convertible_str = doc.get("@convertible")
+            assert convertible_str in ["True", "False", None]
+            convertible = True if convertible_str == "True" else False 
 
         except RuntimeError as error:
             logging.info(">> SPIDER: OMD_PARSE: DOC CONVERTIBILITY: No convertible")
@@ -124,7 +124,9 @@ def omd_parse(current_url, username):
 
         # CONTENT, ONLY DOCS (NOT FOLDERS)
         body_str = None
-        if convertible == "True" or content_type in ['text/plain', 'text/x-tex']:
+        if convertible:
+            title, body_str, _, language = extract_txt(url + "?totext")
+        elif content_type in ['text/plain', 'text/x-tex']:
             title, body_str, _, language = extract_txt(url)
 
         # Hack. Revert to main language if language is not installed
