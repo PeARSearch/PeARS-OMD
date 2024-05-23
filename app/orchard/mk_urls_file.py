@@ -11,12 +11,12 @@ from collections import Counter
 import joblib
 
 dir_path = dirname(dirname(realpath(__file__)))
-pod_dir = join(dir_path,'static','pods')
+pod_dir = join(dir_path,'pods')
 
 
 def make_shareable_pod(keyword):
     url_keyword = keyword.replace(' ', '_')
-    hfile = join(dir_path, "static", "pods", url_keyword + ".share")
+    hfile = join(dir_path, "pods", url_keyword + ".share")
     name = keyword
     langs = []
     titles = []

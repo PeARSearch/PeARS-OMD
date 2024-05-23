@@ -30,8 +30,8 @@ if CARBON_TRACKING:
 
 # Make sure user data directories exist
 DEFAULT_PATH = f'app'
-Path(os.path.join(DEFAULT_PATH,'static/pods')).mkdir(parents=True, exist_ok=True)
-Path(os.path.join(DEFAULT_PATH,'static/userdata')).mkdir(parents=True, exist_ok=True)
+Path(os.path.join(DEFAULT_PATH,'pods')).mkdir(parents=True, exist_ok=True)
+Path(os.path.join(DEFAULT_PATH,'userdata')).mkdir(parents=True, exist_ok=True)
 
 
 def configure_logging():
@@ -46,9 +46,9 @@ app = Flask(__name__)
 # Read config file
 try:
     app.config.from_object('config')
-    load_dotenv('app/static/conf/pears.ini')
+    load_dotenv('./conf/pears.ini')
 except:
-    logging.error(">>\tERROR: __init__.py: the pears.ini file is not present in the app/static/conf directory.")
+    logging.error(">>\tERROR: __init__.py: the pears.ini file is not present in the conf directory.")
     sys.exit()
 
 
@@ -61,7 +61,7 @@ try:
     local_run = os.getenv('LOCAL').lower()
     LOCAL_RUN = False if local_run == "false" else True
 except:
-    logging.error(">>\tERROR: __init__.py: the pears.ini file in the app/static/conf directory is incorrectly configured.")
+    logging.error(">>\tERROR: __init__.py: the pears.ini file in the conf directory is incorrectly configured.")
     sys.exit()
 
 

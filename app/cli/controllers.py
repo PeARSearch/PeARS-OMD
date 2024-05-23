@@ -19,7 +19,7 @@ from app.utils_db import rm_from_idx_to_url, rm_from_npz, rm_doc_from_pos
 pears = Blueprint('pears', __name__)
 
 dir_path = dirname(dirname(dirname(realpath(__file__))))
-pod_dir = join(dir_path,'app','static','pods')
+pod_dir = join(dir_path,'app','pods')
 
 
 @pears.cli.command('backup')

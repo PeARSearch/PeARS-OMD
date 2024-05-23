@@ -11,7 +11,7 @@ from app.utils import convert_to_string, convert_dict_to_string, normalise
 from app.utils_db import get_pod_name
 
 dir_path = dirname(dirname(realpath(__file__)))
-pod_dir = join(dir_path,'static','pods')
+pod_dir = join(dir_path,'pods')
 
 def tokenize_text(lang, text):
     sp.load(f'app/api/models/{lang}/{lang}wiki.model')

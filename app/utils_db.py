@@ -14,8 +14,8 @@ import numpy as np
 from os.path import dirname, realpath, join, isfile
 from scipy.sparse import csr_matrix, vstack, save_npz, load_npz
 
-dir_path = dirname(dirname(realpath(__file__)))
-pod_dir = join(dir_path,'app','static','pods')
+dir_path = dirname(realpath(__file__))
+pod_dir = join(dir_path,'pods')
 
 def get_pod_name(target_url, lang, username):
     """ Retrieve correct pod given url and username.
@@ -24,7 +24,7 @@ def get_pod_name(target_url, lang, username):
     """
     pod_name = 'home.'+lang+'.u.'+username
     if LOCAL_RUN:
-        if 'http://localhost:9090/static/testdocs/shared' in target_url:
+        if 'http://localhost:9090/testdocs/shared' in target_url:
             pod_name = 'home.'+lang+'.shared.u.'+username
     else:
         if join(OMD_PATH, 'shared') in target_url:

@@ -10,11 +10,11 @@ DEBUG = True
 
 # Define the application directory
 BASE_DIR = abspath(dirname(__file__))
-Path(join(BASE_DIR,'app/static/db')).mkdir(parents=True, exist_ok=True)
+Path(join(BASE_DIR,'app/db')).mkdir(parents=True, exist_ok=True)
 
 # Define the database - we are working with
 # SQLite for this example
-SQLALCHEMY_DATABASE_URI = 'sqlite:///' + join(BASE_DIR, 'app/static/db/app.db')
+SQLALCHEMY_DATABASE_URI = 'sqlite:///' + join(BASE_DIR, 'app/db/app.db')
 DATABASE_CONNECT_OPTIONS = {}
 
 # Application threads. A common general assumption is
