@@ -63,18 +63,23 @@ def omd_parse(current_url, username):
             if url[-1] == '/': #For local test only
                 url = join(url,'index.html')
         
+        # IS THIS ITEM A FOLDER DESCRIPTION
+        is_folder_description = url.endswith("?description")
+        if is_folder_description:
+            url = url.replace("?description", "")
+
         # EXTENSION
         extension = '.'+url.split('/')[-1].split('.')[-1]
         if extension in IGNORED_EXTENSIONS:
             continue
 
         # CONVERTIBILITY
-        convertible = "False"
+        convertible = False
         try:
             logging.info(">> SPIDER: OMD_PARSE: DOC CONVERTIBILITY: ", doc.get('@convertible'))
-            convertible = doc.get("@convertible")
-            if convertible == "True":
-                url = url + "?totext"
+            convertible_str = doc.get("@convertible")
+            assert convertible_str in ["True", "False", None]
+            convertible = True if convertible_str == "True" else False 
 
         except RuntimeError as error:
             logging.info(">> SPIDER: OMD_PARSE: DOC CONVERTIBILITY: No convertible")
@@ -87,6 +92,9 @@ def omd_parse(current_url, username):
             if content_type in ['folder','desktop']:
                 if join(OMD_PATH,'shared') not in url:
                     links.append(url)
+                # for folders - add the URL to the list & skip!
+                # we'll come back to it, and index it based on the ?description info
+                continue
         except RuntimeError as error:
             logging.info(">> SPIDER: OMD_PARSE: DOC CONTENTTYPE: No contentType")
             logging.info(error)
@@ -102,14 +110,20 @@ def omd_parse(current_url, username):
             logging.info(error)
             pass
         if title is None:
-            title = ''
+            if is_folder_description:
+                title = doc["description"]
+            else:   
+                title = ''
         
 
         # DESCRIPTION
         description = None
         try:
             logging.info(">> SPIDER: DOC DESCRIPTION: "+doc['description'][:100])
-            description = title + ' ' + doc['description']
+            if title != doc['description']:
+                description = title + ' ' + doc['description']
+            else:
+                description = doc['description']
             logging.info("\t"+description+"\n")
         except:
             logging.info(">> SPIDER: DOC DESCRIPTION: No description")
@@ -124,7 +138,11 @@ def omd_parse(current_url, username):
 
         # CONTENT, ONLY DOCS (NOT FOLDERS)
         body_str = None
-        if convertible == "True" or content_type in ['text/plain', 'text/x-tex']:
+        if convertible:
+            title, body_str, _, language = extract_txt(url + "?totext")
+        elif is_folder_description:
+            _, description, _, language = extract_txt(url + "?description")
+        elif content_type in ['text/plain', 'text/x-tex']:
             title, body_str, _, language = extract_txt(url)
 
         # Hack. Revert to main language if language is not installed
