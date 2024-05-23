@@ -149,7 +149,6 @@ class MyAdminIndexView(AdminIndexView):
         is_admin = False
         if resp.json().get('valid'):
             is_admin = resp.json().get('isAdmin')
-        is_admin = True
         return is_admin # This does the trick rendering the view only if the user is admin
 
 
