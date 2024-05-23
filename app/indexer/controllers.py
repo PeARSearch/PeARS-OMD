@@ -21,8 +21,8 @@ from app.indexer.posix import posix_doc
 from app.auth.controllers import login_required
 
 app_dir_path = dirname(dirname(realpath(__file__)))
-pod_dir = join(app_dir_path,'static','pods')
-user_app_dir_path = join(app_dir_path,'static', 'userdata')
+pod_dir = join(app_dir_path,'pods')
+user_app_dir_path = join(app_dir_path,'userdata')
 
 # Define the blueprint:
 indexer = Blueprint('indexer', __name__, url_prefix='/indexer')

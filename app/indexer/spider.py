@@ -13,7 +13,7 @@ from app import (LANGS, OMD_PATH, LOCAL_RUN,
         AUTH_TOKEN, FILE_SIZE_LIMIT, IGNORED_EXTENSIONS)
 
 app_dir_path = dirname(dirname(realpath(__file__)))
-user_app_dir_path = join(app_dir_path,'static', 'userdata')
+user_app_dir_path = join(app_dir_path,'userdata')
 
 def omd_parse(current_url, username):
     """ This function parses a url and writes the text content

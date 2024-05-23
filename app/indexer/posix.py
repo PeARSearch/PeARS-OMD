@@ -4,13 +4,13 @@ from app import models
 
 def load_posix(pod_name):
     dir_path = dirname(dirname(realpath(__file__)))
-    posix_path = join(dir_path,'static','pods')
+    posix_path = join(dir_path,'pods')
     posix = joblib.load(join(posix_path,pod_name+'.pos'))
     return posix
 
 def dump_posix(posindex, pod_name):
     dir_path = dirname(dirname(realpath(__file__)))
-    posix_path = join(dir_path,'static','pods')
+    posix_path = join(dir_path,'pods')
     joblib.dump(posindex, join(posix_path,pod_name+'.pos'))
 
 

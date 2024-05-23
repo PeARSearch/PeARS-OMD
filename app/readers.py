@@ -19,7 +19,7 @@ def read_vocab(vocab_file):
 
 def read_pearsignore():
     ignored_extensions = []
-    with open('app/static/conf/.pearsignore') as f:
+    with open('conf/.pearsignore') as f:
         for l in f:
             l = l.rstrip('\n')
             if l == '' or '#' in l:

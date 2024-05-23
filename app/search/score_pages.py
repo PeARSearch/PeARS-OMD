@@ -19,7 +19,7 @@ from app.utils import cosine_similarity, hamming_similarity, convert_to_array, g
 from app.indexer.mk_page_vector import compute_query_vectors
 
 dir_path = dirname(dirname(realpath(__file__)))
-pod_dir = join(dir_path,'static','pods')
+pod_dir = join(dir_path,'pods')
 
 def compute_scores(query, query_vector, tokenized, pod_name):
     """ Compute different scores for a query.

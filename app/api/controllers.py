@@ -14,7 +14,7 @@ from app.auth.controllers import login_required
 api = Blueprint('api', __name__, url_prefix='/api')
 
 dir_path = dirname(dirname(realpath(__file__)))
-pod_dir = join(dir_path,'static','pods')
+pod_dir = join(dir_path,'pods')
 
 
 @api.route('/pods/')
