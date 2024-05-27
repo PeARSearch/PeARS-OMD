@@ -23,20 +23,6 @@ def return_pods():
     return jsonify(json_list=[p.serialize for p in Pods.query.all()])
 
 
-@api.route('/pods/<pod>/')
-@login_required
-def return_pod(pod):
-    pod = pod.replace('+', ' ')
-    p = db.session.query(Pods).filter_by(name=pod).first()
-    return jsonify(p.serialize)
-
-
-@api.route('/urls/')
-@login_required
-def return_urls():
-    return jsonify(json_list=[i.serialize for i in Urls.query.all()])
-
-
 @api.route('/urls/delete', methods=["GET"])
 @login_required
 def api_delete():
