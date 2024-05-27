@@ -18,6 +18,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 ## Installation and Setup
 
+PeARS-OMD is meant to be run privately on a local machine. The next steps explain how to run the system on a local port and connect it to an On My Disk account.
 
 ##### 1. Clone this repo on your machine:
 
@@ -55,12 +56,12 @@ From the PeARS-lite directory, run:
 
 ##### 4. Set your authentification token
 
-The PeARS authentification token is set in the *app/static/conf/pears.ini* file. Just replace *&lt;your auth token&gt;* with the string of your choice.
+The PeARS authentification token is set in the *conf/pears.ini* file. Just replace *&lt;your auth token&gt;* with the string of your choice.
 
 
 ##### 5. Choose your languages
 
-The list of available languages is also set in *app/static/conf/pears.ini*. Currently, the languages that are available out-of-the-box are English, French, Russian, and Slovenian. If you would like all of these language to be available, enter "en,fr,ru,sl" as the value. Please note that the order of the language matters for certain things: it plays a role in the ordering of search results, and the first language in the list is used as a fallback if `langdetect` can't recognize a document's language as one of the installed languages.  
+The list of available languages is also set in *conf/pears.ini*. Currently, the languages that are available out-of-the-box are English, French, Russian, and Slovenian. If you would like all of these language to be available, enter "en,fr,ru,sl" as the value. Please note that the order of the language matters for certain things: it plays a role in the ordering of search results, and the first language in the list is used as a fallback if `langdetect` can't recognize a document's language as one of the installed languages.  
 
 ##### 6. Run your pear!
 
@@ -96,8 +97,8 @@ The system will search both your files' metadata as well as their full text, if 
 Whenever you want to come back to a clean install, manually delete your database and pods:
 
 ```
-rm -f app/static/db/app.db
-rm -fr app/static/pods/*
+rm -f app/db/app.db
+rm -fr app/pods/*
 ```
 
 
@@ -224,7 +225,7 @@ curl http://localhost:9090/api/urls/delete?path=http://localhost:9090/static/tes
 
 ## Adding your own data
 
-To test PeARS-lite with your own data, you will have to set up a new user in the static/testdocs folder. The following illustrates this process with a toy example, to be run from the base directory.
+To try PeARS-OMD with your own test data, you will have to set up a new user in the static/testdocs folder. The following illustrates this process with a toy example, to be run from the base directory.
 
 First, we will assume that we have a folder somewhere on our computer, containing .txt files. For the sake of illustration, we will reuse the *static/testdocs/tester/localhost.localdomain/Downloads/* directory in this example, but you can use your own.
 
@@ -251,8 +252,8 @@ curl localhost:9090?q=grandma
 NB: again, if you would like to start from a clean install, do not forget to manually delete the existing index:
 
 ```
-rm -f app/static/db/app.db
-rm -fr app/static/pods/*npz
+rm -f app/db/app.db
+rm -fr app/pods/*npz
 ```
 
 ## Credits
