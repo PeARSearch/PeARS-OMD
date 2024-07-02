@@ -1,16 +1,16 @@
-# SPDX-FileCopyrightText: 2022 PeARS Project, <community@pearsproject.org>, 
+# SPDX-FileCopyrightText: 2022 PeARS Project, <community@pearsproject.org>
 #
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import logging
+from urllib.parse import urljoin
 import requests
 import justext
-from urllib.parse import urljoin
-from app.indexer import detect_open
 from bs4 import BeautifulSoup
 from langdetect import detect
-from app.api.models import installed_languages
 from app import LANGS, AUTH_TOKEN
+from app.indexer import detect_open
+from app.api.models import installed_languages
 
 
 def remove_boilerplates(response, lang):
@@ -93,7 +93,7 @@ def extract_html(url):
                     title = ""
             else:
                 title = og_title['content']
-            title = ' '.join(title.split()[:11]) #11 to conform with EU regulations
+            title = ' '.join(title.split()[:10]) #10 to conform with EU regulations
  
             # Get body string
             body_str = remove_boilerplates(req, LANGS[0]) #Problematic...
@@ -109,7 +109,7 @@ def extract_html(url):
             if og_description:
                 snippet = og_description['content'][:1000]
             else:
-                snippet = ' '.join(body_str.split()[:11]) #11 to conform with EU regulations
+                snippet = ' '.join(body_str.split()[:10]) #10 to conform with EU regulations
     return title, body_str, snippet, language, error
 
 

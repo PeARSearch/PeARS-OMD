@@ -4,14 +4,13 @@
 
 import logging
 import joblib
+from os.path import dirname, realpath, join, isfile
 from app import db, models
 from app import LOCAL_RUN, OMD_PATH, LANGS, VEC_SIZE
 from app.api.models import Urls, Pods
 from app.api.models import installed_languages
 from app.indexer.posix import load_posix, dump_posix
-from app.utils import convert_to_array, convert_string_to_dict, convert_to_string, normalise
 import numpy as np
-from os.path import dirname, realpath, join, isfile
 from scipy.sparse import csr_matrix, vstack, save_npz, load_npz
 
 dir_path = dirname(realpath(__file__))

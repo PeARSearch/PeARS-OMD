@@ -14,9 +14,9 @@ from scipy.sparse import csr_matrix, load_npz
 from scipy.spatial import distance
 from app.api.models import Urls, Pods
 from app import app, db, tracker
-from app.search.overlap_calculation import generic_overlap, completeness, posix
-from app.utils import cosine_similarity, hamming_similarity, convert_to_array, get_language, carbon_print
+from app.utils import get_language, carbon_print
 from app.indexer.mk_page_vector import compute_query_vectors
+from app.search.overlap_calculation import generic_overlap, completeness, posix
 
 dir_path = dirname(dirname(realpath(__file__)))
 pod_dir = join(dir_path,'pods')

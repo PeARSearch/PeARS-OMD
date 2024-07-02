@@ -2,12 +2,12 @@
 #
 # SPDX-License-Identifier: AGPL-3.0-only
 
-from app import VEC_SIZE, models
 import re
 import string
 import numpy as np
-from app.indexer.posix import load_posix
 from scipy.spatial.distance import cdist
+from app import VEC_SIZE, models
+from app.indexer.posix import load_posix
 
 def jaccard(a, b):
     c = a.intersection(b)
