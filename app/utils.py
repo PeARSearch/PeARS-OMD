@@ -88,42 +88,6 @@ def read_docs(doc_file):
     return urls, titles, snippets, descriptions, languages, docs
 
 
-def normalise(v):
-    norm = np.linalg.norm(v)
-    if norm == 0:
-        return v
-    return v / norm
-
-
-def convert_to_string(vector):
-    s = ' '.join(str(i) for i in vector)
-    return(s)
-
-
-def convert_to_array(vector):
-    # for i in vector.rstrip(' ').split(' '):
-    #    print('#',i,float(i))
-    return np.array([float(i) for i in vector.split()])
-
-
-def convert_dict_to_string(dic):
-    s = ""
-    for k, v in dic.items():
-        s += k + ':' + str(v) + ' '
-    return s
-
-
-def convert_string_to_dict(s):
-    d = {}
-    els = s.rstrip(' ').split()
-    for e in els:
-        if ':' in e:
-            pair = e.split(':')
-            if pair[0] != "" and pair[1] != "":
-                d[pair[0]] = pair[1]
-    return d
-
-
 def cosine_similarity(v1, v2):
     if len(v1) != len(v2):
         return 0.0
@@ -135,66 +99,6 @@ def cosine_similarity(v1, v2):
 
 def hamming_similarity(v1, v2):
     return 1 - distance.hamming(v1,v2)
-
-
-def cosine_to_matrix(q, M):
-    qsqrt = sqrt(np.dot(q, q))
-    if qsqrt == 0:
-        return np.zeros(M.shape[0])
-    qMdot = np.dot(q, M.T)
-    Mdot = np.dot(M, M.T)
-    Msqrts = [sqrt(Mdot[i][i]) for i in range(len(Mdot[0]))]
-    cosines = []
-    for i in range(len(Mdot[0])):
-        if Msqrts[i] != 0:
-            cosines.append(qMdot[i] / (qsqrt * Msqrts[i]))
-        else:
-            cosines.append(0)
-    return cosines
-
-
-def sim_to_matrix(dm_dict, vec, n):
-    cosines = {}
-    c = 0
-    for k, v in dm_dict.items():
-        try:
-            cos = cosine_similarity(vec, v)
-            cosines[k] = cos
-            c += 1
-        except Exception:
-            pass
-    c = 0
-    neighbours = []
-    for t in sorted(cosines, key=cosines.get, reverse=True):
-        if c < n:
-            if t.isalpha():
-                print(t, cosines[t])
-                neighbours.append(t)
-                c += 1
-        else:
-            break
-    return neighbours
-
-
-def sim_to_matrix_url(url_dict, vec, n):
-    cosines = {}
-    for k, v in url_dict.items():
-        try:
-            cos = cosine_similarity(vec, v.vector)
-            cosines[k] = cos
-        except Exception:
-            pass
-    c = 0
-    neighbours = []
-    for t in sorted(cosines, key=cosines.get, reverse=True):
-        if c < n:
-            # print(t,cosines[t])
-            neighbour = [t, url_dict[t].title, url_dict[t].snippet]
-            neighbours.append(neighbour)
-            c += 1
-        else:
-            break
-    return neighbours
 
 
 def get_pod_info(url):

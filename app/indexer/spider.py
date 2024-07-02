@@ -4,7 +4,7 @@
 
 import logging
 from os.path import join, dirname, realpath
-from flask import session, url_for
+from flask import url_for
 import xmltodict
 import requests
 from langdetect import detect
