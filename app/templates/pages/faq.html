@@ -23,7 +23,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
        <br>
        <p id="firsttime"><b>Configuring your PeARS installation</b></p>
-       <p>After installing PeARS, you will want to head to the configuration file situated at <i>app/static/conf/pears.ini</i>. The main thing you want to change there is the languages you will use in your installation. You should change the line<br>
+       <p>After installing PeARS, you will want to head to the configuration file situated at <i>conf/pears.ini</i>. The main thing you want to change there is the languages you will use in your installation. You should change the line<br>
        <code>LANGUAGES=...</code><br>
        to show the languages you want to use as a comma-separated list. For instance, if you speak English and Slovenian:<br>
        <code>LANGUAGES=en,sl</code>
@@ -36,7 +36,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 
        <br>
        <p id="crawling"><b>Making your On My Disk content searchable</b></p>
-       <p>In order to search your content, you first need to 'index' it. This means that PeARS will generate mathematical representations of your documents that will be used at search time, like the big search engines. To do this, head over to your <a href="{{url_for('indexer.index')}}">indexing</a> page. Enter a directory to crawl from. Typically, if you want to index all your files, this will be a url of the type <i>https://demo.onmydisk.net/your-username/</i>.</p>
+       <p>In order to search your content, you first need to 'index' it. This means that PeARS will generate mathematical representations of your documents that will be used at search time, like the big search engines. To do this, head over to your <a href="{{url_for('indexer.index')}}">indexing</a> page. Enter a directory to crawl from. On My Disk URLs are structured as <br>
+       <code>https://onmydisk.net/USER/DEVICE/path/to/folder/</code>.<br>
+       For example:<br> 
+       <code>https://onmydisk.net/janedoe/jane-does-laptop/sample-documents/</code>.<br>
+       Be sure to include the final slash. Click "start crawl" to recursively index the folder. Once indexing is complete, you can search these files.</p>
 
        <br>
        <p id="multilingual"><b>Searching in several languages</b></p>
