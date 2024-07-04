@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 from os.path import join
-from urllib.parse import quote_plus
 from inspect import getfullargspec
 from functools import wraps
 import requests

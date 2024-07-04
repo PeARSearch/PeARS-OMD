@@ -4,10 +4,9 @@
 
 from os.path import dirname, join, realpath
 from scipy.sparse import csr_matrix, vstack, save_npz, load_npz
-from app import db, LOCAL_RUN, VEC_SIZE, OMD_PATH
-from app.api.models import Urls, installed_languages, sp
+from app import db, VEC_SIZE
+from app.api.models import sp
 from app.indexer.vectorizer import vectorize_scale
-from app.utils import convert_to_string, convert_dict_to_string, normalise
 from app.utils_db import get_pod_name
 
 dir_path = dirname(dirname(realpath(__file__)))

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 PeARS Project, <community@pearsproject.org>, 
+# SPDX-FileCopyrightText: 2024 PeARS Project, <community@pearsproject.org> 
 #
 # SPDX-License-Identifier: AGPL-3.0-only
 
@@ -8,14 +8,14 @@ import logging
 from math import ceil
 from os import remove
 from os.path import dirname, join, realpath, isfile
-from flask import Blueprint, request, session, flash, render_template, Response, url_for
+from flask import Blueprint, request, session, render_template, Response
 
 from app import app, tracker
 from app import LANGS
 from app.api.models import Urls, Pods
 from app.indexer import mk_page_vector, spider
-from app.utils import read_docs, read_urls, get_language, carbon_print
-from app.utils_db import (create_pod_in_db, create_pod_npz_pos, create_or_replace_url_in_db, 
+from app.utils import read_docs, read_urls, carbon_print
+from app.utils_db import (create_pod_in_db, create_pod_npz_pos, create_or_replace_url_in_db,
         add_to_idx_to_url, add_to_npz_to_idx, rm_doc_from_pos, rm_from_npz_to_idx, rm_from_npz)
 from app.indexer.posix import posix_doc
 from app.auth.controllers import login_required
