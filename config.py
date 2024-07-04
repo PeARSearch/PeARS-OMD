@@ -27,11 +27,11 @@ THREADS_PER_PAGE = 2
 CSRF_ENABLED = True
 
 # Use a secure, unique and absolutely secret key for
-# signing the data.
-CSRF_SESSION_KEY = "secret"
+# signing the data. Enter your own here.
+CSRF_SESSION_KEY = "sdfkjhlskghisalughlsaighlishgoiegjosgjolgjoeijg"
 
-# Secret key for signing cookies
-SECRET_KEY = "secret"
+# Secret key for signing cookies. Enter your own here.
+SECRET_KEY = "xcvbcmvbjxbvjxvhjcxbvmxhvmxbjihkmsghxhcufxmskufhkms"
 
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 

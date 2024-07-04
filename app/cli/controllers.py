@@ -2,19 +2,18 @@
 #
 # SPDX-License-Identifier: AGPL-3.0-only
 
-import joblib
 from collections import Counter
 from shutil import copy2, copytree
 from os.path import dirname, realpath, join
 from datetime import datetime
 from pathlib import Path
-from random import shuffle
+import joblib
 from flask import Blueprint
 import click
 from scipy.sparse import load_npz, save_npz
 from app import db, Urls, Pods
 from app.indexer.posix import load_posix
-from app.utils_db import rm_from_idx_to_url, rm_from_npz, rm_doc_from_pos
+from app.utils_db import rm_from_npz, rm_doc_from_pos
 
 pears = Blueprint('pears', __name__)
 

@@ -8,10 +8,10 @@ from pathlib import Path
 user = sys.argv[1]
 src_path = sys.argv[2]
 
-Path(join("app/static/testdocs/",user)).mkdir(parents=True, exist_ok=True)
-Path(join("app/static/testdocs/",user,"localhost.localdomain")).mkdir(parents=True, exist_ok=True)
+Path(join("app/testdocs/",user)).mkdir(parents=True, exist_ok=True)
+Path(join("app/testdocs/",user,"localhost.localdomain")).mkdir(parents=True, exist_ok=True)
 
-doc_path = join("app/static/testdocs/",user,"localhost.localdomain","Documents")
+doc_path = join("app/testdocs/",user,"localhost.localdomain","Documents")
 Path(doc_path).mkdir(parents=True, exist_ok=True)
 
 
@@ -21,10 +21,10 @@ def write_index(d, content):
         index.write(content+'\n')
 
 user_content = "<omd_index><doc url='localhost.localdomain/' contentType='desktop' convertible='False'><title></title></doc></omd_index>"
-write_index(join("app/static/testdocs/",user),user_content)
+write_index(join("app/testdocs/",user),user_content)
 
 localdomain_content = "<omd_index><doc url='Documents/' contentType='folder' convertible='False'><title>Documents</title></doc></omd_index>"
-write_index(join("app/static/testdocs/",user,"localhost.localdomain"),localdomain_content)
+write_index(join("app/testdocs/",user,"localhost.localdomain"),localdomain_content)
 
 documents_content = "<omd_index>\n"
 

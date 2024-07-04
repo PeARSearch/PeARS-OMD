@@ -18,20 +18,21 @@ from flask_admin import Admin, AdminIndexView
 # Import SQLAlchemy
 from flask_sqlalchemy import SQLAlchemy
 
+# Root path
+dir_path = dirname(dirname(realpath(__file__)))
+
 # Initialise emission tracking
 CARBON_TRACKING = False
 CARBON_DIR = None
 tracker = None
 if CARBON_TRACKING:
-    dir_path = dirname(dirname(realpath(__file__)))
     CARBON_DIR = join(dir_path,'emission_tracking')
     Path(CARBON_DIR).mkdir(exist_ok=True, parents=True)
     tracker = EmissionsTracker(output_dir=CARBON_DIR, project_name="PeARS Lite, OMD emission tracking")
 
 # Make sure user data directories exist
-DEFAULT_PATH = f'app'
-Path(os.path.join(DEFAULT_PATH,'pods')).mkdir(parents=True, exist_ok=True)
-Path(os.path.join(DEFAULT_PATH,'userdata')).mkdir(parents=True, exist_ok=True)
+Path(join(dir_path, 'app', 'pods')).mkdir(parents=True, exist_ok=True)
+Path(join(dir_path, 'app', 'userdata')).mkdir(parents=True, exist_ok=True)
 
 
 def configure_logging():
@@ -46,7 +47,7 @@ app = Flask(__name__)
 # Read config file
 try:
     app.config.from_object('config')
-    load_dotenv('./conf/pears.ini')
+    load_dotenv(join(dir_path, 'conf', 'pears.ini'))
 except:
     logging.error(">>\tERROR: __init__.py: the pears.ini file is not present in the conf directory.")
     sys.exit()
@@ -58,7 +59,7 @@ try:
     OMD_PATH = os.getenv('OMD_PATH')
     LANGS = os.getenv('LANGUAGES').lower().split(',')
     FILE_SIZE_LIMIT = int(os.getenv('FILE_SIZE_LIMIT'))
-    local_run = os.getenv('LOCAL').lower()
+    local_run = os.getenv('LOCAL_RUN').lower()
     LOCAL_RUN = False if local_run == "false" else True
 except:
     logging.error(">>\tERROR: __init__.py: the pears.ini file in the conf directory is incorrectly configured.")

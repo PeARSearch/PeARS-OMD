@@ -2,14 +2,12 @@
 #
 # SPDX-License-Identifier: AGPL-3.0-only
 
+import logging
 import re
 from os.path import dirname, join, realpath
-from urllib.parse import quote_plus
-import logging
-import requests
 import numpy as np
 from flask import jsonify, session
-from flask import Blueprint, request, render_template, make_response
+from flask import Blueprint, request, render_template
 from flask_cors import cross_origin
 
 from app import app

@@ -2,14 +2,10 @@
 #
 # SPDX-License-Identifier: AGPL-3.0-only
 
-from app import db
-from app.utils import convert_to_array
-import numpy as np
-import configparser
-import joblib
-from glob import glob
 from os.path import isdir, exists
+from glob import glob
 import sentencepiece as spm
+from app import db
 
 sp = spm.SentencePieceProcessor()
 

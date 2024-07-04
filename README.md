@@ -104,10 +104,10 @@ rm -fr app/pods/*
 
 ## API Usage
 
-To provide a toy example, the installation contains sample documents in the static folder, organised in folders as follows:
+To provide a toy example, the installation contains sample documents in the testdocs folder, organised in folders as follows:
 
 ```
-http://localhost:9090/static/testdocs/
+http://localhost:9090/testdocs/
     |_index.html
     |_tester/
         |_index.html
@@ -138,8 +138,8 @@ NB: on the OMD server, the index.html files are created on-the-fly at runtime.
 To recursively crawl from base url:
 
 ```
-curl localhost:9090/indexer/from_crawl?url=http://localhost:9090/static/testdocs/tester/index.html
-curl localhost:9090/indexer/from_crawl?url=http://localhost:9090/static/testdocs/shared/index.html
+curl localhost:9090/indexer/from_crawl?url=http://localhost:9090/testdocs/tester/index.html
+curl localhost:9090/indexer/from_crawl?url=http://localhost:9090/testdocs/shared/index.html
 ```
 
 The commands above will index the files of user *tester*, as well as public shares. A user should be able to search their own files, as well as public shares. An anonymous user should only be able to search public files. There are two different checkpoints for search as a logged in user and an anonymous user, as the following example searches demonstrate.
@@ -157,7 +157,7 @@ The search function returns json objects containing all information about the se
 
 ```
 {
-  "http://localhost:9090/static/testdocs/shared/shared_sample3.txt": {
+  "http://localhost:9090/testdocs/shared/shared_sample3.txt": {
     "cc": "False", 
     "date_created": "2023-11-06 09:59:18", 
     "date_modified": "2023-11-06 09:59:18", 
@@ -166,7 +166,7 @@ The search function returns json objects containing all information about the se
     "pod": "home", 
     "snippet": "The Theory of Nothing, a play about science and existentialism.  ", 
     "title": "Theory of Nothing", 
-    "url": "http://localhost:9090/static/testdocs/shared/shared_sample3.txt", 
+    "url": "http://localhost:9090/testdocs/shared/shared_sample3.txt", 
     "vector": "10"
   }
 }
@@ -179,7 +179,7 @@ This is easier to test from the PeARS interface. Make sure you are logged in (us
 
 ```
 {
-  "http://localhost:9090/static/testdocs/shared/shared_sample3.txt": {
+  "http://localhost:9090/testdocs/shared/shared_sample3.txt": {
     "cc": "False", 
     "date_created": "2023-11-06 09:59:18", 
     "date_modified": "2023-11-06 09:59:18", 
@@ -188,10 +188,10 @@ This is easier to test from the PeARS interface. Make sure you are logged in (us
     "pod": "home", 
     "snippet": "The Theory of Nothing, a play about science and existentialism.  ", 
     "title": "Theory of Nothing", 
-    "url": "http://localhost:9090/static/testdocs/shared/shared_sample3.txt", 
+    "url": "http://localhost:9090/testdocs/shared/shared_sample3.txt", 
     "vector": "10"
   }, 
-  "http://localhost:9090/static/testdocs/tester/localhost.localdomain/Downloads/sample3.txt": {
+  "http://localhost:9090/testdocs/tester/localhost.localdomain/Downloads/sample3.txt": {
     "cc": "False", 
     "date_created": "2023-11-06 09:59:10", 
     "date_modified": "2023-11-06 09:59:10", 
@@ -200,7 +200,7 @@ This is easier to test from the PeARS interface. Make sure you are logged in (us
     "pod": "home", 
     "snippet": "This is a theory of everything. It may not work as intended, but then theories of everything never do.  ", 
     "title": "Theory of Everything", 
-    "url": "http://localhost:9090/static/testdocs/tester/localhost.localdomain/Downloads/sample3.txt", 
+    "url": "http://localhost:9090/testdocs/tester/localhost.localdomain/Downloads/sample3.txt", 
     "vector": "7"
   }
 }
@@ -213,34 +213,34 @@ When logged in, it is possible to move and delete files. Moving a file involves 
 
 
 ```
-curl http://localhost:9090/api/urls/move?src=http://localhost:9090/static/testdocs/tester/localhost.localdomain/Downloads/sample3.txt\&target=http://localhost:9090/static/testdocs/shared/shared_sample5.txt
+curl http://localhost:9090/api/urls/move?src=http://localhost:9090/testdocs/tester/localhost.localdomain/Downloads/sample3.txt\&target=http://localhost:9090/testdocs/shared/shared_sample5.txt
 ```
 
 Deleting a file uses the *api/urls/delete* endpoint and takes a *path* argument referring to the path of the file to be deleted.
 
 ```
-curl http://localhost:9090/api/urls/delete?path=http://localhost:9090/static/testdocs/tester/localhost.localdomain/Downloads/sample4.txt
+curl http://localhost:9090/api/urls/delete?path=http://localhost:9090/testdocs/tester/localhost.localdomain/Downloads/sample4.txt
 ```
 
 
 ## Adding your own data
 
-To try PeARS-OMD with your own test data, you will have to set up a new user in the static/testdocs folder. The following illustrates this process with a toy example, to be run from the base directory.
+To try PeARS-OMD with your own test data, you will have to set up a new user in the testdocs folder. The following illustrates this process with a toy example, to be run from the base directory.
 
-First, we will assume that we have a folder somewhere on our computer, containing .txt files. For the sake of illustration, we will reuse the *static/testdocs/tester/localhost.localdomain/Downloads/* directory in this example, but you can use your own.
+First, we will assume that we have a folder somewhere on our computer, containing .txt files. For the sake of illustration, we will reuse the *testdocs/tester/localhost.localdomain/Downloads/* directory in this example, but you can use your own.
 
 Second, we will create a new user with a *Documents* directory, where we will copy the .txt files from our chosen folder. There is a script in the root of the repo to do exactly this. You can feed it a new username and the path to the folder with your .txt documents. This script also sets up the directory structure required to match the OMD server. So for instance, let us create a new user called *myuser*, and copy some sample files to their space, using the content of our previous *Downloads* directory:
 
 ```
-python3 mkuser.py myuser app/static/testdocs/tester/localhost.localdomain/Downloads/
+python3 mkuser.py myuser app/testdocs/tester/localhost.localdomain/Downloads/
 ```
 
-The result of this call is a new *app/static/testdocs/myuser/* directory, with some .txt files in the *localhost.localdomain/Documents/* folder of that user.
+The result of this call is a new *app/testdocs/myuser/* directory, with some .txt files in the *localhost.localdomain/Documents/* folder of that user.
 
 Once we have done this, we can index the files of this new user: 
 
 ```
-curl localhost:9090/indexer/from_crawl?url=http://localhost:9090/static/testdocs/myuser/index.html
+curl localhost:9090/indexer/from_crawl?url=http://localhost:9090/testdocs/myuser/index.html
 ```
 
 And finally we can search as before:
