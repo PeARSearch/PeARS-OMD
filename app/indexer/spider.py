@@ -15,154 +15,172 @@ from app import (LANGS, OMD_PATH, LOCAL_RUN,
 app_dir_path = dirname(dirname(realpath(__file__)))
 user_app_dir_path = join(app_dir_path,'userdata')
 
-def omd_parse(current_url, username):
-    """ This function parses a url and writes the text content
-    to the user's corpus file.
-    Arguments: the url path and a username.
-    """
-    logging.info("\n>> INDEXER: SPIDER: omd_parse: Running OMD parse on "+current_url)
-    links = []
-    fout = open(join(user_app_dir_path, username+'.corpus'),'a', encoding='utf-8')
+def get_xml(xml_url):
+    xml = None
     try:
-        xml = requests.get(current_url, timeout=120, \
+        xml = requests.get(xml_url, timeout=120, \
             headers={'Authorization': AUTH_TOKEN}, stream =True).raw
+        #print(xml.read())
+        #xml = requests.get(xml_url, timeout=60, \
+        #    headers={'Authorization': AUTH_TOKEN}, stream =True).raw
     except RuntimeError as error:
-        logging.error(">> ERROR: SPIDER: OMD PARSE: Request failed. Moving on.")
+        logging.error(">> ERROR: SPIDER: GET XML: Request failed. Moving on.")
         logging.error(error)
-        return links
-    #print(xml.read())
-    #xml = requests.get(current_url, timeout=60, \
-    #    headers={'Authorization': AUTH_TOKEN}, stream =True).raw
+    return xml
+
+def read_xml(xml):
+    parse = None
     try:
         parse = xmltodict.parse(xml.read())
     except:
-        logging.error(">> ERROR: SPIDER: OMD PARSE: File may have some bad XML. Could not parse.")
-        return links
+        logging.error(">> ERROR: SPIDER: PARSE XML: File may have some bad XML. Could not parse.")
+    return parse
+
+def get_docs_from_xml_parse(parse):
+    docs = None
     try:
         docs = parse['omd_index']['doc']
     except:
-        logging.error(">> ERROR: SPIDER: OMD PARSE: No documents found in the XML.")
-        return links
+        logging.error(">> ERROR: SPIDER: get docs from xml parse: No documents found in the XML.")
+    print(docs)
+    return docs
+
+
+def process_xml(xml_url, username):
+    logging.info("\n>> INDEXER: SPIDER: xml_parse: Running OMD parse on "+xml_url)
+    urldir = '/'.join(xml_url.split('/')[:-1])
+    docs = []
+
+    xml = get_xml(xml_url)
+    if xml is None:
+        return docs, urldir
+    
+    parse = read_xml(xml)
+    if parse is None:
+        return docs, urldir
+
+    docs = get_docs_from_xml_parse(parse)
+    if docs is None:
+        return docs, urldir
 
     if not isinstance(docs, list):
         docs = [docs]
-    for doc in docs:
-        urldir = '/'.join(current_url.split('/')[:-1])
+    return docs, urldir
 
-        # URL
-        if doc['@url'][0] == '/':
-            url = doc['@url'][1:]
-        else:
-            url = doc['@url']
-        if url.startswith('shared/'):
-            url = join(OMD_PATH, url)
-        else:
-            url = join(urldir, url)
-        logging.info(">> INDEXER: SPIDER: omd_parse: doc url: "+url)
-        if LOCAL_RUN:
-            if url[-1] == '/': #For local test only
-                url = join(url,'index.html')
-        
-        # IS THIS ITEM A FOLDER DESCRIPTION
+
+def get_doc_url(doc, urldir):
+
+    url = ""
+    process = True
+
+    if doc['@url'][0] == '/':
+        url = doc['@url'][1:]
+    else:
+        url = doc['@url']
+    if url.startswith('shared/'):
+        url = join(OMD_PATH, url)
+    else:
+        url = join(urldir, url)
+    logging.info(">> INDEXER: SPIDER: get url from doc: doc url: "+url)
+    if LOCAL_RUN:
+        if url[-1] == '/': #For local test only
+            url = join(url,'index.html')
+   
+   # Is this item a folder description?
+    is_folder_description = url.endswith("?description")
+    if is_folder_description:
+        url = url.replace("?description", "")
+
+    # Check item extension: should we process it?
+    extension = '.'+url.split('/')[-1].split('.')[-1]
+    if extension in IGNORED_EXTENSIONS:
+        process = False
+
+    return url, process
+
+
+def assess_convertibility(doc):
+    convertible = False
+    try:
+        logging.info(f">> SPIDER: ASSESS CONVERTIBILITY: {doc.get('@convertible')}")
+        convertible_str = doc.get("@convertible")
+        assert convertible_str in ["True", "False", None]
+        convertible = True if convertible_str == "True" else False 
+  
+    except RuntimeError as error:
+        logging.info(">> SPIDER: ASSESS CONVERTIBILITY: No convertibility found.")
+        logging.info(error)
+    return convertible
+
+
+def get_doc_content_type(doc, url):
+    content_type = None
+    islink = False
+    try:
+        logging.info(f">> SPIDER: GET DOC CONTENTTYPE: {doc['@contentType']}")
+        content_type = doc['@contentType']
+        if content_type in ['folder','desktop']:
+            if join(OMD_PATH,'shared') not in url:
+                islink = True
+    except RuntimeError as error:
+        logging.info(">> SPIDER: OMD_PARSE: DOC CONTENTTYPE: No contentType")
+        logging.info(error)
+    return content_type, islink
+
+
+def get_doc_title(doc, url):
+    title = ""
+    try:
+        logging.info(f">> SPIDER: GET DOC TITLE: {doc['title']}")
+        title = doc['title']
+    except RuntimeError as error:
+        logging.info(">> SPIDER: GET DOC TITLE: No title")
+        logging.info(error)
+    if title is None:
         is_folder_description = url.endswith("?description")
         if is_folder_description:
-            url = url.replace("?description", "")
+            title = doc["description"]
+    return title
 
-        # EXTENSION
-        extension = '.'+url.split('/')[-1].split('.')[-1]
-        if extension in IGNORED_EXTENSIONS:
-            continue
 
-        # CONVERTIBILITY
-        convertible = False
-        try:
-            logging.info(">> SPIDER: OMD_PARSE: DOC CONVERTIBILITY: ", doc.get('@convertible'))
-            convertible_str = doc.get("@convertible")
-            assert convertible_str in ["True", "False", None]
-            convertible = True if convertible_str == "True" else False 
-
-        except RuntimeError as error:
-            logging.info(">> SPIDER: OMD_PARSE: DOC CONVERTIBILITY: No convertible")
-            logging.info(error)
-
-        # CONTENT TYPE
-        try:
-            logging.info(">> SPIDER: OMD_PARSE: DOC CONTENTTYPE: "+extension+" "+doc['@contentType'])
-            content_type = doc['@contentType']
-            if content_type in ['folder','desktop']:
-                if join(OMD_PATH,'shared') not in url:
-                    links.append(url)
-                # for folders - add the URL to the list & skip!
-                # we'll come back to it, and index it based on the ?description info
-                continue
-        except RuntimeError as error:
-            logging.info(">> SPIDER: OMD_PARSE: DOC CONTENTTYPE: No contentType")
-            logging.info(error)
-            pass
-
-        
-        # TITLE
-        try:
-            logging.info(">> SPIDER: OMD_PARSE: DOC TITLE: "+doc['title'])
-            title = doc['title']
-        except RuntimeError as error:
-            logging.info(">> SPIDER: OMD_PARSE: DOC TITLE: No title")
-            logging.info(error)
-            pass
-        if title is None:
-            if is_folder_description:
-                title = doc["description"]
-            else:   
-                title = ''
-        
-
-        # DESCRIPTION
-        description = None
-        try:
-            logging.info(">> SPIDER: DOC DESCRIPTION: "+doc['description'][:100])
-            if title != doc['description']:
-                description = title + ' ' + doc['description']
-            else:
-                description = doc['description']
-            logging.info("\t"+description+"\n")
-        except:
-            logging.info(">> SPIDER: DOC DESCRIPTION: No description")
-            pass
-       
-        
-        # FIRST GO AT LANGUAGE DETECTION
-        if description is not None:
-            language = detect(description)
+def get_doc_description(doc, title):
+    description = ""
+    try:
+        logging.info(f">> SPIDER: GET DOC DESCRIPTION: {doc['description'][:100]}")
+        if title != doc['description']:
+            description = title + ' ' + doc['description']
         else:
-            language = LANGS[0]
+            description = doc['description']
+        logging.info("\t"+description+"\n")
+    except:
+        logging.info(">> SPIDER: GET DOC DESCRIPTION: No description")
+    return description
 
-        # CONTENT, ONLY DOCS (NOT FOLDERS)
-        body_str = None
-        if convertible:
-            title, body_str, _, language = extract_txt(url + "?totext")
-        elif is_folder_description:
-            _, description, _, language = extract_txt(url + "?description")
-        elif content_type in ['text/plain', 'text/x-tex']:
-            title, body_str, _, language = extract_txt(url)
 
-        # Hack. Revert to main language if language is not installed
-        if language not in LANGS:
-            logging.info(">> SPIDER: LANGUAGE: language is not in LANGS, reverting to default.")
-            language = LANGS[0]
+def get_doc_content(url, convertible, content_type):
+    title = ""
+    body_str = ""
+    language = LANGS[0]
+    is_folder_description = url.endswith("?description")
+    
+    if convertible:
+        title, body_str, _, language = extract_txt(url + "?totext")
+    elif is_folder_description:
+        _, body_str, _, language = extract_txt(url + "?description")
+    elif content_type in ['text/plain', 'text/x-tex']:
+        title, body_str, _, language = extract_txt(url)
 
-        # Write to temporary corpus file
-        logging.info(">> SPIDER: WRITING CORPUS")
-        fout.write("<doc title='"+title+"' url='"+url+"' lang='"+language+"'>\n")
-        if description:
-            fout.write("{{DESCRIPTION}} "+description+"\n")
-        if body_str:
-            # Limit how much of the content will be indexed, to cope with storage limitations
-            fout.write("{{BODY}} "+body_str[:FILE_SIZE_LIMIT]+"\n")
-        fout.write("</doc>\n")
-    fout.close()
+    # Hack. Revert to main language if language is not installed
+    if language not in LANGS:
+        logging.info(">> SPIDER: LANGUAGE: language is not in LANGS, reverting to default.")
+        language = LANGS[0]
 
-    #print("\n NEW LINKS:",links)
-    return links
+    return title, body_str, language
+
+
+
+
+
 
 def write_docs(base_url, username):
     """Write document corpus while crawling.
