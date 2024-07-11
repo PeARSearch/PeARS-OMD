@@ -56,9 +56,10 @@ def from_crawl():
     """
 
     def process_start_url(url, username):
-        create_pod_npz_pos(username)
+        create_pod_npz_pos(username, device)
+
         for LANG in LANGS:
-            create_pod_in_db(username, LANG)
+            create_pod_in_db(username, LANG, device)
         print(">> INDEXER: CONTROLLER: from_crawl: Now crawling", u)
         user_url_file = join(user_app_dir_path, username+".toindex")
         #Every contributor gets their own file to avoid race conditions
@@ -71,20 +72,36 @@ def from_crawl():
             username = m.group(1)
         return username
 
+    def get_device_from_url(url):
+        m = re.search(u'onmydisk.net/([^/]*)/([^/]*)/', url)
+        if m:
+            device = m.group(2)
+        return device
+
     if request.method == "POST":
         u = request.form['url']
+        device = get_device_from_url(u)
         username = session['username']
         process_start_url(u, username)
-        return render_template('indexer/progress_crawl.html', username=username)
+        return render_template('indexer/progress_crawl.html', username=username, device=device) 
     u = request.args['url']
     username = get_username_from_url(u)
-    process_start_url(u, username)
-    return progress_crawl(username=username)
+    device = get_device_from_url(u)
+
+    process_start_url(u, username, device)
+    return progress_crawl(username=username, device=device)
 
 
 @indexer.route("/progress_crawl")
 @login_required
-def progress_crawl(username=None):
+def progress_crawl(username=None, device=None):
+
+    def get_device_from_url(omd_url):
+        m = re.search(u'onmydisk.net/([^/]*)/([^/]*)/', omd_url)
+        if m:
+            device = m.group(2)
+        return device
+
     """ Crawl function, called by from_crawl.
     Reads the start URL given by the user and
     recursively crawls down directories from there.
@@ -92,9 +109,13 @@ def progress_crawl(username=None):
     print("Running progress crawl")
     if 'username' in session:
         username = session['username']
+
     # There will only be one path read, although we are using the standard
     # PeARS read_urls function. Hence the [0].
     url = read_urls(join(user_app_dir_path, username+".toindex"))[0]
+    if device is None:
+        device = get_device_from_url(url)
+
     spider.write_docs(url, username) #Writing docs to corpus
 
     def generate():
@@ -115,7 +136,7 @@ def progress_crawl(username=None):
                 logging.debug("\t>>> INDEXER: CONTROLLER: PROGRESS CRAWL: INDEXING "+url)
                 new, idx = add_to_idx_to_url(username, url)
                 pod_name, _, tokenized_text = mk_page_vector.compute_vectors_local_docs( \
-                    url, title, description, doc, username, lang)
+                    url, title, description, doc, username, lang, device)
                 if not new:
                     logging.info("\t>>> INDEXER: CONTROLLER: PROGRESS CRAWL: URL PREVIOUSLY KNOWN: "+url)
                     rm_doc_from_pos(idx, pod_name) #in case old version is there
@@ -124,7 +145,7 @@ def progress_crawl(username=None):
                         rm_from_npz(vid, pod_name)
                 posix_doc(tokenized_text, idx, pod_name, lang, username)
                 add_to_npz_to_idx(pod_name, idx)
-                create_or_replace_url_in_db(url, title, snippet, description, username, lang)
+                create_or_replace_url_in_db(url, title, snippet, description, username, lang, device)
                 c += 1
                 #print('###', str(ceil(c / len(urls) * 100)))
                 yield "data:" + str(ceil(c / len(urls) * 100)) + "\n\n"

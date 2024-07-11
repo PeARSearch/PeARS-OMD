@@ -34,7 +34,9 @@ def omd_parse(current_url, username):
     #xml = requests.get(current_url, timeout=60, \
     #    headers={'Authorization': AUTH_TOKEN}, stream =True).raw
     try:
-        parse = xmltodict.parse(xml.read())
+        xml_content = xml.read()
+        xml_with_replaced_amps = xml_content.replace(b"&", b"&amp;")
+        parse = xmltodict.parse(xml_with_replaced_amps)
     except:
         logging.error(">> ERROR: SPIDER: OMD PARSE: File may have some bad XML. Could not parse.")
         return links

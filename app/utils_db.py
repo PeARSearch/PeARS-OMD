@@ -4,7 +4,8 @@
 
 import logging
 import joblib
-from os.path import dirname, realpath, join, isfile
+from os.path import dirname, realpath, join, isfile, isdir
+import os
 from app import db, models
 from app import LOCAL_RUN, OMD_PATH, LANGS, VEC_SIZE
 from app.api.models import Urls, Pods
@@ -16,30 +17,31 @@ from scipy.sparse import csr_matrix, vstack, save_npz, load_npz
 dir_path = dirname(realpath(__file__))
 pod_dir = join(dir_path,'pods')
 
-def get_pod_name(target_url, lang, username):
+def get_pod_name(target_url, lang, username, device):
     """ Retrieve correct pod given url and username.
     In particular, checks whether the private or shared
     pod should be used.
     """
-    pod_name = 'home.'+lang+'.u.'+username
+    pod_name = f"{username}/{device}/{lang}/private"
     if LOCAL_RUN:
         if 'http://localhost:9090/testdocs/shared' in target_url:
-            pod_name = 'home.'+lang+'.shared.u.'+username
+            pod_name = f"{username}/{device}/{lang}/shared"
     else:
         if join(OMD_PATH, 'shared') in target_url:
-            pod_name = 'home.'+lang+'.shared.u.'+username
+            pod_name = f"{username}/{device}/{lang}/shared"
     return pod_name
 
 
-
-
-def create_pod_npz_pos(contributor):
+def create_pod_npz_pos(contributor, device):
     """ Pod npz and pos initialisation.
     This should only happens once in the OMD setup, when
     the user indexes for the first time.
     """
     # One idx to url dictionary per user
-    pod_path = join(pod_dir, contributor+'.idx')
+    user_dir = join(pod_dir, contributor)
+    if not isdir(user_dir):
+        os.mkdir(user_dir)
+    pod_path = join(user_dir, 'user.idx')
     if not isfile(pod_path):
         print("Making idx dictionaries for new pod")
         idx_to_url = [[],[]]
@@ -47,8 +49,11 @@ def create_pod_npz_pos(contributor):
 
     # Separate private from shared for other representations
     for lang in LANGS:
-        pod_path_private = join(pod_dir,'home.'+lang+'.u.'+contributor)
-        pod_path_shared = join(pod_dir,'home.'+lang+'.shared.u.'+contributor)
+        user_pod_dir = join(user_dir, device, lang)
+        if not isdir(user_pod_dir):
+            os.makedirs(user_pod_dir)
+        pod_path_private = join(user_pod_dir, "private")
+        pod_path_shared = join(user_pod_dir, "shared")
         for pod_path in [pod_path_private, pod_path_shared]:
             if not isfile(pod_path+'.npz'):
                 print("Making 0 CSR matrix for new pod")
@@ -68,7 +73,7 @@ def create_pod_npz_pos(contributor):
                 joblib.dump(npz_to_idx, pod_path+'.npz.idx')
 
 
-def create_pod_in_db(contributor, lang):
+def create_pod_in_db(contributor, lang, device):
     """ Pod database initialisation.
     If the pod does not exist, create it in the database.
     """
@@ -83,17 +88,20 @@ def create_pod_in_db(contributor, lang):
             db.session.add(p)
             db.session.commit()
 
-    name_private = 'home.'+lang+'.u.'+contributor
-    name_shared = 'home.'+lang+'.shared.u.'+contributor
+    name_private = f"{contributor}/{device}/{lang}/private"
+    name_shared = f"{contributor}/{device}/{lang}/shared"
+
+    # name_private = 'home.'+lang+'.u.'+contributor
+    # name_shared = 'home.'+lang+'.shared.u.'+contributor
     url_private = "http://localhost:8080/api/pods/" + name_private.replace(' ', '+')
     url_shared = "http://localhost:8080/api/pods/" + name_shared.replace(' ', '+')
     commit(url_private, name_private)
     commit(url_shared, name_shared)
 
 
-def create_or_replace_url_in_db(target_url, title, snippet, description, username, lang):
+def create_or_replace_url_in_db(target_url, title, snippet, description, username, lang, device):
     cc = False
-    pod_name = get_pod_name(target_url, lang, username)
+    pod_name = get_pod_name(target_url, lang, username, device)
     entry = db.session.query(Urls).filter_by(url=target_url).first()
     if entry:
         u = db.session.query(Urls).filter_by(url=target_url).first()
@@ -108,7 +116,7 @@ def create_or_replace_url_in_db(target_url, title, snippet, description, usernam
     db.session.commit()
 
 def rename_idx_to_url(contributor, src, tgt):
-    pod_path = join(pod_dir, contributor+'.idx')
+    pod_path = join(pod_dir, contributor, 'user.idx')
     idx_to_url = joblib.load(pod_path)
     i = idx_to_url[1].index(src)
     idx_to_url[1][i] = tgt
@@ -116,7 +124,7 @@ def rename_idx_to_url(contributor, src, tgt):
 
 
 def add_to_idx_to_url(contributor, url):
-    pod_path = join(pod_dir, contributor+'.idx')
+    pod_path = join(pod_dir, contributor, 'user.idx')
     idx_to_url = joblib.load(pod_path)
     idx = idx_to_url[0]
     urls = idx_to_url[1]
