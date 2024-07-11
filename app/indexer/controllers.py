@@ -39,9 +39,7 @@ def index():
     username = session['username']
     num_db_entries = 0
     pods = Pods.query.filter(Pods.name.contains('.u.'+username)).all()
-    print("PODS",pods)
     for pod in pods:
-        print(pod.name)
         num_db_entries += len(Urls.query.filter_by(pod=pod.name).all())
     return render_template("indexer/index.html", num_entries=num_db_entries)
 
@@ -59,7 +57,7 @@ def from_crawl():
         create_pod_npz_pos(username)
         for LANG in LANGS:
             create_pod_in_db(username, LANG)
-        print(">> INDEXER: CONTROLLER: from_crawl: Now crawling", u)
+        logging.debug(f">> INDEXER: CONTROLLER: from_crawl: Now crawling {u}")
         user_url_file = join(user_app_dir_path, username+".toindex")
         #Every contributor gets their own file to avoid race conditions
         with open(user_url_file, 'w', encoding="utf8") as f:
@@ -110,39 +108,42 @@ def progress_crawl(username=None):
     # There will only be one path read, although we are using the standard
     # PeARS read_urls function. Hence the [0].
     start_url = read_urls(join(user_app_dir_path, username+".toindex"))[0]
-    print(f"Running progress crawl from {start_url}.")
+    logging.info(f">> INDEXER: Running progress crawl from {start_url}.")
 
     def generate():
         with app.app_context():
-            print("\n\n>>> INDEXER: CONTROLLER: READING DOCS")
-            links = []
-            docs, urldir = spider.process_xml(start_url, username)
-            if len(docs) == 0:
-                yield "data:100\n\n"
+            logging.debug("\n\n>>> INDEXER: CONTROLLER: READING DOCS")
+            links = [start_url]
+            while len(links) > 0:
+                docs, urldir = spider.process_xml(links[0], username)
 
-            c = 0
-            if tracker is not None:
-                task_name = "run indexing for "+str(len(docs))+" files"
-                tracker.start_task(task_name)
-            for doc in docs:
-                url, process = spider.get_doc_url(doc, urldir)
-                if not process:
-                    continue
-                convertible = spider.assess_convertibility(doc)
-                content_type, islink = spider.get_doc_content_type(doc, url)
-                title = spider.get_doc_title(doc, url)
-                description = spider.get_doc_description(doc, title)
-                body_title, body_str, language = spider.get_doc_content(url, convertible, content_type)
-                if title is None:
-                    title = body_title
-                print(f"\n{url}, convertible: {convertible}, content_type: {content_type}, islink: {islink}, title: {title}, description: {description}, body_str: {body_str}, language: {language}\n")
-                run_indexing(username, url, title, body_str[:100], description, language, body_str)
-                if islink:
-                    links.append(url)
-                c += 1
-                yield "data:" + str(ceil(c / len(docs) * 100)) + "\n\n"
-            if tracker is not None:
-                search_emissions = tracker.stop_task()
-                carbon_print(search_emissions, task_name)
+                c = 0
+                if tracker is not None:
+                    task_name = "run indexing for "+str(len(docs))+" files"
+                    tracker.start_task(task_name)
+                for doc in docs:
+                    url, process = spider.get_doc_url(doc, urldir)
+                    if not process:
+                        continue
+                    convertible = spider.assess_convertibility(doc)
+                    content_type, islink = spider.get_doc_content_type(doc, url)
+                    title = spider.get_doc_title(doc, url)
+                    description = spider.get_doc_description(doc, title)
+                    body_title, body_str, language = spider.get_doc_content(url, convertible, content_type)
+                    if title is None:
+                        title = body_title
+                    logging.debug(f"\n{url}, convertible: {convertible}, content_type: {content_type}, islink: {islink}, title: {title}, description: {description}, body_str: {body_str}, language: {language}\n")
+                    run_indexing(username, url, title, body_str[:100], description, language, body_str)
+                    if islink:
+                        links.append(url)
+                    c += 1
+                    yield "data:" + str(ceil(c / len(docs) * 100)-1) + "\n\n"
+                del(links[0])
+                if len(links) == 0:
+                    yield "data:100\n\n"
+                    
+                if tracker is not None:
+                    search_emissions = tracker.stop_task()
+                    carbon_print(search_emissions, task_name)
 
     return Response(generate(), mimetype='text/event-stream')

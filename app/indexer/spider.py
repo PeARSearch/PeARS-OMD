@@ -42,7 +42,6 @@ def get_docs_from_xml_parse(parse):
         docs = parse['omd_index']['doc']
     except:
         logging.error(">> ERROR: SPIDER: get docs from xml parse: No documents found in the XML.")
-    print(docs)
     return docs
 
 
@@ -177,45 +176,3 @@ def get_doc_content(url, convertible, content_type):
 
     return title, body_str, language
 
-
-
-
-
-
-def write_docs(base_url, username):
-    """Write document corpus while crawling.
-    Argument: base url, to start the crawl from.
-    """
-    if base_url is None:
-        print("No url passed.")
-        return url_for('indexer')
-
-    if not LOCAL_RUN and base_url[-1] != '/':
-        base_url+='/'
-
-    pages_to_visit = [base_url]
-    pages_visited = []
-    corpus_path = join(user_app_dir_path, username+'.corpus')
-
-    #Initialise user's corpus path
-    fout = open(corpus_path,'w', encoding="utf-8")
-    fout.close()
-
-    print(">> INDEXER: SPIDER: write_docs: Starting crawl from",base_url)
-    while len(pages_to_visit) > 0:
-        # Start from base url
-        #print("Pages to visit",pages_to_visit)
-        url = pages_to_visit[0]
-        pages_visited.append(url)
-        try:    
-            links = omd_parse(url, username)
-            for link in links:
-                #print(link,pages_visited)
-                #print(link,pages_to_visit)
-                #print(link,urldir)
-                if link not in pages_visited and link not in pages_to_visit and '#' not in link:
-                    #print("Found href:",link)
-                    pages_to_visit.append(link)
-        except: 
-            print(f">> ERROR: SPIDER: OMD PARSE: exceptions in parsing: {url}")
-        pages_to_visit = pages_to_visit[1:]
