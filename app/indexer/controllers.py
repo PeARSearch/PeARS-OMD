@@ -133,7 +133,8 @@ def progress_crawl(username=None):
                     if title is None:
                         title = body_title
                     logging.debug(f"\n{url}, convertible: {convertible}, content_type: {content_type}, islink: {islink}, title: {title}, description: {description}, body_str: {body_str}, language: {language}\n")
-                    run_indexing(username, url, title, body_str[:100], description, language, body_str)
+                    snippet = ' '.join(body_str.split()[:50])
+                    run_indexing(username, url, title, snippet, description, language, body_str)
                     if islink:
                         links.append(url)
                     c += 1
