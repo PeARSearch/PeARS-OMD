@@ -8,7 +8,7 @@ from flask import url_for
 import xmltodict
 import requests
 from langdetect import detect
-from app.indexer.htmlparser import extract_txt
+from app.indexer.htmlparser import extract_txt, extract_html
 from app import (LANGS, OMD_PATH, LOCAL_RUN, 
         AUTH_TOKEN, FILE_SIZE_LIMIT, IGNORED_EXTENSIONS)
 
@@ -168,6 +168,8 @@ def get_doc_content(url, convertible, content_type):
         _, body_str, _, language = extract_txt(url + "?description")
     elif content_type in ['text/plain', 'text/x-tex']:
         title, body_str, _, language = extract_txt(url)
+    elif content_type in ['text/html']:
+        title, body_str, _, language = extract_html(url)
 
     # Hack. Revert to main language if language is not installed
     if language not in LANGS:
