@@ -144,13 +144,13 @@ def add_to_idx_to_url(contributor, url):
 def rm_from_idx_to_url(contributor, url):
     pod_path = join(pod_dir, contributor, 'user.idx')
     idx_to_url = joblib.load(pod_path)
-    logging.debug("IDX_TO_URL BEFORE RM",idx_to_url)
+    logging.debug(f"IDX_TO_URL BEFORE RM {idx_to_url}")
     i = idx_to_url[1].index(url)
     idx = idx_to_url[0][i]
     idx_to_url[0].pop(i)
     idx_to_url[1].pop(i)
-    logging.debug("IDX_TO_URL AFTER RM",idx_to_url)
-    logging.debug("INDEX OF REMOVED ITEM",idx)
+    logging.debug(f"IDX_TO_URL AFTER RM {idx_to_url}")
+    logging.debug(f"INDEX OF REMOVED ITEM {idx}")
     joblib.dump(idx_to_url, pod_path)
     return idx
 
@@ -177,12 +177,12 @@ def rm_from_npz_to_idx(pod_name, idx):
     pod_path = join(pod_dir, pod_name+'.npz.idx')
     npz_to_idx = joblib.load(pod_path)
     if idx in npz_to_idx[1]:
-        logging.debug("NPZ_TO_IDX BEFORE RM:",npz_to_idx)
+        logging.debug(f"NPZ_TO_IDX BEFORE RM: {npz_to_idx}")
         i = npz_to_idx[1].index(idx)
         npz_to_idx[1].pop(i)
         npz_to_idx[0] = list(range(len(npz_to_idx[1])))
-        logging.debug("NPZ_TO_IDX AFTER RM:",npz_to_idx)
-        logging.debug("INDEX OF REMOVED ITEM",i)
+        logging.debug(f"NPZ_TO_IDX AFTER RM: {npz_to_idx}")
+        logging.debug(f"INDEX OF REMOVED ITEM {i}",)
         joblib.dump(npz_to_idx, pod_path)
         return i
     return -1
@@ -198,13 +198,13 @@ def rm_from_npz(vid, pod_name):
     """
     pod_path = join(pod_dir, pod_name+'.npz')
     pod_m = load_npz(pod_path)
-    logging.debug("SHAPE OF NPZ MATRIX BEFORE RM:",pod_m.shape)
+    logging.debug(f"SHAPE OF NPZ MATRIX BEFORE RM: {pod_m.shape}")
     v = pod_m[vid]
-    logging.debug("CHECKING SHAPE OF DELETED VEC:",pod_m.shape)
+    logging.debug(f"CHECKING SHAPE OF DELETED VEC: {pod_m.shape}")
     m1 = pod_m[:vid]
     m2 = pod_m[vid+1:]
     pod_m = vstack((m1,m2))
-    logging.debug("SHAPE OF NPZ MATRIX AFTER RM:",pod_m.shape)
+    logging.debug(f"SHAPE OF NPZ MATRIX AFTER RM: {pod_m.shape}")
     save_npz(pod_path, pod_m)
     return v
 
