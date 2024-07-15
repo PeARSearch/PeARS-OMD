@@ -17,6 +17,7 @@ user_app_dir_path = join(app_dir_path,'userdata')
 
 def get_xml(xml_url):
     xml = None
+<<<<<<< HEAD
     try:
         xml = requests.get(xml_url, timeout=120, \
             headers={'Authorization': AUTH_TOKEN}, stream =True).raw
@@ -34,6 +35,23 @@ def read_xml(xml):
         xml_content = xml.read()
         xml_with_replaced_amps = xml_content.replace(b"&", b"&amp;")
         parse = xmltodict.parse(xml_with_replaced_amps)
+=======
+    try:
+        xml = requests.get(xml_url, timeout=120, \
+            headers={'Authorization': AUTH_TOKEN}, stream =True).raw
+        #print(xml.read())
+        #xml = requests.get(xml_url, timeout=60, \
+        #    headers={'Authorization': AUTH_TOKEN}, stream =True).raw
+    except RuntimeError as error:
+        logging.error(">> ERROR: SPIDER: GET XML: Request failed. Moving on.")
+        logging.error(error)
+    return xml
+
+def read_xml(xml):
+    parse = None
+    try:
+        parse = xmltodict.parse(xml.read())
+>>>>>>> 36563dcaef6e2bb99ef4a72964b4217ec2129aaf
     except:
         logging.error(">> ERROR: SPIDER: PARSE XML: File may have some bad XML. Could not parse.")
     return parse

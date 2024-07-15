@@ -120,7 +120,11 @@ def posix_score_seq(posl, enforce_subwords=True):
 
 def posix(q, pod_name):
     doc_scores = {}
+<<<<<<< HEAD
     lang = pod_name.split('/')[2]
+=======
+    lang = pod_name.split('.')[1]
+>>>>>>> 36563dcaef6e2bb99ef4a72964b4217ec2129aaf
     vocab = models[lang]['vocab']
     inverted_vocab = models[lang]['inverted_vocab']
 

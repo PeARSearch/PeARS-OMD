@@ -26,8 +26,13 @@ def compute_vec(lang, text, pod_m):
     return pod_m
 
 
+<<<<<<< HEAD
 def compute_vectors_local_docs(target_url, title, description, doc, username, lang, device):
     pod_name = get_pod_name(target_url, lang, username, device)
+=======
+def compute_vectors_local_docs(target_url, title, description, doc, username, lang):
+    pod_name = get_pod_name(target_url, lang, username)
+>>>>>>> 36563dcaef6e2bb99ef4a72964b4217ec2129aaf
     pod_m = load_npz(join(pod_dir, pod_name+'.npz'))
     #print("Computing vectors for", target_url, "(",pod_name,")",lang)
     filename = target_url.split('/')[-1]

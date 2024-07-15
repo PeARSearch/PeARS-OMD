@@ -38,7 +38,11 @@ def index():
     """
     username = session['username']
     num_db_entries = 0
+<<<<<<< HEAD
     pods = Pods.query.filter(Pods.name.startswith(f"{username}/")).all()
+=======
+    pods = Pods.query.filter(Pods.name.contains('.u.'+username)).all()
+>>>>>>> 36563dcaef6e2bb99ef4a72964b4217ec2129aaf
     for pod in pods:
         num_db_entries += len(Urls.query.filter_by(pod=pod.name).all())
     return render_template("indexer/index.html", num_entries=num_db_entries)
@@ -54,10 +58,16 @@ def from_crawl():
     """
 
     def process_start_url(url, username):
+<<<<<<< HEAD
         create_pod_npz_pos(username, device)
 
         for LANG in LANGS:
             create_pod_in_db(username, LANG, device)
+=======
+        create_pod_npz_pos(username)
+        for LANG in LANGS:
+            create_pod_in_db(username, LANG)
+>>>>>>> 36563dcaef6e2bb99ef4a72964b4217ec2129aaf
         logging.debug(f">> INDEXER: CONTROLLER: from_crawl: Now crawling {u}")
         user_url_file = join(user_app_dir_path, username+".toindex")
         #Every contributor gets their own file to avoid race conditions
@@ -69,6 +79,7 @@ def from_crawl():
         if m:
             username = m.group(1)
         return username
+<<<<<<< HEAD
 
     def get_device_from_url(url):
         m = re.search(u'onmydisk.net/([^/]*)/([^/]*)/', url)
@@ -95,6 +106,25 @@ def run_indexing(username, url, title, snippet, description, lang, doc, device):
     new, idx = add_to_idx_to_url(username, url)
     pod_name, _, tokenized_text = mk_page_vector.compute_vectors_local_docs( \
         url, title, description, doc, username, lang, device)
+=======
+
+    if request.method == "POST":
+        u = request.form['url']
+        username = session['username']
+        process_start_url(u, username)
+        return render_template('indexer/progress_crawl.html', username=username)
+    u = request.args['url']
+    username = get_username_from_url(u)
+    process_start_url(u, username)
+    return progress_crawl(username=username)
+
+
+def run_indexing(username, url, title, snippet, description, lang, doc):
+    logging.debug("\t>>> INDEXER: CONTROLLER: PROGRESS CRAWL: INDEXING "+url)
+    new, idx = add_to_idx_to_url(username, url)
+    pod_name, _, tokenized_text = mk_page_vector.compute_vectors_local_docs( \
+        url, title, description, doc, username, lang)
+>>>>>>> 36563dcaef6e2bb99ef4a72964b4217ec2129aaf
     if not new:
         logging.info("\t>>> INDEXER: CONTROLLER: PROGRESS CRAWL: URL PREVIOUSLY KNOWN: "+url)
         rm_doc_from_pos(idx, pod_name) #in case old version is there
@@ -103,11 +133,16 @@ def run_indexing(username, url, title, snippet, description, lang, doc, device):
             rm_from_npz(vid, pod_name)
     posix_doc(tokenized_text, idx, pod_name, lang, username)
     add_to_npz_to_idx(pod_name, idx)
+<<<<<<< HEAD
     create_or_replace_url_in_db(url, title, snippet, description, username, lang, device)
+=======
+    create_or_replace_url_in_db(url, title, snippet, description, username, lang)
+>>>>>>> 36563dcaef6e2bb99ef4a72964b4217ec2129aaf
 
 
 @indexer.route("/progress_crawl")
 @login_required
+<<<<<<< HEAD
 def progress_crawl(username=None, device=None):
 
     def get_device_from_url(omd_url):
@@ -116,20 +151,29 @@ def progress_crawl(username=None, device=None):
             device = m.group(2)
         return device
 
+=======
+def progress_crawl(username=None):
+>>>>>>> 36563dcaef6e2bb99ef4a72964b4217ec2129aaf
     """ Crawl function, called by from_crawl.
     Reads the start URL given by the user and
     recursively crawls down directories from there.
     """
     if 'username' in session:
         username = session['username']
+<<<<<<< HEAD
 
+=======
+>>>>>>> 36563dcaef6e2bb99ef4a72964b4217ec2129aaf
     # There will only be one path read, although we are using the standard
     # PeARS read_urls function. Hence the [0].
     start_url = read_urls(join(user_app_dir_path, username+".toindex"))[0]
     logging.info(f">> INDEXER: Running progress crawl from {start_url}.")
+<<<<<<< HEAD
 
     if device is None:
         device = get_device_from_url(start_url)
+=======
+>>>>>>> 36563dcaef6e2bb99ef4a72964b4217ec2129aaf
 
     def generate():
         with app.app_context():
@@ -155,6 +199,7 @@ def progress_crawl(username=None, device=None):
                         title = body_title
                     logging.debug(f"\n{url}, convertible: {convertible}, content_type: {content_type}, islink: {islink}, title: {title}, description: {description}, body_str: {body_str}, language: {language}\n")
                     snippet = ' '.join(body_str.split()[:50])
+<<<<<<< HEAD
                     run_indexing(username, url, title, snippet, description, language, body_str, device)
                     if islink:
                         links.append(url)
@@ -164,6 +209,13 @@ def progress_crawl(username=None, device=None):
                     except Exception as e:
                         print(e)
                         yield None
+=======
+                    run_indexing(username, url, title, snippet, description, language, body_str)
+                    if islink:
+                        links.append(url)
+                    c += 1
+                    yield "data:" + str(ceil(c / len(docs) * 100)-1) + "\n\n"
+>>>>>>> 36563dcaef6e2bb99ef4a72964b4217ec2129aaf
                 del(links[0])
                 if len(links) == 0:
                     yield "data:100\n\n"
