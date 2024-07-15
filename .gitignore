@@ -109,12 +109,10 @@ ENV/
 .mypy_cache/
 
 # sqlite3 db
-app/static/db/app.db
+app/db/app.db
 
 # Language spaces and models
-app/static/pods/
-app/static/flies/
-app/static/spm/
+app/pods/
 urls_to_index.txt
 pods_to_index.txt
 
