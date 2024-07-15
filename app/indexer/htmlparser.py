@@ -77,14 +77,14 @@ def extract_html(url):
     error = None
     bs_obj, req = BS_parse(url)
     if not bs_obj:
-        error = "\t>> ERROR: extract_html: Failed to get BeautifulSoup object."
-        return title, body_str, snippet, language, error
+        logging.error(f"\t>> ERROR: extract_html: Failed to get BeautifulSoup object.")
+        return title, body_str, snippet, language
     if hasattr(bs_obj.title, 'string'):
         if url.startswith('http'):
             og_title = bs_obj.find("meta", property="og:title")
             og_description = bs_obj.find("meta", property="og:description")
-            print("OG TITLE",og_title)
-            print("OG DESC",og_description)
+            logging.debug(f"OG TITLE {og_title}")
+            logging.debug(f"OG DESC {og_description}")
 
             # Process title
             if not og_title:
@@ -93,24 +93,23 @@ def extract_html(url):
                     title = ""
             else:
                 title = og_title['content']
-            title = ' '.join(title.split()[:10]) #10 to conform with EU regulations
  
             # Get body string
             body_str = remove_boilerplates(req, LANGS[0]) #Problematic...
             try:
                 language = detect(title + " " + body_str)
-                print("\t>> INFO: Language for", url, ":", language)
+                logging.debug(f"\t>> INFO: Language for {url}: {language}")
             except Exception:
                 title = ""
-                error = "\t>> ERROR: extract_html: Couldn't detect page language."
-                return title, body_str, snippet, language, error
+                logging.error(f"\t>> ERROR: extract_html: Couldn't detect page language.")
+                return title, body_str, snippet, language
 
             # Process snippet
             if og_description:
                 snippet = og_description['content'][:1000]
             else:
                 snippet = ' '.join(body_str.split()[:10]) #10 to conform with EU regulations
-    return title, body_str, snippet, language, error
+    return title, body_str, snippet, language
 
 
 def extract_txt(url):
@@ -121,7 +120,7 @@ def extract_txt(url):
     language = LANGS[0]
     logging.debug(f">> INDEXER: HTMLPARSER: extract_txt: title: {title}")
     try:
-        req = requests.get(url, timeout=10, headers={'Authorization': AUTH_TOKEN})
+        req = requests.get(url, timeout=120, headers={'Authorization': AUTH_TOKEN})
         req.encoding = 'utf-8'
     except Exception:
         return title, body_str, snippet, language

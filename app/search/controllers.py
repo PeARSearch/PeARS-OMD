@@ -120,8 +120,11 @@ def order_results(results, scores):
     sorted_scores = np.argsort(scores)[::-1]
     sorted_results = {}
     for i in sorted_scores:
-        url = list(results.keys())[i]
-        sorted_results[url] = results[url]
+        try:
+            url = list(results.keys())[i]
+            sorted_results[url] = results[url]
+        except:
+            logging.error(f">> ERROR: SEARCH: CONTROLLERS: sorted scores and results list do not have the same length.")
     return sorted_results
 
 
