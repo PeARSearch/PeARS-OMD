@@ -91,8 +91,6 @@ def create_pod_in_db(contributor, lang, device):
     name_private = f"{contributor}/{device}/{lang}/private"
     name_shared = f"{contributor}/{device}/{lang}/shared"
 
-    # name_private = 'home.'+lang+'.u.'+contributor
-    # name_shared = 'home.'+lang+'.shared.u.'+contributor
     url_private = "http://localhost:8080/api/pods/" + name_private.replace(' ', '+')
     url_shared = "http://localhost:8080/api/pods/" + name_shared.replace(' ', '+')
     commit(url_private, name_private)
@@ -144,7 +142,7 @@ def add_to_idx_to_url(contributor, url):
 
 
 def rm_from_idx_to_url(contributor, url):
-    pod_path = join(pod_dir, contributor+'.idx')
+    pod_path = join(pod_dir, contributor, 'user.idx')
     idx_to_url = joblib.load(pod_path)
     logging.debug("IDX_TO_URL BEFORE RM",idx_to_url)
     i = idx_to_url[1].index(url)
@@ -233,7 +231,7 @@ def rm_doc_from_pos(vid, pod):
 
     Returns: the content of the positional index for that vector.
     """
-    lang = pod.split('.')[1]
+    lang = pod.split('/')[2]  # pod = "user/device/lang/pod_name"
     vocab = models[lang]['vocab']
     posindex = load_posix(pod)
     remaining_posindex = []
@@ -260,7 +258,7 @@ def add_doc_to_pos(mini_posindex, pod):
     a mini positional index).
     pod: the name of the target pod.
     """
-    lang = pod.split('.')[1]
+    lang = pod.split('/')[2]  # pod = "user/device/lang/pod_name"
     vocab = models[lang]['vocab']
     posindex = load_posix(pod)
     for token in vocab:
@@ -278,7 +276,7 @@ def delete_url(url):
     """
     u = db.session.query(Urls).filter_by(url=url).first()
     pod = u.pod
-    username = pod.split('.u.')[1]
+    username = pod.split('/')[0]  # pod = "user/device/lang/pod_name"
     print("POD",pod,"USER",username)
     idx = rm_from_idx_to_url(username, url)
     vid = rm_from_npz_to_idx(pod, idx)

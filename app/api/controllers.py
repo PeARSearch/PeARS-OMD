@@ -37,7 +37,7 @@ def return_url_delete(path):
     try:
         u = db.session.query(Urls).filter_by(url=path).first()
         pod_name = u.pod
-        pod_username = pod_name.split('.u.')[1]
+        pod_username = pod_name.split('/')[0]
     except AttributeError as err:
         message = "URL not found in the database"
         return False, message

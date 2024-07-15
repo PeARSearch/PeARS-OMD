@@ -38,7 +38,7 @@ def index():
     """
     username = session['username']
     num_db_entries = 0
-    pods = Pods.query.filter(Pods.name.contains('.u.'+username)).all()
+    pods = Pods.query.filter(Pods.name.startswith(f"{username}/")).all()
     for pod in pods:
         num_db_entries += len(Urls.query.filter_by(pod=pod.name).all())
     return render_template("indexer/index.html", num_entries=num_db_entries)
@@ -159,7 +159,11 @@ def progress_crawl(username=None, device=None):
                     if islink:
                         links.append(url)
                     c += 1
-                    yield "data:" + str(ceil(c / len(docs) * 100)-1) + "\n\n"
+                    try:                        
+                        yield "data:" + str(ceil(c / len(docs) * 100)-1) + "\n\n"
+                    except Exception as e:
+                        print(e)
+                        yield None
                 del(links[0])
                 if len(links) == 0:
                     yield "data:100\n\n"

@@ -55,7 +55,7 @@ def deletedbonly():
 def checkconsistency(username):
     print("\n>> CLI: UNITTEST: CONSISTENCY CHECKS")
     pods = Pods.query.all()
-    usernames = [p.name.split('.u.')[1] for p in pods]
+    usernames = [p.name.split('/')[0] for p in pods]
     if username not in usernames:
         print("\t> ERROR: no username",username)
         return 0
@@ -64,7 +64,7 @@ def checkconsistency(username):
     check_duplicates_idx_to_url(username)
     check_db_vs_idx_to_url(username)
     print("\n")
-    pods = [p for p in pods if p.name.split('.u.')[1] == username]
+    pods = [p for p in pods if p.name.split('/')[0] == username]
     for pod in pods:
         print(">> CLI: UNITTEST: CONSISTENCY: CHECKING POD:", pod.name)
         check_npz_to_idx(pod.name)
@@ -75,7 +75,7 @@ def checkconsistency(username):
 
 def check_idx_to_url(username):
     print("\t>> CHECKING IDX_TO_URL")
-    pod_path = join(pod_dir, username+'.idx')
+    pod_path = join(pod_dir, username, 'user.idx')
     idx_to_url = joblib.load(pod_path)
     if len(idx_to_url[0]) != len(idx_to_url[1]):
         print("\t\t> ERROR: the two lists in idx_to_url do not match in length", len(idx_to_url[0]), len(idx_to_url[1]))
@@ -86,11 +86,11 @@ def check_db_vs_idx_to_url(username):
     print("\t>> CHECKING DB VS IDX_TO_URL")
     urls = []
     pods = Pods.query.all()
-    pods = [p for p in pods if p.name.split('.u.')[1] == username]
+    pods = [p for p in pods if p.name.split('/')[0] == username]
     for pod in pods:
         urls.extend(Urls.query.filter_by(pod=pod.name).all())
     urls = [url.url for url in urls]
-    pod_path = join(pod_dir, username+'.idx')
+    pod_path = join(pod_dir, username, 'user.idx')
     idx_to_url = joblib.load(pod_path)
     if len(set(urls)) != len(set(idx_to_url[1])):
         print("\t\t> ERROR: Length of URL set in DB != len(set(idx)) in idx_to_url", len(urls), len(idx_to_url[0]))
@@ -100,7 +100,7 @@ def check_db_vs_idx_to_url(username):
 
 def check_duplicates_idx_to_url(username):
     print("\t>> CHECKING DUPLICATES IN IDX_TO_URL")
-    pod_path = join(pod_dir, username+'.idx')
+    pod_path = join(pod_dir, username, 'user.idx')
     idx_to_url = joblib.load(pod_path)
     if len(idx_to_url[0]) > len(list(set(idx_to_url[0]))):
         print("\t\t> ERROR: Duplicates in idx_to_url (idx)")
@@ -110,11 +110,11 @@ def check_duplicates_idx_to_url(username):
 
 def check_missing_docs_in_npz(username):
     print("\t>> CHECKING DOCS IN IDX_TO_URL WITHOUT A VECTOR")
-    pod_path = join(pod_dir, username+'.idx')
+    pod_path = join(pod_dir, username, 'user.idx')
     idx_to_url = joblib.load(pod_path)
     all_npz_idx = []
     pods = Pods.query.all()
-    pods = [p for p in pods if p.name.split('.u.')[1] == username]
+    pods = [p for p in pods if p.name.split('/')[0] == username]
     for pod in pods:
         pod_path = join(pod_dir, pod.name+'.npz.idx')
         npz_to_idx = joblib.load(pod_path)
@@ -142,7 +142,7 @@ def check_npz_to_idx(pod):
 
 def check_npz_to_idx_vs_idx_to_url(pod, username):
     print("\t>> CHECKING NPZ_TO_IDX VS IDX_TO_URL")
-    pod_path = join(pod_dir, username+'.idx')
+    pod_path = join(pod_dir, username, 'user.idx')
     idx_to_url = joblib.load(pod_path)
     pod_path = join(pod_dir, pod+'.npz.idx')
     npz_to_idx = joblib.load(pod_path)
@@ -189,7 +189,7 @@ def check_pos_vs_npz_to_idx(pod):
 def repair(username):
     print("\n>> CLI: REPAIR")
     pods = Pods.query.all()
-    usernames = [p.name.split('.u.')[1] for p in pods]
+    usernames = [p.name.split('/')[0] for p in pods]
     if username not in usernames:
         print("\t> ERROR: no username",username)
         return 0
@@ -197,7 +197,7 @@ def repair(username):
     repair_missing_docs_in_npz(username)
     repair_db_vs_idx_to_url(username)
     pods = Pods.query.all()
-    pods = [p for p in pods if p.name.split('.u.')[1] == username]
+    pods = [p for p in pods if p.name.split('/')[0] == username]
     for pod in pods:
         print("\n>> CLI: REPAIR: ", pod.name)
         repair_duplicates_npz_to_idx(pod.name)
@@ -208,7 +208,7 @@ def repair(username):
 
 def repair_duplicates_idx_to_url(username):
     print("\t>> DELETE DUPLICATES IN IDX_TO_URL")
-    pod_path = join(pod_dir, username+'.idx')
+    pod_path = join(pod_dir, username, 'user.idx')
     idx_to_url = joblib.load(pod_path)
     idx = idx_to_url[0]
     urls = idx_to_url[1]
@@ -229,7 +229,7 @@ def repair_duplicates_idx_to_url(username):
 
 def repair_missing_docs_in_npz(username):
     print("\t>> DELETE DOCS WITHOUT VECTORS FROM IDX_TO_URL")
-    pod_path = join(pod_dir, username+'.idx')
+    pod_path = join(pod_dir, username, 'user.idx')
     idx_to_url = joblib.load(pod_path)
     idx = idx_to_url[0]
     urls = idx_to_url[1]
@@ -274,7 +274,7 @@ def repair_duplicates_npz_to_idx(pod):
 
 def repair_npz_to_idx_vs_idx_to_url(pod, username):
     print("\t>> DELETE NPZ_TO_IDX ENTRIES NOT IN IDX_TO_URL")
-    pod_path = join(pod_dir, username+'.idx')
+    pod_path = join(pod_dir, username, 'user.idx')
     idx_to_url = joblib.load(pod_path)
     pod_path = join(pod_dir, pod+'.npz.idx')
     npz_to_idx = joblib.load(pod_path)
@@ -334,14 +334,14 @@ def del_pod_docs(pod, todelete):
 def showindexfile(username, indexfile):
     if indexfile == 'idx_to_url':
         print(">> CLI: SHOW: IDX TO URL: ")
-        pod_path = join(pod_dir, username+'.idx')
+        pod_path = join(pod_dir, username, 'user.idx')
         idx_to_url = joblib.load(pod_path)
         for i in range(len(idx_to_url[0])):
             print(idx_to_url[0][i], idx_to_url[1][i])
 
     if indexfile == 'npz_to_idx':
         pods = Pods.query.all()
-        pods = [p for p in pods if p.name.split('.u.')[1] == username]
+        pods = [p for p in pods if p.name.split('/')[0] == username]
         for pod in pods:
             print("\n>> CLI: SHOW: NPZ TO IDX: ", pod.name)
             pod_path = join(pod_dir, pod.name+'.npz.idx')
@@ -351,7 +351,7 @@ def showindexfile(username, indexfile):
 
     if indexfile == 'posdocs':
         pods = Pods.query.all()
-        pods = [p for p in pods if p.name.split('.u.')[1] == username]
+        pods = [p for p in pods if p.name.split('/')[0] == username]
         for pod in pods:
             print(">> CLI: SHOW: POS: ", pod.name)
             pod_path = join(pod_dir, pod.name+'.npz.idx')

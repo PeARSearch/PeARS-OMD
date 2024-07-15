@@ -43,8 +43,8 @@ def compute_scores(query, query_vector, tokenized, pod_name):
     if len(posix_scores) == 0:
         return vec_scores, completeness_scores, posix_scores
 
-    username = pod_name.split('.u.')[1]
-    idx_to_url = joblib.load(join(pod_dir, username+'.idx'))
+    username = pod_name.split('/')[0]
+    idx_to_url = joblib.load(join(pod_dir, username, 'user.idx'))
     npz_to_idx = joblib.load(join(pod_dir, pod_name+'.npz.idx'))
     for i in range(pod_m.shape[0]):
         cos =  m_cosines[0][i]
@@ -90,12 +90,13 @@ def score_pods(query, query_vector, lang, username = None):
     podsum = []
     npzs = []
     if username is not None:
-        userhome = 'home.'+lang+'.u.'+username
-        npzs.append(join(pod_dir, userhome+'.npz'))
-        pods.append(db.session.query(Pods).filter_by(name=userhome).first())
-    npzs.extend(glob(join(pod_dir,'*.'+lang+'.shared.u.*npz')))
+        private_folders = Pods.query.filter(Pods.name.startswith(f"{username}/")).filter(Pods.name.endswith(f"/{lang}/private")).all()
+        for pf in private_folders:
+            npzs.append(join(pod_dir, pf.name+'.npz'))
+            pods.append(pf)
+    npzs.extend(glob(join(pod_dir, f"*/*/{lang}/shared.npz")))
     for npz in npzs:
-        podname = npz.split('/')[-1].replace('.npz','')
+        podname = npz.replace(pod_dir + "/", "").replace(".npz", "")
         s = np.sum(load_npz(npz).toarray(), axis=0)
         if np.sum(s) > 0:
             podsum.append(s)
@@ -108,7 +109,7 @@ def score_pods(query, query_vector, lang, username = None):
 
     # For each pod, retrieve cosine to query
     pods.extend(db.session.query(Pods).filter_by(language=lang).filter_by(registered=True).\
-            filter(Pods.name.contains('.shared.u.')).all())
+            filter(Pods.name.endswith('/shared')).all())
     for p in pods:
         if p.name in podnames:
             cosine_score = m_cosines[0][podnames.index(p.name)]
@@ -136,8 +137,8 @@ def score_docs(query, query_vector, tokenized, pod_name):
                 compute_scores(query, query_vector, tokenized, pod_name)
         if len(vec_scores) == 0:
             return document_scores
-        username = pod_name.split('.u.')[1]
-        idx_to_url = joblib.load(join(pod_dir, username+'.idx'))
+        username = pod_name.split('/')[0]
+        idx_to_url = joblib.load(join(pod_dir, username, 'user.idx'))
         #print("IDX TO URL",idx_to_url)
         for url in list(vec_scores.keys()):
             #print(">>>",url)
