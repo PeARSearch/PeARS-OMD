@@ -86,7 +86,7 @@ def from_crawl():
     username = get_username_from_url(u)
     device = get_device_from_url(u)
 
-    process_start_url(u, username, device)
+    process_start_url(u, username)
     return progress_crawl(username=username, device=device)
 
 
