@@ -21,6 +21,9 @@ from flask_sqlalchemy import SQLAlchemy
 # Root path
 dir_path = dirname(dirname(realpath(__file__)))
 
+# Server host
+SERVER_HOST = "localhost:9090"
+
 # Initialise emission tracking
 CARBON_TRACKING = False
 CARBON_DIR = None

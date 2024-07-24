@@ -7,7 +7,7 @@ import joblib
 from os.path import dirname, realpath, join, isfile, isdir
 import os
 from app import db, models
-from app import LOCAL_RUN, OMD_PATH, LANGS, VEC_SIZE
+from app import LOCAL_RUN, OMD_PATH, LANGS, VEC_SIZE, SERVER_HOST
 from app.api.models import Urls, Pods
 from app.api.models import installed_languages
 from app.indexer.posix import load_posix, dump_posix
@@ -24,7 +24,7 @@ def get_pod_name(target_url, lang, username, device):
     """
     pod_name = f"{username}/{device}/{lang}/private"
     if LOCAL_RUN:
-        if 'http://localhost:9090/testdocs/shared' in target_url:
+        if f'http://{SERVER_HOST}/testdocs/shared' in target_url:
             pod_name = f"{username}/{device}/{lang}/shared"
     else:
         if join(OMD_PATH, 'shared') in target_url:
