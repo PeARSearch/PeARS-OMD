@@ -78,23 +78,20 @@ def create_pod_in_db(contributor, lang, device):
     If the pod does not exist, create it in the database.
     """
 
-    def commit(url, name):
-        if not db.session.query(Pods).filter_by(url=url).all():
-            p = Pods(url=url)
-            p.name = name
-            p.description = name
+    def commit(path):
+        if not db.session.query(Pods).filter_by(url=path).all():
+            p = Pods(url=path)
+            p.name = path
+            p.description = path
             p.language = lang
             p.registered = True
             db.session.add(p)
             db.session.commit()
 
-    name_private = f"{contributor}/{device}/{lang}/private"
-    name_shared = f"{contributor}/{device}/{lang}/shared"
-
-    url_private = "http://localhost:8080/api/pods/" + name_private.replace(' ', '+')
-    url_shared = "http://localhost:8080/api/pods/" + name_shared.replace(' ', '+')
-    commit(url_private, name_private)
-    commit(url_shared, name_shared)
+    path_private = f"{contributor}/{device}/{lang}/private"
+    path_shared = f"{contributor}/{device}/{lang}/shared"
+    commit(path_private)
+    commit(path_shared)
 
 
 def create_or_replace_url_in_db(target_url, title, snippet, description, username, lang, device):
