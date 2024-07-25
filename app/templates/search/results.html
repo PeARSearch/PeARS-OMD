@@ -16,7 +16,7 @@ SPDX-License-Identifier: AGPL-3.0-only
   <form class="form-inline my-2 my-lg-0 mx-2" action="{{url_for('search.anonymous')}}" id="searchform">
 {% endif %}
   <div class="input-group group">
-    <input required class="form-control" type="search" value="{{query|safe}}" aria-label="Search" name="q">
+    <input required class="form-control" type="search" value="{{query}}" aria-label="Search" name="q">
     <input class="form-control" title="Is this the GUI calling?" type="hidden" name='gui' value='true' required>
     <button class="btn btn-outline-success" type="submit" id="searchbutton">Search</button>
     <button class="btn btn-outline-success" type="button" id="loadingbutton" style='display:none'>
@@ -41,7 +41,7 @@ SPDX-License-Identifier: AGPL-3.0-only
           <div class="card-body">
 	  <!--<h4 class="card-title"><a href="{{result[1]}}">{{result[2]}}</a></h4>-->
 	    <a class="btn btn-light" href="{{result[1]}}"><b>{{result[2]}}</b></a>
-	    <p class="card-text small" style='margin: 0px 0px 10px 40px'><br>{{result[4]|safe}} ...</p>
+	    <p class="card-text small" style='margin: 0px 0px 10px 40px'><br>{{result[4]}} ...</p>
 	    <p class="small" style='margin-left:40px;'>
 	    <a href="{{result[1]}}" class="card-link">{{result[1]}}</a> |
 	    </p>
@@ -56,7 +56,7 @@ SPDX-License-Identifier: AGPL-3.0-only
         <div id="sidebar-wrapper">
           <div class="alert alert-info alert-dismissible">
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            {{internal_message|safe}}
+            {{internal_message}}
           </div>
         </div>
         {% endif %}
