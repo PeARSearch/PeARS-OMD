@@ -19,6 +19,7 @@ from app.utils_db import (create_pod_in_db, create_pod_npz_pos, create_or_replac
         add_to_idx_to_url, add_to_npz_to_idx, rm_doc_from_pos, rm_from_npz_to_idx, rm_from_npz)
 from app.indexer.posix import posix_doc
 from app.auth.controllers import login_required
+from app.forms import IndexerForm
 
 app_dir_path = dirname(dirname(realpath(__file__)))
 pod_dir = join(app_dir_path,'pods')
@@ -28,6 +29,14 @@ user_app_dir_path = join(app_dir_path,'userdata')
 indexer = Blueprint('indexer', __name__, url_prefix='/indexer')
 
 
+def get_num_db_entries():
+    username = session['username']
+    num_db_entries = 0
+    pods = Pods.query.filter(Pods.name.startswith(f"{username}/")).all()
+    for pod in pods:
+        num_db_entries += len(Urls.query.filter_by(pod=pod.name).all())
+    return num_db_entries
+
 # Set the route and accepted methods
 @indexer.route("/", methods=["GET"])
 @login_required
@@ -36,12 +45,9 @@ def index():
     Returns the index template with the number of entries
     currently in the database for that user.
     """
-    username = session['username']
-    num_db_entries = 0
-    pods = Pods.query.filter(Pods.name.startswith(f"{username}/")).all()
-    for pod in pods:
-        num_db_entries += len(Urls.query.filter_by(pod=pod.name).all())
-    return render_template("indexer/index.html", num_entries=num_db_entries)
+    num_db_entries = get_num_db_entries()
+    form = IndexerForm(request.form)
+    return render_template("indexer/index.html", num_entries=num_db_entries, form=form)
 
 
 @indexer.route("/from_crawl", methods=["GET","POST"])
@@ -77,11 +83,15 @@ def from_crawl():
         return device
 
     if request.method == "POST":
-        u = request.form['url']
-        device = get_device_from_url(u)
-        username = session['username']
-        process_start_url(u, username)
-        return render_template('indexer/progress_crawl.html', username=username, device=device) 
+        form = IndexerForm(request.form)
+        if form.validate_on_submit():
+            u = request.form['url']
+            device = get_device_from_url(u)
+            username = session['username']
+            process_start_url(u, username)
+            return render_template('indexer/progress_crawl.html', username=username, device=device)
+        num_db_entries = get_num_db_entries() 
+        return render_template("indexer/index.html", num_entries=num_db_entries, form=form)
     u = request.args['url']
     username = get_username_from_url(u)
     device = get_device_from_url(u)
