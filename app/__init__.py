@@ -73,7 +73,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 models = dict()
 for LANG in LANGS:
     models[LANG] = {}
-    spm_vocab_path = f'app/api/models/{LANG}/{LANG}wiki.vocab'
+    spm_vocab_path = join(dir_path, f'app/api/models/{LANG}/{LANG}wiki.vocab')
     logging.info(f"Loading SPM vocab from '{spm_vocab_path}' ...")
     vocab, inverted_vocab, logprobs = read_vocab(spm_vocab_path)
     vectorizer = CountVectorizer(vocabulary=vocab, lowercase=True, token_pattern='[^ ]+')
