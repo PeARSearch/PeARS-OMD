@@ -2,16 +2,18 @@ import sys
 import shutil
 from glob import glob
 from os import listdir
-from os.path import join, basename
+from os.path import join, basename, dirname, realpath
 from pathlib import Path
 
 user = sys.argv[1]
 src_path = sys.argv[2]
 
-Path(join("app/testdocs/",user)).mkdir(parents=True, exist_ok=True)
-Path(join("app/testdocs/",user,"localhost.localdomain")).mkdir(parents=True, exist_ok=True)
+dir_path = dirname(realpath(__file__))
 
-doc_path = join("app/testdocs/",user,"localhost.localdomain","Documents")
+Path(join(dir_path, "app/testdocs/",user)).mkdir(parents=True, exist_ok=True)
+Path(join(dir_path, "app/testdocs/",user,"localhost.localdomain")).mkdir(parents=True, exist_ok=True)
+
+doc_path = join(dir_path, "app/testdocs/",user,"localhost.localdomain","Documents")
 Path(doc_path).mkdir(parents=True, exist_ok=True)
 
 
@@ -21,10 +23,10 @@ def write_index(d, content):
         index.write(content+'\n')
 
 user_content = "<omd_index><doc url='localhost.localdomain/' contentType='desktop' convertible='False'><title></title></doc></omd_index>"
-write_index(join("app/testdocs/",user),user_content)
+write_index(join(dir_path, "app/testdocs/",user),user_content)
 
 localdomain_content = "<omd_index><doc url='Documents/' contentType='folder' convertible='False'><title>Documents</title></doc></omd_index>"
-write_index(join("app/testdocs/",user,"localhost.localdomain"),localdomain_content)
+write_index(join(dir_path, "app/testdocs/",user,"localhost.localdomain"),localdomain_content)
 
 documents_content = "<omd_index>\n"
 
