@@ -7,4 +7,4 @@ class LoginForm(FlaskForm):
     password = PasswordField('Password', [DataRequired()])
 
 class IndexerForm(FlaskForm):
-    url = StringField('The url to index from', [DataRequired(), url()])
+    url = StringField('The url to index from', [DataRequired(), url()], description="https://onmydisk.net/username/")
