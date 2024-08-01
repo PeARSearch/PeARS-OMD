@@ -5,5 +5,8 @@
 # Run a test server.
 
 from app import app
+from app import SERVER_HOST
 
-app.run(host='0.0.0.0', port=9090, debug=True, threaded=True)
+
+host, port = SERVER_HOST.split(":")
+app.run(host=host, port=int(port), debug=True, threaded=True)
