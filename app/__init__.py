@@ -62,8 +62,6 @@ try:
     OMD_PATH = os.getenv('OMD_PATH')
     LANGS = os.getenv('LANGUAGES').lower().split(',')
     FILE_SIZE_LIMIT = int(os.getenv('FILE_SIZE_LIMIT'))
-    local_run = os.getenv('LOCAL_RUN').lower()
-    LOCAL_RUN = False if local_run == "false" else True
 except:
     logging.error(">>\tERROR: __init__.py: the pears.ini file in the conf directory is incorrectly configured.")
     sys.exit()
@@ -140,10 +138,7 @@ class MyAdminIndexView(AdminIndexView):
             access_token = request.cookies.get('OMD_SESSION_ID')  
         if not access_token:
             return False
-        if LOCAL_RUN:
-            url = 'http://localhost:9191/api' #Local test
-        else:
-            url = join(OMD_PATH, 'signin/')
+        url = join(OMD_PATH, 'signin/')
         data = {'action': 'getUserInfo', 'session_id': access_token}
         resp = requests.post(url, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
         is_admin = False
