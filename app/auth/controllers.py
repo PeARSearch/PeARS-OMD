@@ -9,7 +9,7 @@ import requests
 from flask import Blueprint, request, render_template, make_response, session, flash
 from flask_cors import cross_origin
 from app.forms import LoginForm
-from app import LOCAL_RUN, AUTH_TOKEN, OMD_PATH
+from app import AUTH_TOKEN, OMD_PATH
 
 # Define the blueprint:
 auth = Blueprint('auth', __name__, url_prefix='/auth')
@@ -25,10 +25,7 @@ def login():
         username = request.form.get('username', '', type=str)
         password = request.form.get('password', '', type=str)
         # send authorization message to on my disk
-        if LOCAL_RUN:
-            url = 'http://localhost:9191/api' #Local test
-        else:
-            url = join(OMD_PATH, 'signin/')
+        url = join(OMD_PATH, 'signin/')
         data = {'action': 'signin', 'username': username, 'password': password}
         user_info = requests.post(url, timeout=30, json=data) 
         if user_info == None:
@@ -66,10 +63,7 @@ def login():
 @auth.route('/logout', methods=['GET','POST'])
 def logout():
     access_token = request.cookies.get('OMD_SESSION_ID')
-    if LOCAL_RUN:
-        url = 'http://localhost:9191/api' #Local test
-    else:
-        url = join(OMD_PATH, 'signout/')
+    url = join(OMD_PATH, 'signout/')
     data = {'action': 'signout', 'session_id': access_token}
     logout_confirmation = requests.post(url, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
     if logout_confirmation.status_code < 400:
@@ -87,10 +81,7 @@ def logout():
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if LOCAL_RUN:
-            url = 'http://localhost:9191/api' #Local test
-        else:
-            url = join(OMD_PATH, 'signin/')
+        url = join(OMD_PATH, 'signin/')
         
         access_token = request.headers.get('Token') #Get token from request header
         #print(">> login_required: access_token: OMD_SESSION_ID", access_token)
