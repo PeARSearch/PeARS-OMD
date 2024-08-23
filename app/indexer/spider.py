@@ -32,8 +32,7 @@ def read_xml(xml):
     parse = None
     try:
         xml_content = xml.read()
-        xml_with_replaced_amps = xml_content.replace(b"&", b"&amp;")
-        parse = xmltodict.parse(xml_with_replaced_amps)
+        parse = xmltodict.parse(xml_content)
     except:
         logging.error(">> ERROR: SPIDER: PARSE XML: File may have some bad XML. Could not parse.")
     return parse
