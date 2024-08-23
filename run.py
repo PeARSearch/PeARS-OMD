@@ -6,10 +6,12 @@
 import os
 
 from app import app
+from app import SERVER_HOST
 
 if os.getenv("FLASK_ENV") == "development":
     debug_mode = True
 else:
     debug_mode = False
 
-app.run(host='0.0.0.0', port=9090, debug=debug_mode, threaded=True)
+host, port = SERVER_HOST.split(":")
+app.run(host=host, port=int(port), debug=debug_mode, threaded=True)

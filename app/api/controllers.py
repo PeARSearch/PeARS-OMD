@@ -7,7 +7,7 @@ from os.path import dirname, join, realpath, basename
 from flask import Blueprint, jsonify, request, session, flash, render_template
 from app.utils_db import delete_url, rename_idx_to_url
 from app.api.models import Urls, Pods
-from app import db, LOCAL_RUN, OMD_PATH, AUTH_TOKEN
+from app import db, OMD_PATH, AUTH_TOKEN
 from app.auth.controllers import login_required
 
 # Define the blueprint:
@@ -15,12 +15,6 @@ api = Blueprint('api', __name__, url_prefix='/api')
 
 dir_path = dirname(dirname(realpath(__file__)))
 pod_dir = join(dir_path,'pods')
-
-
-@api.route('/pods/')
-@login_required
-def return_pods():
-    return jsonify(json_list=[p.serialize for p in Pods.query.all()])
 
 
 @api.route('/urls/delete', methods=["GET"])

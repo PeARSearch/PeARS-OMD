@@ -14,7 +14,7 @@ from app import app
 from app.utils import get_language, beautify_snippet, beautify_title
 from app.search.score_pages import run_search
 from app.auth.controllers import login_required
-from app import LOCAL_RUN, OMD_PATH, LANGS
+from app import SERVER_HOST, OMD_PATH, LANGS
 
 LOG = logging.getLogger(__name__)
 
@@ -70,10 +70,7 @@ def anonymous():
 
 
 def run_user_search(query):
-    if LOCAL_RUN:
-        url = 'http://localhost:9191/api' #Local test
-    else:
-        url = OMD_PATH
+    url = OMD_PATH
     results = {}
     scores = []
     username = session['username']
@@ -83,7 +80,7 @@ def run_user_search(query):
     else:
         languages = [lang]
     for lang in languages:
-        r, s = run_search(query+' -'+lang, url_filter=[join(url,username), join(url,'shared'), 'http://localhost:9090/'])
+        r, s = run_search(query+' -'+lang, url_filter=[join(url,username), join(url,'shared'), f'http://{SERVER_HOST}/'])
         for k,v in r.items():
             if v is not None:
                 i = list(r.keys()).index(k)
@@ -97,10 +94,7 @@ def run_user_search(query):
 
 
 def run_anonymous_search(query):
-    if LOCAL_RUN:
-        url = 'http://localhost:9090/testdocs/shared' #Local test
-    else:
-        url = join(OMD_PATH, 'shared')
+    url = join(OMD_PATH, 'shared')
     results = {}
     scores = []
     query, lang = get_language(query.lower())

@@ -5,6 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 {% extends "base/base.html" %}
+{% from "base/_formhelpers.html" import render_field %}
 {% block body %}
   <div class="row">
     <div class="col">
@@ -22,10 +23,10 @@ SPDX-License-Identifier: AGPL-3.0-only
           <p> Crawl from  a start URL on your network. For now, the crawl will ignore any file that is not in either .txt or .html format.</p>
 
           <form method="POST" accept-charset="UTF-8" enctype="multipart/form-data"
-            action="{{url_for('indexer.from_crawl')}}">
+            action="{{url_for('indexer.from_crawl')}}" autocomplete="off">
             <div class="input-group p-2">
-              <span class="input-group-text">URL</span>
-              <input required type="text" class="form-control" placeholder="https://onmydisk.net/username/" name='url' id='url'>
+              {{ form.hidden_tag() }}
+              <p>{{ render_field(form.url) }}</p>
             </div>
         </div>
         <div class="card-footer clearfix">

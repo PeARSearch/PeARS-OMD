@@ -2,16 +2,18 @@
 #
 # SPDX-License-Identifier: AGPL-3.0-only
 
-from os.path import isdir, exists
+from os.path import isdir, exists, join, dirname, realpath
 from glob import glob
 import sentencepiece as spm
 from app import db
 
 sp = spm.SentencePieceProcessor()
 
+dir_path = dirname(dirname(realpath(__file__)))
+
 def get_installed_languages():
     installed_languages = []
-    language_paths = glob('./app/api/models/*/')
+    language_paths = glob(join(dir_path, 'api/models/*/'))
     for p in language_paths:
         lang = p[:-1].split('/')[-1]
         installed_languages.append(lang)
