@@ -9,7 +9,7 @@ import xmltodict
 import requests
 from langdetect import detect
 from app.indexer.htmlparser import extract_txt, extract_html
-from app import (LANGS, OMD_PATH, LOCAL_RUN, 
+from app import (LANGS, OMD_PATH, 
         AUTH_TOKEN, FILE_SIZE_LIMIT, IGNORED_EXTENSIONS)
 
 app_dir_path = dirname(dirname(realpath(__file__)))
@@ -83,9 +83,6 @@ def get_doc_url(doc, urldir):
     else:
         url = join(urldir, url)
     logging.info(">> INDEXER: SPIDER: get url from doc: doc url: "+url)
-    if LOCAL_RUN:
-        if url[-1] == '/': #For local test only
-            url = join(url,'index.html')
    
    # Is this item a folder description?
     is_folder_description = url.endswith("?description")
