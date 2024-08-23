@@ -163,7 +163,8 @@ def get_doc_content(url, convertible, content_type):
     if convertible:
         title, body_str, _, language = extract_txt(url + "?totext")
     elif is_folder_description:
-        _, body_str, _, language = extract_txt(url + "?description")
+        #_, body_str, _, language = extract_txt(url + "?description")
+        body_str = None
     elif content_type in ['text/plain', 'text/x-tex']:
         title, body_str, _, language = extract_txt(url)
     elif content_type in ['text/html']:

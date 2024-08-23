@@ -135,6 +135,8 @@ def progress_crawl(username=None, device=None):
     # There will only be one path read, although we are using the standard
     # PeARS read_urls function. Hence the [0].
     start_url = read_urls(join(user_app_dir_path, username+".toindex"))[0]
+    if start_url[-1] != '/':
+        start_url+='/'
     logging.info(f">> INDEXER: Running progress crawl from {start_url}.")
 
     if device is None:
@@ -162,8 +164,17 @@ def progress_crawl(username=None, device=None):
                     body_title, body_str, language = spider.get_doc_content(url, convertible, content_type)
                     if title is None:
                         title = body_title
+
                     logging.debug(f"\n{url}, convertible: {convertible}, content_type: {content_type}, islink: {islink}, title: {title}, description: {description}, body_str: {body_str}, language: {language}\n")
-                    snippet = ' '.join(body_str.split()[:50])
+                    if body_str.startswith("<omd_index>"):
+                        if description != title:
+                            body_str = description
+                        else:
+                            body_str = f"Directory {title}"
+                    if body_str == "":
+                        snippet = "No description."
+                    else:
+                        snippet = ' '.join(body_str.split()[:50])
                     run_indexing(username, url, title, snippet, description, language, body_str, device)
                     if islink:
                         links.append(url)
