@@ -71,12 +71,14 @@ def from_crawl():
             f.write(url + "\n")
    
     def get_username_from_url(url):
+        username = ''
         m = re.search(u'onmydisk.net/([^/]*)/', url)
         if m:
             username = m.group(1)
         return username
 
     def get_device_from_url(url):
+        device = ''
         m = re.search(u'onmydisk.net/([^/]*)/([^/]*)/', url)
         if m:
             device = m.group(2)
@@ -121,6 +123,7 @@ def run_indexing(username, url, title, snippet, description, lang, doc, device):
 def progress_crawl(username=None, device=None):
 
     def get_device_from_url(omd_url):
+        device = ''
         m = re.search(u'onmydisk.net/([^/]*)/([^/]*)/', omd_url)
         if m:
             device = m.group(2)
