@@ -28,6 +28,11 @@ SPDX-License-Identifier: AGPL-3.0-only
               {{ form.hidden_tag() }}
               <p>{{ render_field(form.url) }}</p>
             </div>
+           {% for message in messages %}
+            <div class="notification is-danger">
+		    <b>{{ message }}</b>
+            </div>
+           {% endfor %}
         </div>
         <div class="card-footer clearfix">
           <span class="input-group-btn float-end">
