@@ -154,10 +154,13 @@ def progress_crawl(username=None, device=None):
         with app.app_context():
             logging.debug("\n\n>>> INDEXER: CONTROLLER: READING DOCS")
             links = [start_url]
+            m = 0
+            c = 0
             while len(links) > 0:
+                print(f"Processing {links[0]}.")
                 docs, urldir = spider.process_xml(links[0], username)
-
                 c = 0
+                m += len(docs)
                 if tracker is not None:
                     task_name = "run indexing for "+str(len(docs))+" files"
                     tracker.start_task(task_name)
@@ -180,14 +183,20 @@ def progress_crawl(username=None, device=None):
                         else:
                             body_str = f"Directory {title}"
                     if body_str == "":
-                        snippet = "No description."
+                        description or "No description"
                     else:
                         snippet = ' '.join(body_str.split()[:50])
                     run_indexing(username, url, title, snippet, description, language, body_str, device)
                     if islink:
                         links.append(url)
                     c += 1
-                    yield "data:" + str(ceil(c / len(docs) * 100)-1) + "\n\n"
+                    p = ceil(c / m * 100)
+                    if p == 0:
+                       p += 1
+                    if p == 100:
+                       p -= 1
+
+                    yield "data:" + str(p) + "\n\n"
                 del(links[0])
                 if len(links) == 0:
                     yield "data:100\n\n"
