@@ -11,7 +11,7 @@ import requests
 import numpy as np
 from scipy.spatial import distance
 from app import LANGS, CARBON_DIR
-
+from markupsafe import Markup, escape
 
 
 def carbon_print(tracker_results, task_name):
@@ -145,4 +145,14 @@ def beautify_snippet(snippet, query):
     for w in query.split():
         tmp_snippet = tmp_snippet.replace(w,'<b>'+w+'</b>')
         tmp_snippet = tmp_snippet.replace(w.title(),'<b>'+w.title()+'</b>')
+    #Secure snippet
+    els = re.split(r'<b>|</b>', tmp_snippet)
+    tmp_snippet = ""
+    tag = '<b>'
+    for e in els:
+        tmp_snippet+=escape(e)+Markup(tag)
+        tag = '</b>' if tag == '<b>' else '<b>'
+    # switch tag one last time to remove the correct end of string
+    tag = '</b>' if tag == '<b>' else '<b>'
+    tmp_snippet = tmp_snippet[:-len(tag)]
     return tmp_snippet
