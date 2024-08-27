@@ -71,14 +71,14 @@ def from_crawl():
             f.write(url + "\n")
    
     def get_username_from_url(url):
-        username = ''
+        username = None
         m = re.search(u'onmydisk.net/([^/]*)/', url)
         if m:
             username = m.group(1)
         return username
 
     def get_device_from_url(url):
-        device = ''
+        device = None
         m = re.search(u'onmydisk.net/([^/]*)/([^/]*)/', url)
         if m:
             device = m.group(2)
@@ -90,6 +90,11 @@ def from_crawl():
             u = request.form['url']
             device = get_device_from_url(u)
             username = session['username']
+            if not device or not username:
+                #The url given by the user is missing a username or device name
+                num_db_entries = get_num_db_entries() 
+                messages = ["Please ensure the entered URL contains both your username and one of your devices' names."]
+                return render_template("indexer/index.html", num_entries=num_db_entries, form=form, messages=messages)
             process_start_url(u, username)
             return render_template('indexer/progress_crawl.html', username=username, device=device)
         num_db_entries = get_num_db_entries() 
