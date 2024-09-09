@@ -17,6 +17,7 @@ from flask_admin import Admin, AdminIndexView
 
 # Import SQLAlchemy
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 
 # Root path
 dir_path = dirname(dirname(realpath(__file__)))
@@ -95,6 +96,7 @@ logging.info("IGNORED EXTENSIONS: "+' '.join(IGNORED_EXTENSIONS))
 # Define the database object which is imported
 # by modules and controllers
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 
 
 # Import a module / component using its blueprint handler variable (mod_auth)

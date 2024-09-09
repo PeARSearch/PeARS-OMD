@@ -40,9 +40,8 @@ class Urls(Base):
     id = db.Column(db.Integer, primary_key=True)
     url = db.Column(db.String(1000))
     title = db.Column(db.String(1000))
-    vector = db.Column(db.String(7000))
+    vector = db.Column(db.Integer)
     snippet = db.Column(db.String(1000))
-    cc = db.Column(db.Boolean)
     pod = db.Column(db.String(1000))
     description = db.Column(db.String(1000))
 
@@ -51,14 +50,12 @@ class Urls(Base):
                  title=None,
                  vector=None,
                  snippet=None,
-                 cc=False,
                  pod=None,
                  description=None):
         self.url = url
         self.title = title
         self.vector = vector
         self.snippet = snippet
-        self.cc = cc
         self.pod = pod
         self.description = description
 
@@ -73,7 +70,6 @@ class Urls(Base):
             'title': self.title,
             'vector': self.vector,
             'snippet': self.snippet,
-            'cc': self.cc,
             'pod': self.pod,
             'notes': self.description
         }
@@ -88,18 +84,12 @@ class Pods(Base):
     url = db.Column(db.String(1000))
     description = db.Column(db.String(7000))
     language = db.Column(db.String(1000))
-    DS_vector = db.Column(db.String(7000))
-    word_vector = db.Column(db.String(7000))
-    registered = db.Column(db.Boolean)
 
     def __init__(self,
                  name=None,
                  url=None,
                  description=None,
-                 language=None,
-                 DS_vector=None,
-                 word_vector=None,
-                 registered=False):
+                 language=None):
         self.name = name
         self.url = url
         self.description = description
@@ -112,8 +102,5 @@ class Pods(Base):
             'url': self.url,
             'description': self.description,
             'language': self.language,
-            'DSvector': self.DS_vector,
-            'wordvector': self.word_vector,
-            'registered': self.registered
         }
 

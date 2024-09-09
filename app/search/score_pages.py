@@ -48,25 +48,21 @@ def compute_scores(query, query_vector, tokenized, pod_name):
         print(">> SEARCH: SCORE_PAGES: compute_scores: no documents found via posix.")
         return vec_scores, completeness_scores, posix_scores
 
-    try:
-        username = pod_name.split('/')[0]
-        idx_to_url = joblib.load(join(pod_dir, username, 'user.idx'))
-        npz_to_idx = joblib.load(join(pod_dir, pod_name+'.npz.idx'))
-        for i in range(pod_m.shape[0]):
-            cos =  m_cosines[0][i]
-            if  cos == 0 or math.isnan(cos):
-                continue
-            #Get doc idx for row i of the matrix
-            idx = npz_to_idx[1][i]
-            #Get list position of doc idx in idx_to_url
-            lspos = idx_to_url[0].index(idx)
-            #Retrieve corresponding URL
-            url = idx_to_url[1][lspos]
-            vec_scores[url] = cos
-            completeness_scores[url] = m_completeness[0][i]
-    except:
-        print(">> SEARCH: SCORE_PAGES: compute_scores: possible consistency issue")
-        return vec_scores, completeness_scores, posix_scores
+    #try:
+    for i in range(pod_m.shape[0]):
+        cos =  m_cosines[0][i]
+        if  cos == 0 or math.isnan(cos):
+            continue
+        #Get doc idx for row i of the matrix
+        #Retrieve corresponding URL
+        print(f"Looking for vector {i} on {pod_name}")
+        url = Urls.query.filter_by(pod=pod_name).filter_by(vector=i).first().url
+        print(url)
+        vec_scores[url] = cos
+        completeness_scores[url] = m_completeness[0][i]
+    #except:
+    #    print(">> SEARCH: SCORE_PAGES: compute_scores: possible consistency issue")
+    #    return vec_scores, completeness_scores, posix_scores
     return vec_scores, completeness_scores, posix_scores
 
 
@@ -117,8 +113,7 @@ def score_pods(query, query_vector, lang, username = None):
     m_cosines = 1 - distance.cdist(query_vector, podsum.todense(), 'cosine')
 
     # For each pod, retrieve cosine to query
-    pods.extend(db.session.query(Pods).filter_by(language=lang).filter_by(registered=True).\
-            filter(Pods.name.endswith('/shared')).all())
+    pods.extend(db.session.query(Pods).filter_by(language=lang).filter(Pods.name.endswith('/shared')).all())
     for p in pods:
         if p.name in podnames:
             cosine_score = m_cosines[0][podnames.index(p.name)]
@@ -147,39 +142,31 @@ def score_docs(query, query_vector, tokenized, pod_name):
         if len(vec_scores) == 0:
             print(">> SEARCH: SCORE_PAGES: score_docs: vec_scores is empty.")
             return document_scores
-        username = pod_name.split('/')[0]
-        try:
-            idx_to_url = joblib.load(join(pod_dir, username, 'user.idx'))
-        except:
-            print(">> SEARCH: SCORE_PAGES: score_docs: user.idx file not found.")
-            return document_scores
-        #print("IDX TO URL",idx_to_url)
         for url in list(vec_scores.keys()):
             #print(">>>",url)
             #print(url, vec_scores[url], completeness_scores[url])
             try:
-                i = idx_to_url[1].index(url)
-                idx = idx_to_url[0][i]
+                idx = -1
+                u = Urls.query.filter_by(url=url).first()
+                if u:
+                    idx = u.id
+                else:
+                    print("ERROR: SEARCH: SCORE_PAGES: score_docs: could not find url in database")
+                    print(url)
                 document_scores[url] = 0.0
                 if idx in posix_scores:
                     document_scores[url]+=posix_scores[idx]
                 document_scores[url]+=completeness_scores[url]
                 if math.isnan(document_scores[url]) or document_scores[url] < 1:
                     document_scores[url] = 0
+                snippet_score = generic_overlap(query, u.snippet)
+                document_scores[url]+=snippet_score
+                if idx in posix_scores:
+                    print(url, vec_scores[url], posix_scores[idx], document_scores[url], completeness_scores[url], snippet_score)
                 else:
-                    u = db.session.query(Urls).filter_by(url=url).first()
-                    if u:
-                        snippet_score = generic_overlap(query, u.snippet)
-                        document_scores[url]+=snippet_score
-                    else:
-                        print("ERROR: SEARCH: SCORE_PAGES: score_docs: could not find url in database")
-                        print(url)
+                    print(url, vec_scores[url], 0.0, document_scores[url], completeness_scores[url], snippet_score)
             except:
                 continue
-                #if idx in posix_scores:
-                #    print(url, vec_scores[url], posix_scores[idx], document_scores[url], completeness_scores[url], snippet_score)
-                #else:
-                #    print(url, vec_scores[url], 0.0, document_scores[url], completeness_scores[url], snippet_score)
         return document_scores
 
 
