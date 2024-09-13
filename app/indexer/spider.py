@@ -20,9 +20,9 @@ def get_xml(xml_url):
     try:
         xml = requests.get(xml_url, timeout=120, \
             headers={'Authorization': AUTH_TOKEN}, stream =True).raw
-        #print(xml.read())
-        #xml = requests.get(xml_url, timeout=60, \
-        #    headers={'Authorization': AUTH_TOKEN}, stream =True).raw
+        print(xml.read())
+        xml = requests.get(xml_url, timeout=60, \
+            headers={'Authorization': AUTH_TOKEN}, stream =True).raw
     except RuntimeError as error:
         logging.error(">> ERROR: SPIDER: GET XML: Request failed. Moving on.")
         logging.error(error)
@@ -175,4 +175,20 @@ def get_doc_content(url, convertible, content_type):
         language = LANGS[0]
 
     return title, body_str, language
+
+def get_doc_owner(doc):
+    owner = ""
+    try:
+        owner = doc['owner']
+    except:
+        logging.info(">> SPIDER: GET DOC OWNER: No owner found.")
+    return owner
+
+def get_doc_shared_with(doc):
+    group = []
+    try:
+        group = doc['shared_with'].split(',')
+    except:
+        logging.info(">> SPIDER: GET DOC SHARED_WITH: No group found.")
+    return group
 
