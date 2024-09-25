@@ -162,6 +162,7 @@ def progress_crawl(username=None, device=None):
                     tracker.start_task(task_name)
                 for doc in docs:
                     url, process = spider.get_doc_url(doc, urldir)
+                    print(f"\n>> {url}")
                     if not process:
                         continue
                     last_modified = spider.get_last_modified(doc)

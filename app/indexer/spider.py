@@ -20,10 +20,10 @@ user_app_dir_path = join(app_dir_path,'userdata')
 def get_xml(xml_url):
     xml = None
     try:
+        #xml = requests.get(xml_url, timeout=120, \
+        #    headers={'Authorization': AUTH_TOKEN}, stream =True).raw
+        #print(xml.read())
         xml = requests.get(xml_url, timeout=120, \
-            headers={'Authorization': AUTH_TOKEN}, stream =True).raw
-        print(xml.read())
-        xml = requests.get(xml_url, timeout=60, \
             headers={'Authorization': AUTH_TOKEN}, stream =True).raw
     except RuntimeError as error:
         logging.error(">> ERROR: SPIDER: GET XML: Request failed. Moving on.")
@@ -189,7 +189,7 @@ def get_doc_owner(doc):
 def get_doc_shared_with(doc):
     group = []
     try:
-        group = doc['shared_with'].split(',')
+        group = doc['@shared_with'].split(',')
     except:
         logging.info(">> SPIDER: GET DOC SHARED_WITH: No group found.")
     return group
