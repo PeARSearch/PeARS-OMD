@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 PeARS Project, <community@pearsproject.org> 
+# SPDX-FileCopyrightText: 2024 PeARS Project, <community@pearsproject.org> 
 #
 # SPDX-License-Identifier: AGPL-3.0-only
 
@@ -6,13 +6,16 @@ import logging
 import joblib
 from os.path import dirname, realpath, join, isfile, isdir
 import os
+from datetime import datetime
+from pytz import timezone
 from app import db, models
-from app import OMD_PATH, LANGS, VEC_SIZE, SERVER_HOST
+from app import OMD_PATH, LANGS, VEC_SIZE, SERVER_HOST, GATEWAY_TIMEZONE
 from app.api.models import Urls, Pods
 from app.api.models import installed_languages
 from app.indexer.posix import load_posix, dump_posix
 import numpy as np
 from scipy.sparse import csr_matrix, vstack, save_npz, load_npz
+from sqlalchemy import update
 
 dir_path = dirname(realpath(__file__))
 pod_dir = join(dir_path,'pods')
@@ -37,11 +40,6 @@ def create_pod_npz_pos(contributor, device):
     user_dir = join(pod_dir, contributor)
     if not isdir(user_dir):
         os.mkdir(user_dir)
-    pod_path = join(user_dir, 'user.idx')
-    if not isfile(pod_path):
-        print("Making idx dictionaries for new pod")
-        idx_to_url = [[],[]]
-        joblib.dump(idx_to_url, pod_path)
 
     # Separate private from shared for other representations
     for lang in LANGS:
@@ -62,12 +60,6 @@ def create_pod_npz_pos(contributor, device):
                 posindex = [{} for _ in range(VEC_SIZE)]
                 joblib.dump(posindex, pod_path+'.pos')
 
-            if not isfile(pod_path+'.npz.idx'):
-                print("Making idx dictionaries for new pod")
-                # Lists of lists to make deletions easier
-                npz_to_idx = [[0],[-1]] # For row 0 of the matrix
-                joblib.dump(npz_to_idx, pod_path+'.npz.idx')
-
 
 def create_pod_in_db(contributor, lang, device):
     """ Pod database initialisation.
@@ -80,7 +72,6 @@ def create_pod_in_db(contributor, lang, device):
             p.name = path
             p.description = path
             p.language = lang
-            p.registered = True
             db.session.add(p)
             db.session.commit()
 
@@ -90,8 +81,7 @@ def create_pod_in_db(contributor, lang, device):
     commit(path_shared)
 
 
-def create_or_replace_url_in_db(target_url, title, snippet, description, username, lang, device):
-    cc = False
+def create_or_replace_url_in_db(target_url, title, snippet, description, idv, username, lang, device):
     pod_name = get_pod_name(target_url, lang, username, device)
     entry = db.session.query(Urls).filter_by(url=target_url).first()
     if entry:
@@ -101,84 +91,12 @@ def create_or_replace_url_in_db(target_url, title, snippet, description, usernam
     u.title = title
     u.snippet = snippet
     u.description = description[:100]
+    u.vector = idv
     u.pod = pod_name
-    u.cc = cc
     db.session.add(u)
     db.session.commit()
-
-def rename_idx_to_url(contributor, src, tgt):
-    pod_path = join(pod_dir, contributor, 'user.idx')
-    idx_to_url = joblib.load(pod_path)
-    i = idx_to_url[1].index(src)
-    idx_to_url[1][i] = tgt
-    joblib.dump(idx_to_url, pod_path)
-
-
-def add_to_idx_to_url(contributor, url):
-    pod_path = join(pod_dir, contributor, 'user.idx')
-    idx_to_url = joblib.load(pod_path)
-    idx = idx_to_url[0]
-    urls = idx_to_url[1]
-    new = True #was there an old version of this URL in the index?
-    if url in urls:
-        i = idx[urls.index(url)]
-        new = False
-        return new, i
-    if len(idx_to_url[0]) > 0:
-        i = max(idx_to_url[0])+1
-    else:
-        i = 0
-    idx_to_url[0].append(i)
-    idx_to_url[1].append(url)
-    joblib.dump(idx_to_url, pod_path)
-    return new, i
-
-
-def rm_from_idx_to_url(contributor, url):
-    pod_path = join(pod_dir, contributor, 'user.idx')
-    idx_to_url = joblib.load(pod_path)
-    logging.debug(f"IDX_TO_URL BEFORE RM {idx_to_url}")
-    i = idx_to_url[1].index(url)
-    idx = idx_to_url[0][i]
-    idx_to_url[0].pop(i)
-    idx_to_url[1].pop(i)
-    logging.debug(f"IDX_TO_URL AFTER RM {idx_to_url}")
-    logging.debug(f"INDEX OF REMOVED ITEM {idx}")
-    joblib.dump(idx_to_url, pod_path)
-    return idx
-
-
-def add_to_npz_to_idx(pod_name, idx):
-    """Record the ID of the document given
-    its position in the npz matrix.
-    NB: the lists do not have to be in the
-    order of the matrix.
-    """
-    pod_path = join(pod_dir, pod_name+'.npz.idx')
-    npz_to_idx = joblib.load(pod_path)
-    if idx not in npz_to_idx[1]:
-        npz_to_idx[1].append(idx)
-        npz_to_idx[0] = list(range(len(npz_to_idx[1])))
-        joblib.dump(npz_to_idx, pod_path)
-
-
-def rm_from_npz_to_idx(pod_name, idx):
-    """Remove doc from npz to idx record.
-    NB: the lists do not have to be in the
-    order of the matrix.
-    """
-    pod_path = join(pod_dir, pod_name+'.npz.idx')
-    npz_to_idx = joblib.load(pod_path)
-    if idx in npz_to_idx[1]:
-        logging.debug(f"NPZ_TO_IDX BEFORE RM: {npz_to_idx}")
-        i = npz_to_idx[1].index(idx)
-        npz_to_idx[1].pop(i)
-        npz_to_idx[0] = list(range(len(npz_to_idx[1])))
-        logging.debug(f"NPZ_TO_IDX AFTER RM: {npz_to_idx}")
-        logging.debug(f"INDEX OF REMOVED ITEM {i}",)
-        joblib.dump(npz_to_idx, pod_path)
-        return i
-    return -1
+    print(f"Adding URL {target_url}, {idv}, {pod_name}")
+    return u.id
 
 
 def rm_from_npz(vid, pod_name):
@@ -199,7 +117,7 @@ def rm_from_npz(vid, pod_name):
     pod_m = vstack((m1,m2))
     logging.debug(f"SHAPE OF NPZ MATRIX AFTER RM: {pod_m.shape}")
     save_npz(pod_path, pod_m)
-    return v
+    return vid
 
 def add_to_npz(v, pod_path):
     """ Add new pre-computed vector to npz matrix.
@@ -264,6 +182,12 @@ def add_doc_to_pos(mini_posindex, pod):
     dump_posix(posindex,pod)
 
 
+def update_db_idvs_after_npz_delete(idv, pod):
+    condition = (Urls.pod == pod) & (Urls.vector > idv)
+    update_stmt = update(Urls).where(condition).values(vector=Urls.vector-1)
+    db.session.execute(update_stmt)
+
+
 def delete_url(url):
     """ Delete url with some url on some pod.
     """
@@ -271,18 +195,30 @@ def delete_url(url):
     pod = u.pod
     username = pod.split('/')[0]  # pod = "user/device/lang/pod_name"
     print("POD",pod,"USER",username)
-    idx = rm_from_idx_to_url(username, url)
-    vid = rm_from_npz_to_idx(pod, idx)
 
     #Remove document row from .npz matrix
-    rm_from_npz(vid, pod)
+    idv = rm_from_npz(u.vector, pod)
 
     #Remove doc from positional index
-    rm_doc_from_pos(idx, pod)
+    rm_doc_from_pos(u.id, pod)
+
+    #Update database idvs
+    update_db_idvs_after_npz_delete(idv, pod)
 
     #Delete from database
     db.session.delete(u)
     db.session.commit()
     return "Deleted document with url "+url
 
-
+def uptodate(url, date):
+    """ Compare last modified in database with given datetime
+    """
+    up_to_date = False
+    u = db.session.query(Urls).filter_by(url=url).first()
+    if u is None:
+        return up_to_date
+    db_datetime = u.date_modified.astimezone(timezone(GATEWAY_TIMEZONE))
+    print(f"DB DATE: {db_datetime}, LAST MODIFIED: {date}")
+    if db_datetime >= date:
+        up_to_date = True
+    return up_to_date

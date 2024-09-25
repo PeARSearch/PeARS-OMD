@@ -5,7 +5,7 @@
 
 from os.path import dirname, join, realpath, basename
 from flask import Blueprint, jsonify, request, session, flash, render_template
-from app.utils_db import delete_url, rename_idx_to_url
+from app.utils_db import delete_url
 from app.api.models import Urls, Pods
 from app import db, OMD_PATH, AUTH_TOKEN
 from app.auth.controllers import login_required

@@ -15,8 +15,7 @@ from app import LANGS
 from app.api.models import Urls, Pods
 from app.indexer import mk_page_vector, spider
 from app.utils import read_docs, read_urls, carbon_print
-from app.utils_db import (create_pod_in_db, create_pod_npz_pos, create_or_replace_url_in_db,
-        add_to_idx_to_url, add_to_npz_to_idx, rm_doc_from_pos, rm_from_npz_to_idx, rm_from_npz)
+from app.utils_db import create_pod_in_db, create_pod_npz_pos, create_or_replace_url_in_db, delete_url, uptodate
 from app.indexer.posix import posix_doc
 from app.auth.controllers import login_required
 from app.forms import IndexerForm
@@ -109,18 +108,15 @@ def from_crawl():
 
 def run_indexing(username, url, title, snippet, description, lang, doc, device):
     logging.debug(f"\t>>> INDEXER: CONTROLLER: PROGRESS CRAWL: INDEXING {url}")
-    new, idx = add_to_idx_to_url(username, url)
-    pod_name, _, tokenized_text = mk_page_vector.compute_vectors_local_docs( \
-        url, title, description, doc, username, lang, device)
-    if not new:
+    url_in_db = Urls.query.filter_by(url=url).first()
+    if url_in_db:
         logging.info(f"\t>>> INDEXER: CONTROLLER: PROGRESS CRAWL: URL PREVIOUSLY KNOWN: {url}")
-        rm_doc_from_pos(idx, pod_name) #in case old version is there
-        vid = rm_from_npz_to_idx(pod_name, idx)
-        if vid != -1:
-            rm_from_npz(vid, pod_name)
+        delete_url(url)
+    print(url, "SNIPPET", snippet, "DESCRIPTION", description)
+    pod_name, idv, tokenized_text = mk_page_vector.compute_vectors_local_docs( \
+        url, title, description, doc, username, lang, device)
+    idx = create_or_replace_url_in_db(url, title, snippet, description, idv, username, lang, device)
     posix_doc(tokenized_text, idx, pod_name, lang, username)
-    add_to_npz_to_idx(pod_name, idx)
-    create_or_replace_url_in_db(url, title, snippet, description, username, lang, device)
 
 
 @indexer.route("/progress_crawl")
@@ -157,7 +153,7 @@ def progress_crawl(username=None, device=None):
             m = 0
             c = 0
             while len(links) > 0:
-                print(f"Processing {links[0]}.")
+                print(f"\n\nProcessing {links[0]}.")
                 docs, urldir = spider.process_xml(links[0], username)
                 c = 0
                 m += len(docs)
@@ -166,12 +162,18 @@ def progress_crawl(username=None, device=None):
                     tracker.start_task(task_name)
                 for doc in docs:
                     url, process = spider.get_doc_url(doc, urldir)
+                    print(f"\n>> {url}")
                     if not process:
                         continue
+                    last_modified = spider.get_last_modified(doc)
+                    if last_modified is not None and uptodate(url, last_modified):
+                        continue
+                    print(f"{url} is not up to date. Reindexing.")
                     convertible = spider.assess_convertibility(doc)
                     content_type, islink = spider.get_doc_content_type(doc, url)
                     title = spider.get_doc_title(doc, url)
                     description = spider.get_doc_description(doc, title)
+                    snippet = ""
                     body_title, body_str, language = spider.get_doc_content(url, convertible, content_type)
                     if title is None:
                         title = body_title
@@ -183,9 +185,11 @@ def progress_crawl(username=None, device=None):
                         else:
                             body_str = f"Directory {title}"
                     if body_str == "":
-                        description or "No description"
+                        description = description or "No description"
                     else:
                         snippet = ' '.join(body_str.split()[:50])
+                    #print("DESCRIPTION",description)
+                    #print("SNIPPET",snippet)
                     run_indexing(username, url, title, snippet, description, language, body_str, device)
                     if islink:
                         links.append(url)

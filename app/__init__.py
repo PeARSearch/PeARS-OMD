@@ -17,6 +17,7 @@ from flask_admin import Admin, AdminIndexView
 
 # Import SQLAlchemy
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 
 # Root path
 dir_path = dirname(dirname(realpath(__file__)))
@@ -62,6 +63,7 @@ try:
     OMD_PATH = os.getenv('OMD_PATH')
     LANGS = os.getenv('LANGUAGES').lower().split(',')
     FILE_SIZE_LIMIT = int(os.getenv('FILE_SIZE_LIMIT'))
+    GATEWAY_TIMEZONE = os.getenv('TIMEZONE')
 except:
     logging.error(">>\tERROR: __init__.py: the pears.ini file in the conf directory is incorrectly configured.")
     sys.exit()
@@ -95,6 +97,7 @@ logging.info("IGNORED EXTENSIONS: "+' '.join(IGNORED_EXTENSIONS))
 # Define the database object which is imported
 # by modules and controllers
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 
 
 # Import a module / component using its blueprint handler variable (mod_auth)

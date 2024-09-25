@@ -85,7 +85,7 @@ celerybeat-schedule
 
 # dotenv and .ini files
 .env
-app/static/conf/pears.ini
+conf/pears.ini
 
 # virtualenv
 .venv
@@ -120,5 +120,4 @@ pods_to_index.txt
 # User data
 app/*.txt
 app/*.html
-app/static/toindex/
 app/static/*.txt

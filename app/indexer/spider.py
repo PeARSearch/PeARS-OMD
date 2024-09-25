@@ -7,10 +7,12 @@ from os.path import join, dirname, realpath
 from flask import url_for
 import xmltodict
 import requests
+from datetime import datetime
+from pytz import timezone
 from langdetect import detect
 from app.indexer.htmlparser import extract_txt, extract_html
 from app import (LANGS, OMD_PATH, 
-        AUTH_TOKEN, FILE_SIZE_LIMIT, IGNORED_EXTENSIONS)
+        AUTH_TOKEN, FILE_SIZE_LIMIT, IGNORED_EXTENSIONS, GATEWAY_TIMEZONE)
 
 app_dir_path = dirname(dirname(realpath(__file__)))
 user_app_dir_path = join(app_dir_path,'userdata')
@@ -18,11 +20,11 @@ user_app_dir_path = join(app_dir_path,'userdata')
 def get_xml(xml_url):
     xml = None
     try:
+        #xml = requests.get(xml_url, timeout=120, \
+        #    headers={'Authorization': AUTH_TOKEN}, stream =True).raw
+        #print(xml.read())
         xml = requests.get(xml_url, timeout=120, \
             headers={'Authorization': AUTH_TOKEN}, stream =True).raw
-        #print(xml.read())
-        #xml = requests.get(xml_url, timeout=60, \
-        #    headers={'Authorization': AUTH_TOKEN}, stream =True).raw
     except RuntimeError as error:
         logging.error(">> ERROR: SPIDER: GET XML: Request failed. Moving on.")
         logging.error(error)
@@ -176,3 +178,28 @@ def get_doc_content(url, convertible, content_type):
 
     return title, body_str, language
 
+def get_doc_owner(doc):
+    owner = ""
+    try:
+        owner = doc['@owner']
+    except:
+        logging.info(">> SPIDER: GET DOC OWNER: No owner found.")
+    return owner
+
+def get_doc_shared_with(doc):
+    group = []
+    try:
+        group = doc['@shared_with'].split(',')
+    except:
+        logging.info(">> SPIDER: GET DOC SHARED_WITH: No group found.")
+    return group
+
+def get_last_modified(doc):
+    last_modified = ""
+    try:
+        last_modified = doc['@last_modified']
+    except:
+        logging.info(">> SPIDER: GET LAST MODIFIED: No date found.")
+        return None
+    last_modified = datetime.strptime(last_modified, '%Y-%m-%d %H:%M:%S').astimezone(timezone(GATEWAY_TIMEZONE))
+    return last_modified
