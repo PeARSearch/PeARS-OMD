@@ -6,8 +6,10 @@ import logging
 import joblib
 from os.path import dirname, realpath, join, isfile, isdir
 import os
+from datetime import datetime
+from pytz import timezone
 from app import db, models
-from app import OMD_PATH, LANGS, VEC_SIZE, SERVER_HOST
+from app import OMD_PATH, LANGS, VEC_SIZE, SERVER_HOST, GATEWAY_TIMEZONE
 from app.api.models import Urls, Pods
 from app.api.models import installed_languages
 from app.indexer.posix import load_posix, dump_posix
@@ -208,4 +210,15 @@ def delete_url(url):
     db.session.commit()
     return "Deleted document with url "+url
 
-
+def uptodate(url, date):
+    """ Compare last modified in database with given datetime
+    """
+    up_to_date = False
+    u = db.session.query(Urls).filter_by(url=url).first()
+    if u is None:
+        return up_to_date
+    db_datetime = u.date_modified.astimezone(timezone(GATEWAY_TIMEZONE))
+    print(f"DB DATE: {db_datetime}, LAST MODIFIED: {date}")
+    if db_datetime >= date:
+        up_to_date = True
+    return up_to_date

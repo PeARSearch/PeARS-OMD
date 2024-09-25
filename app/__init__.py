@@ -63,6 +63,7 @@ try:
     OMD_PATH = os.getenv('OMD_PATH')
     LANGS = os.getenv('LANGUAGES').lower().split(',')
     FILE_SIZE_LIMIT = int(os.getenv('FILE_SIZE_LIMIT'))
+    GATEWAY_TIMEZONE = os.getenv('TIMEZONE')
 except:
     logging.error(">>\tERROR: __init__.py: the pears.ini file in the conf directory is incorrectly configured.")
     sys.exit()

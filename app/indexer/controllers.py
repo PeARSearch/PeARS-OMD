@@ -15,7 +15,7 @@ from app import LANGS
 from app.api.models import Urls, Pods
 from app.indexer import mk_page_vector, spider
 from app.utils import read_docs, read_urls, carbon_print
-from app.utils_db import create_pod_in_db, create_pod_npz_pos, create_or_replace_url_in_db, delete_url
+from app.utils_db import create_pod_in_db, create_pod_npz_pos, create_or_replace_url_in_db, delete_url, uptodate
 from app.indexer.posix import posix_doc
 from app.auth.controllers import login_required
 from app.forms import IndexerForm
@@ -164,6 +164,10 @@ def progress_crawl(username=None, device=None):
                     url, process = spider.get_doc_url(doc, urldir)
                     if not process:
                         continue
+                    last_modified = spider.get_last_modified(doc)
+                    if last_modified is not None and uptodate(url, last_modified):
+                        continue
+                    print(f"{url} is not up to date. Reindexing.")
                     convertible = spider.assess_convertibility(doc)
                     content_type, islink = spider.get_doc_content_type(doc, url)
                     title = spider.get_doc_title(doc, url)
@@ -183,8 +187,8 @@ def progress_crawl(username=None, device=None):
                         description = description or "No description"
                     else:
                         snippet = ' '.join(body_str.split()[:50])
-                    print("DESCRIPTION",description)
-                    print("SNIPPET",snippet)
+                    #print("DESCRIPTION",description)
+                    #print("SNIPPET",snippet)
                     run_indexing(username, url, title, snippet, description, language, body_str, device)
                     if islink:
                         links.append(url)
