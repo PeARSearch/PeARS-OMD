@@ -13,7 +13,8 @@ from flask import Blueprint, request, session, render_template, Response
 from app import app, tracker
 from app import LANGS
 from app.api.models import Urls, Pods
-from app.indexer import mk_page_vector, spider
+from app.indexer import mk_page_vector
+from app.indexer.spider import process_xml, get_doc_info
 from app.utils import read_docs, read_urls, carbon_print
 from app.utils_db import create_pod_in_db, create_pod_npz_pos, create_or_replace_url_in_db, delete_url, uptodate
 from app.indexer.posix import posix_doc
@@ -154,42 +155,18 @@ def progress_crawl(username=None, device=None):
             c = 0
             while len(links) > 0:
                 print(f"\n\nProcessing {links[0]}.")
-                docs, urldir = spider.process_xml(links[0], username)
+                docs, urldir = process_xml(links[0], username)
                 c = 0
                 m += len(docs)
                 if tracker is not None:
                     task_name = "run indexing for "+str(len(docs))+" files"
                     tracker.start_task(task_name)
                 for doc in docs:
-                    url, process = spider.get_doc_url(doc, urldir)
-                    print(f"\n>> {url}")
-                    if not process:
+                    doc_info = get_doc_info(doc, urldir)
+                    if doc_info is None:
                         continue
-                    last_modified = spider.get_last_modified(doc)
-                    if last_modified is not None and uptodate(url, last_modified):
-                        continue
-                    print(f"{url} is not up to date. Reindexing.")
-                    convertible = spider.assess_convertibility(doc)
-                    content_type, islink = spider.get_doc_content_type(doc, url)
-                    title = spider.get_doc_title(doc, url)
-                    description = spider.get_doc_description(doc, title)
-                    snippet = ""
-                    body_title, body_str, language = spider.get_doc_content(url, convertible, content_type)
-                    if title is None:
-                        title = body_title
-
+                    url, convertible, content_type, islink, title, description, snippet, body_str, language = doc_info
                     logging.debug(f"\n{url}, convertible: {convertible}, content_type: {content_type}, islink: {islink}, title: {title}, description: {description}, body_str: {body_str}, language: {language}\n")
-                    if body_str.startswith("<omd_index>"):
-                        if description != title:
-                            body_str = description
-                        else:
-                            body_str = f"Directory {title}"
-                    if body_str == "":
-                        description = description or "No description"
-                    else:
-                        snippet = ' '.join(body_str.split()[:50])
-                    #print("DESCRIPTION",description)
-                    #print("SNIPPET",snippet)
                     run_indexing(username, url, title, snippet, description, language, body_str, device)
                     if islink:
                         links.append(url)
