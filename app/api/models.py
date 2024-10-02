@@ -4,8 +4,9 @@
 
 from os.path import isdir, exists, join, dirname, realpath
 from glob import glob
+from datetime import datetime
 import sentencepiece as spm
-from app import db
+from app import db, GATEWAY_TIMEZONE
 
 sp = spm.SentencePieceProcessor()
 
@@ -29,11 +30,11 @@ class Base(db.Model):
     __abstract__ = True
 
     id = db.Column(db.Integer, primary_key=True)
-    date_created = db.Column(db.DateTime, default=db.func.current_timestamp())
+    date_created = db.Column(db.DateTime, default=datetime.utcnow())
     date_modified = db.Column(
         db.DateTime,
-        default=db.func.current_timestamp(),
-        onupdate=db.func.current_timestamp())
+        default=datetime.utcnow(),
+        onupdate=datetime.utcnow())
 
 
 class Urls(Base):

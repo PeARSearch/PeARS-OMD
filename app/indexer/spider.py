@@ -11,7 +11,7 @@ from datetime import datetime
 from pytz import timezone
 from langdetect import detect
 from app.indexer.htmlparser import extract_txt, extract_html
-from app import (LANGS, OMD_PATH, AUTH_TOKEN, FILE_SIZE_LIMIT, IGNORED_EXTENSIONS, GATEWAY_TIMEZONE)
+from app import LANGS, OMD_PATH, AUTH_TOKEN, FILE_SIZE_LIMIT, IGNORED_EXTENSIONS, GATEWAY_TIMEZONE
 from app.utils_db import uptodate
 
 app_dir_path = dirname(dirname(realpath(__file__)))
@@ -20,9 +20,9 @@ user_app_dir_path = join(app_dir_path,'userdata')
 def get_xml(xml_url):
     xml = None
     try:
-        xml = requests.get(xml_url, timeout=120, \
-            headers={'Authorization': AUTH_TOKEN}, stream =True).raw
-        print(xml.read().decode())
+        #xml = requests.get(xml_url, timeout=120, \
+        #    headers={'Authorization': AUTH_TOKEN}, stream =True).raw
+        #print(xml.read().decode())
         xml = requests.get(xml_url, timeout=120, \
             headers={'Authorization': AUTH_TOKEN}, stream =True).raw
     except RuntimeError as error:
@@ -205,7 +205,9 @@ def get_last_modified(doc):
     except:
         logging.info(">> SPIDER: GET LAST MODIFIED: No date found.")
         return None
-    last_modified = datetime.strptime(last_modified, '%Y-%m-%d %H:%M:%S').astimezone(timezone(GATEWAY_TIMEZONE))
+    gt_tz = timezone(GATEWAY_TIMEZONE)
+    last_modified = datetime.strptime(last_modified, '%Y-%m-%d %H:%M:%S')
+    last_modified = gt_tz.localize(last_modified)
     return last_modified
 
 def clean_snippets(body_str, description, title):

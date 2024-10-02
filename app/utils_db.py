@@ -42,7 +42,8 @@ def uptodate(url, date, group):
     u = db.session.query(Urls).filter_by(url=url).first()
     if u is None:
         return up_to_date
-    db_datetime = u.date_modified.astimezone(timezone(GATEWAY_TIMEZONE))
+    utc_tz = timezone('UTC')
+    db_datetime = utc_tz.localize(u.date_modified).astimezone(timezone(GATEWAY_TIMEZONE))
     print(f"DB DATE: {db_datetime}, LAST MODIFIED: {date}")
     group_hash = hash_username(group)
     db_group_hash = u.pod.split('/')[0]
@@ -163,13 +164,13 @@ def rm_from_npz(vid, pod_path):
     """
     pod_path = join(pod_dir, pod_path+'.npz')
     pod_m = load_npz(pod_path)
-    print(f"SHAPE OF NPZ MATRIX BEFORE RM: {vid} {pod_m.shape}")
+    #print(f"SHAPE OF NPZ MATRIX BEFORE RM: {vid} {pod_m.shape}")
     v = pod_m[vid]
-    print(f"CHECKING SHAPE OF DELETED VEC: {pod_m.shape}")
+    #print(f"CHECKING SHAPE OF DELETED VEC: {pod_m.shape}")
     m1 = pod_m[:vid]
     m2 = pod_m[vid+1:]
     pod_m = vstack((m1,m2))
-    print(f"SHAPE OF NPZ MATRIX AFTER RM: {pod_m.shape}")
+    #print(f"SHAPE OF NPZ MATRIX AFTER RM: {pod_m.shape}")
     save_npz(pod_path, pod_m)
     return vid
 
@@ -227,6 +228,7 @@ def delete_url(url):
     #Delete from database
     db.session.delete(u)
     db.session.commit()
+    u = db.session.query(Urls).filter_by(url=url).first()
     return "Deleted document with url "+url
 
 def delete_pod(pod_path):
@@ -248,3 +250,13 @@ def delete_pod(pod_path):
         db.session.commit()
     return "Deleted pod with path "+pod_path
 
+def delete_old_urls(urls, urldir):
+    """Compare set of urls in a folder with
+    current state of database and delete urls
+    that do not exist anymore.
+    """
+    urls_in_db = db.session.query(Urls).filter(Urls.url.startswith(urldir)).all()
+    for u in urls_in_db:
+        if u.url not in urls:
+            print(f">> {u.url} does not exist anymore.")
+            delete_url(u.url)

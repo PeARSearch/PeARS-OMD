@@ -16,7 +16,7 @@ from app.api.models import Urls, Pods
 from app.indexer import mk_page_vector
 from app.indexer.spider import process_xml, get_doc_info
 from app.utils import read_docs, read_urls, carbon_print, hash_username
-from app.utils_db import create_pod, create_url_in_db, delete_url
+from app.utils_db import create_pod, create_url_in_db, delete_url, delete_old_urls
 from app.indexer.posix import posix_doc
 from app.auth.controllers import login_required
 from app.forms import IndexerForm
@@ -105,12 +105,12 @@ def from_crawl():
 
 
 def run_indexing(url, pod_path, title, snippet, description, lang, doc):
-    logging.debug(f"\t>>> INDEXER: CONTROLLER: PROGRESS CRAWL: INDEXING {url}")
+    print(f"\t>>> INDEXER: CONTROLLER: PROGRESS CRAWL: INDEXING {url}")
     url_in_db = Urls.query.filter_by(url=url).first()
     if url_in_db:
-        logging.info(f"\t>>> INDEXER: CONTROLLER: PROGRESS CRAWL: URL PREVIOUSLY KNOWN: {url}")
+        print(f"\t>>> INDEXER: CONTROLLER: PROGRESS CRAWL: URL PREVIOUSLY KNOWN: {url}")
         delete_url(url)
-    print(url, "SNIPPET", snippet, "DESCRIPTION", description)
+    #print(url, "SNIPPET", snippet, "DESCRIPTION", description)
     idv, tokenized_text = mk_page_vector.compute_vectors_local_docs(url, pod_path, title, description, doc, lang)
     idx = create_url_in_db(url, title, snippet, description, idv, pod_path)
     posix_doc(tokenized_text, idx, pod_path)
@@ -152,6 +152,9 @@ def progress_crawl(username=None, device=None):
             while len(links) > 0:
                 print(f"\n\nProcessing {links[0]}.")
                 docs, urldir = process_xml(links[0], username)
+                urls = [join(urldir,doc['@url'].split('?')[0]) for doc in docs]
+                print(">>>>>>>>>>>>>>>>>>>>>>\n",urls)
+                delete_old_urls(urls, urldir)
                 c = 0
                 m += len(docs)
                 if tracker is not None:
@@ -162,7 +165,7 @@ def progress_crawl(username=None, device=None):
                     if doc_info is None:
                         continue
                     url, owner, islink, title, description, snippet, body_str, language = doc_info
-                    print(f"\n{url}, owner: {owner}, islink: {islink}, title: {title}, description: {description}, body_str: {body_str}, language: {language}\n")
+                    print(f"\n{url}, owner: {owner}, islink: {islink}, title: {title}, description: {description[:20]}, body_str: {body_str[:20]}, language: {language}\n")
                     pod_path = create_pod(url, owner, language, device)
                     run_indexing(url, pod_path, title, snippet, description, language, body_str)
                     if islink:

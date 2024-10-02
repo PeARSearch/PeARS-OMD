@@ -30,13 +30,13 @@ def compute_vectors_local_docs(target_url, pod_path, title, description, doc, la
     pod_m = load_npz(join(pod_dir, pod_path+'.npz'))
     print("Computing vectors for", target_url, "(",pod_path,")",lang)
     filename = target_url.split('/')[-1]
-    print(target_url, pod_path, title, description, doc, lang)
+    #print(target_url, pod_path, title, description, doc, lang)
     text = filename + " " + title + " " + description + " " + doc
     text = tokenize_text(lang, text)
     #print(text)
     pod_m = compute_vec(lang, text, pod_m)
     idv = pod_m.shape[0]-1
-    print("New pod shape",pod_m.shape,idv)
+    #print("New pod shape",pod_m.shape,idv)
     save_npz(join(pod_dir,pod_path+'.npz'),pod_m)
     return idv, text
 
