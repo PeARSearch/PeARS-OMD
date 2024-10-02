@@ -123,8 +123,10 @@ def order_results(results, scores):
 
 
 def remove_username_from_url(url):
-    # remove whatever comes immediately after "onmydisk.net/", until the next slash 
-    return re.sub(r"^(https://onmydisk.net/).+?/(.+)", r"\1\2", url)
+    # If not a shared doc, remove whatever comes immediately after "onmydisk.net/", until the next slash 
+    if join(OMD_PATH,'shared') not in url:
+        return re.sub(r"^("+OMD_PATH+r").+?/(.+)", r"\1\2", url)
+    return url
 
 
 def prepare_gui_results(query, results):

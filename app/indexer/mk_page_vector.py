@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2022 PeARS Project, <community@pearsproject.org>, 
+# SPDX-FileCopyrightText: 2024 PeARS Project, <community@pearsproject.org>, 
 #
 # SPDX-License-Identifier: AGPL-3.0-only
 
@@ -7,7 +7,6 @@ from scipy.sparse import csr_matrix, vstack, save_npz, load_npz
 from app import db, VEC_SIZE
 from app.api.models import sp
 from app.indexer.vectorizer import vectorize_scale
-from app.utils_db import get_pod_name
 
 dir_path = dirname(dirname(realpath(__file__)))
 pod_dir = join(dir_path,'pods')
@@ -27,18 +26,19 @@ def compute_vec(lang, text, pod_m):
     return pod_m
 
 
-def compute_vectors_local_docs(target_url, title, description, doc, username, lang, device):
-    pod_name = get_pod_name(target_url, lang, username, device)
-    pod_m = load_npz(join(pod_dir, pod_name+'.npz'))
-    print("Computing vectors for", target_url, "(",pod_name,")",lang)
+def compute_vectors_local_docs(target_url, pod_path, title, description, doc, lang):
+    pod_m = load_npz(join(pod_dir, pod_path+'.npz'))
+    print("Computing vectors for", target_url, "(",pod_path,")",lang)
     filename = target_url.split('/')[-1]
+    print(target_url, pod_path, title, description, doc, lang)
     text = filename + " " + title + " " + description + " " + doc
     text = tokenize_text(lang, text)
     #print(text)
     pod_m = compute_vec(lang, text, pod_m)
     idv = pod_m.shape[0]-1
-    save_npz(join(pod_dir,pod_name+'.npz'),pod_m)
-    return pod_name, idv, text
+    print("New pod shape",pod_m.shape,idv)
+    save_npz(join(pod_dir,pod_path+'.npz'),pod_m)
+    return idv, text
 
 
 def compute_query_vectors(query, lang):

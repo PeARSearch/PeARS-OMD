@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 PeARS Project, <community@pearsproject.org>, 
+# SPDX-FileCopyrightText: 2024 PeARS Project, <community@pearsproject.org>, 
 #
 # SPDX-License-Identifier: AGPL-3.0-only
 
@@ -84,16 +84,19 @@ class Pods(Base):
     url = db.Column(db.String(1000))
     description = db.Column(db.String(7000))
     language = db.Column(db.String(1000))
+    owner = db.Column(db.String(2000))
 
     def __init__(self,
                  name=None,
                  url=None,
                  description=None,
-                 language=None):
+                 language=None,
+                 owner=None):
         self.name = name
         self.url = url
         self.description = description
         self.language = language
+        self.owner = owner
 
     @property
     def serialize(self):
@@ -102,5 +105,8 @@ class Pods(Base):
             'url': self.url,
             'description': self.description,
             'language': self.language,
+            'owner': self.owner
         }
 
+    def as_dict(self):
+       return {c.name: str(getattr(self, c.name)) for c in self.__table__.columns}

@@ -1,12 +1,25 @@
 # .ini file
-AUTH_TOKEN=<your token, identical to the one in the OMD client>
-OMD_PATH=https://onmydisk.net/
-LANGUAGES=en,fr,ru,sl
-CARBON_TRACKING=false
+
+# Flask environment
 FLASK_ENV=development # change to 'production' to disable flask debug mode
 
-# indexing variables
+# Running on localhost or the public internet?
+# This will allow you to access the admin interface of the flask app.
+# WARNING: ONLY SET THIS TO TRUE IF YOU KNOW WHAT YOU'RE DOING!
+LOCAL_MODE=false
+
+# Secrets
+AUTH_TOKEN=<your token, identical to the one in the OMD client>
+
+# Languages
+LANGUAGES=en,fr,ru,sl
+
+# Indexing variables
 FILE_SIZE_LIMIT=4000
 
-# gateway information
-TIMEZONE='Europe/Berlin'
+# Gateway information
+GATEWAY_PATH=https://onmydisk.net/
+GATEWAY_TIMEZONE='Europe/Berlin'
+
+# Carbon-tracking
+CARBON_TRACKING=false

@@ -32,7 +32,7 @@ tracker = None
 if CARBON_TRACKING:
     CARBON_DIR = join(dir_path,'emission_tracking')
     Path(CARBON_DIR).mkdir(exist_ok=True, parents=True)
-    tracker = EmissionsTracker(output_dir=CARBON_DIR, project_name="PeARS Lite, OMD emission tracking")
+    tracker = EmissionsTracker(output_dir=CARBON_DIR, project_name="PeARS OMD emission tracking")
 
 # Make sure user data directories exist
 Path(join(dir_path, 'app', 'pods')).mkdir(parents=True, exist_ok=True)
@@ -60,10 +60,11 @@ except:
 # Configurations
 try:
     AUTH_TOKEN = os.getenv('AUTH_TOKEN')
-    OMD_PATH = os.getenv('OMD_PATH')
+    OMD_PATH = os.getenv('GATEWAY_PATH')
     LANGS = os.getenv('LANGUAGES').lower().split(',')
     FILE_SIZE_LIMIT = int(os.getenv('FILE_SIZE_LIMIT'))
-    GATEWAY_TIMEZONE = os.getenv('TIMEZONE')
+    GATEWAY_TIMEZONE = os.getenv('GATEWAY_TIMEZONE')
+    LOCAL_MODE = True if os.getenv("LOCAL_MODE", "false").lower() == 'true' else False
 except:
     logging.error(">>\tERROR: __init__.py: the pears.ini file in the conf directory is incorrectly configured.")
     sys.exit()
@@ -123,7 +124,7 @@ with app.app_context():
 
 from flask_admin.contrib.sqla import ModelView
 from app.api.models import Pods, Urls
-from app.api.controllers import return_url_delete
+from app.api.controllers import return_url_delete, return_pod_delete
 
 from flask_admin import expose
 from flask_admin.contrib.sqla.view import ModelView
@@ -135,6 +136,7 @@ import requests
 # Flask and Flask-SQLAlchemy initialization here
 
 class MyAdminIndexView(AdminIndexView):
+    """Class for displaying admin view to OMD admins only."""
     def is_accessible(self):
         access_token = request.headers.get('Token')
         if not access_token:     
@@ -149,8 +151,25 @@ class MyAdminIndexView(AdminIndexView):
             is_admin = resp.json().get('isAdmin')
         return is_admin # This does the trick rendering the view only if the user is admin
 
+class MyUserIndexView(AdminIndexView):
+    """Class for displaying admin view to signed in users only."""
+    def is_accessible(self):
+        access_token = request.headers.get('Token')
+        if not access_token:     
+            access_token = request.cookies.get('OMD_SESSION_ID')  
+        if not access_token:
+            return False
+        url = join(OMD_PATH, 'signin/')
+        data = {'action': 'getUserInfo', 'session_id': access_token}
+        resp = requests.post(url, json=data, timeout=30, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
+        if resp.status_code < 400 and resp.json()['valid']:
+            return True # This does the trick rendering the view only if the user is signed in
+        return False
 
-admin = Admin(app, name='PeARS DB', template_mode='bootstrap3', index_view=MyAdminIndexView())
+if LOCAL_MODE:
+    admin = Admin(app, name='PeARS DB', template_mode='bootstrap3', index_view=MyUserIndexView())
+else:
+    admin = Admin(app, name='PeARS DB', template_mode='bootstrap3', index_view=MyAdminIndexView())
 
 class UrlsModelView(ModelView):
     list_template = 'admin/pears_list.html'
@@ -175,10 +194,11 @@ class UrlsModelView(ModelView):
         try:
             self.on_model_delete(model)
             print("DELETING",model.url,model.vector)
-            success = return_url_delete(path=model.url)
+            success, message = return_url_delete(path=model.url)
             if success:
                 self.session.commit()
             else:
+                flash(message)
                 return False
         except Exception as ex:
             if not self.handle_view_exception(ex):
@@ -214,13 +234,17 @@ class PodsModelView(ModelView):
     def delete_model(self, model):
         try:
             self.on_model_delete(model)
-            print("DELETING",model.name)
+            print("DELETING",model.url)
             # Add your custom logic here and don't forget to commit any changes e.g.
-            print(return_pod_delete(model.name))
-            self.session.commit()
+            success, message = return_pod_delete(model.url)
+            if success:
+                self.session.commit()
+            else:
+                flash(message)
+                return False
         except Exception as ex:
             if not self.handle_view_exception(ex):
-                flash(gettext('Failed to delete record. %(error)s', error=str(ex)), 'error')
+                flash(f"Failed to delete record. {str(ex)}.")
                 log.exception('Failed to delete record.')
 
             self.session.rollback()

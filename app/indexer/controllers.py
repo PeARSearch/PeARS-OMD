@@ -15,8 +15,8 @@ from app import LANGS
 from app.api.models import Urls, Pods
 from app.indexer import mk_page_vector
 from app.indexer.spider import process_xml, get_doc_info
-from app.utils import read_docs, read_urls, carbon_print
-from app.utils_db import create_pod_in_db, create_pod_npz_pos, create_or_replace_url_in_db, delete_url, uptodate
+from app.utils import read_docs, read_urls, carbon_print, hash_username
+from app.utils_db import create_pod, create_url_in_db, delete_url
 from app.indexer.posix import posix_doc
 from app.auth.controllers import login_required
 from app.forms import IndexerForm
@@ -31,10 +31,11 @@ indexer = Blueprint('indexer', __name__, url_prefix='/indexer')
 
 def get_num_db_entries():
     username = session['username']
+    user_hash = hash_username(username)
     num_db_entries = 0
-    pods = Pods.query.filter(Pods.name.startswith(f"{username}/")).all()
+    pods = Pods.query.filter(Pods.url.startswith(f"{user_hash}/")).all()
     for pod in pods:
-        num_db_entries += len(Urls.query.filter_by(pod=pod.name).all())
+        num_db_entries += len(Urls.query.filter_by(pod=pod.url).all())
     return num_db_entries
 
 # Set the route and accepted methods
@@ -60,10 +61,6 @@ def from_crawl():
     """
 
     def process_start_url(url, username):
-        create_pod_npz_pos(username, device)
-
-        for LANG in LANGS:
-            create_pod_in_db(username, LANG, device)
         logging.debug(f">> INDEXER: CONTROLLER: from_crawl: Now crawling {u}")
         user_url_file = join(user_app_dir_path, username+".toindex")
         #Every contributor gets their own file to avoid race conditions
@@ -107,17 +104,16 @@ def from_crawl():
     return progress_crawl(username=username, device=device)
 
 
-def run_indexing(username, url, title, snippet, description, lang, doc, device):
+def run_indexing(url, pod_path, title, snippet, description, lang, doc):
     logging.debug(f"\t>>> INDEXER: CONTROLLER: PROGRESS CRAWL: INDEXING {url}")
     url_in_db = Urls.query.filter_by(url=url).first()
     if url_in_db:
         logging.info(f"\t>>> INDEXER: CONTROLLER: PROGRESS CRAWL: URL PREVIOUSLY KNOWN: {url}")
         delete_url(url)
     print(url, "SNIPPET", snippet, "DESCRIPTION", description)
-    pod_name, idv, tokenized_text = mk_page_vector.compute_vectors_local_docs( \
-        url, title, description, doc, username, lang, device)
-    idx = create_or_replace_url_in_db(url, title, snippet, description, idv, username, lang, device)
-    posix_doc(tokenized_text, idx, pod_name, lang, username)
+    idv, tokenized_text = mk_page_vector.compute_vectors_local_docs(url, pod_path, title, description, doc, lang)
+    idx = create_url_in_db(url, title, snippet, description, idv, pod_path)
+    posix_doc(tokenized_text, idx, pod_path)
 
 
 @indexer.route("/progress_crawl")
@@ -165,9 +161,10 @@ def progress_crawl(username=None, device=None):
                     doc_info = get_doc_info(doc, urldir)
                     if doc_info is None:
                         continue
-                    url, convertible, content_type, islink, title, description, snippet, body_str, language = doc_info
-                    logging.debug(f"\n{url}, convertible: {convertible}, content_type: {content_type}, islink: {islink}, title: {title}, description: {description}, body_str: {body_str}, language: {language}\n")
-                    run_indexing(username, url, title, snippet, description, language, body_str, device)
+                    url, owner, islink, title, description, snippet, body_str, language = doc_info
+                    print(f"\n{url}, owner: {owner}, islink: {islink}, title: {title}, description: {description}, body_str: {body_str}, language: {language}\n")
+                    pod_path = create_pod(url, owner, language, device)
+                    run_indexing(url, pod_path, title, snippet, description, language, body_str)
                     if islink:
                         links.append(url)
                     c += 1

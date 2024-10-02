@@ -34,6 +34,7 @@ def read_xml(xml):
     parse = None
     try:
         xml_content = xml.read()
+        xml_content = xml_content.replace(b'&',b' and ')
         parse = xmltodict.parse(xml_content)
     except:
         logging.error(">> ERROR: SPIDER: PARSE XML: File may have some bad XML. Could not parse.")
@@ -187,9 +188,9 @@ def get_doc_owner(doc):
     return owner
 
 def get_doc_shared_with(doc):
-    group = []
+    group = ""
     try:
-        group = doc['@shared_with'].split(',')
+        group = doc['@shared_with']
     except:
         logging.info(">> SPIDER: GET DOC SHARED_WITH: No group found.")
     return group
@@ -223,7 +224,11 @@ def get_doc_info(doc, urldir):
     if not process:
         return None
     last_modified = get_last_modified(doc)
-    if last_modified is not None and uptodate(url, last_modified):
+    group = get_doc_owner(doc)
+    shared_with = get_doc_shared_with(doc)
+    if len(shared_with) > 0:
+        group = f"{group},{shared_with}"
+    if last_modified is not None and uptodate(url, last_modified, group):
         return None
     print(f"{url} is not up to date. Reindexing.")
     convertible = assess_convertibility(doc)
@@ -234,4 +239,4 @@ def get_doc_info(doc, urldir):
     if title is None:
         title = body_title
     title, description, snippet, body_str = clean_snippets(body_str, description, title)
-    return url, convertible, content_type, islink, title, description, snippet, body_str, language
+    return url, group, islink, title, description, snippet, body_str, language
