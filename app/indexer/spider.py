@@ -168,7 +168,10 @@ def get_doc_content(url, convertible, content_type):
     elif is_folder_description:
         _, body_str, _, language = extract_txt(url + "?description")
     elif content_type in ['text/plain', 'text/x-tex']:
-        title, body_str, _, language = extract_txt(url)
+        if url.startswith(join(OMD_PATH,'shared')):
+            title, body_str, _, language = extract_txt(url + "?direct")
+        else:
+            title, body_str, _, language = extract_txt(url)
     elif content_type in ['text/html']:
         title, body_str, _, language = extract_html(url)
 
