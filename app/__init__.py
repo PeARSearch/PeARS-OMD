@@ -23,7 +23,7 @@ from flask_migrate import Migrate
 dir_path = dirname(dirname(realpath(__file__)))
 
 # Server host
-SERVER_HOST = "localhost:9090"
+SERVER_HOST = "0.0.0.0:9090"
 
 # Initialise emission tracking
 CARBON_TRACKING = False
