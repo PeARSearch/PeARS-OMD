@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 PeARS Project, <community@pearsproject.org> 
+# SPDX-FileCopyrightText: 2024 PeARS Project, <community@pearsproject.org> 
 #
 # SPDX-License-Identifier: AGPL-3.0-only
 
@@ -6,13 +6,13 @@ import os
 import sys
 import logging
 from pathlib import Path
-from os.path import dirname, join, realpath
+from os.path import dirname, join, realpath, isfile
 from codecarbon import EmissionsTracker
 from decouple import Config, RepositoryEnv
 from dotenv import load_dotenv
 
 # Import flask and template operators
-from flask import Flask, render_template, request, flash
+from flask import Flask, render_template, request, flash, send_from_directory
 from flask_admin import Admin, AdminIndexView
 
 # Import SQLAlchemy
@@ -23,7 +23,7 @@ from flask_migrate import Migrate
 dir_path = dirname(dirname(realpath(__file__)))
 
 # Server host
-SERVER_HOST = "localhost:9090"
+SERVER_HOST = "0.0.0.0:9090"
 
 # Initialise emission tracking
 CARBON_TRACKING = False
@@ -65,6 +65,10 @@ try:
     FILE_SIZE_LIMIT = int(os.getenv('FILE_SIZE_LIMIT'))
     GATEWAY_TIMEZONE = os.getenv('GATEWAY_TIMEZONE')
     LOCAL_MODE = True if os.getenv("LOCAL_MODE", "false").lower() == 'true' else False
+    LOGO_PATH = os.getenv('LOGO_PATH', '')
+    if LOGO_PATH == '' or not isfile(join(LOGO_PATH, "logo.png")):
+        LOGO_PATH = join(dir_path,'app', 'static','assets')
+
 except:
     logging.error(">>\tERROR: __init__.py: the pears.ini file in the conf directory is incorrectly configured.")
     sys.exit()
@@ -107,6 +111,7 @@ from app.indexer.controllers import indexer as indexer_module
 from app.api.controllers import api as api_module
 from app.search.controllers import search as search_module
 from app.pages.controllers import pages as pages_module
+from app.settings.controllers import settings as settings_module
 
 # Register blueprint(s)
 app.register_blueprint(auth_module)
@@ -114,6 +119,7 @@ app.register_blueprint(indexer_module)
 app.register_blueprint(api_module)
 app.register_blueprint(search_module)
 app.register_blueprint(pages_module)
+app.register_blueprint(settings_module)
 # ..
 
 # Build the database:
@@ -245,7 +251,6 @@ class PodsModelView(ModelView):
         except Exception as ex:
             if not self.handle_view_exception(ex):
                 flash(f"Failed to delete record. {str(ex)}.")
-                log.exception('Failed to delete record.')
 
             self.session.rollback()
 
@@ -261,3 +266,10 @@ admin.add_view(UrlsModelView(Urls, db.session))
 
 from app.cli.controllers import pears as pears_module
 app.register_blueprint(pears_module)
+
+@app.route('/static/assets/<path:path>')
+def serve_logos(path):
+    print(LOGO_PATH)
+    return send_from_directory(LOGO_PATH, path)
+
+

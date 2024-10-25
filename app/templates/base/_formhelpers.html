@@ -1,8 +1,17 @@
 {% macro render_field(field) %}
-<div class="form-group">
-        {{ field.label }}
-        {{ field(placeholder=field.description, class_="form-control input-m", size=64) }}
-</div>
+{{ field(placeholder=field.description, class_="form-control input-m", size=64) }}
+<dd>{% if field.errors %}
+    <ul class=errors>
+    {% for error in field.errors %}
+    <li><b>{{ error }}</b></li>
+    {% endfor %}
+    </ul>
+  {% endif %}
+</dd>
+{% endmacro %}
+
+{% macro render_search_field(field, placeholder) %}
+{{ field(class_="form-control input-s", size=32, placeholder=placeholder) }}
 <dd>{% if field.errors %}
     <ul class=errors>
     {% for error in field.errors %}

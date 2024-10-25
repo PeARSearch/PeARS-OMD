@@ -9,7 +9,11 @@ SPDX-License-Identifier: AGPL-3.0-only
   <div class="row">
     <div class="col-lg-2"></div>
     <div class="col-lg-8 text-center mt-5">
-      <a href="{{ url_for('search.user')}}"><img width=350px; src="{{ url_for('static', filename='pears-omd-logo.png')}}"></a>
+        {% if session.get('theme') == 'dark' %}
+          <a href="{{ url_for('search.user')}}"><img width=350px; src="{{url_for('serve_logos', path='logo-dark.png')}}"></a>
+        {% else %}
+          <a href="{{ url_for('search.user')}}"><img width=350px; src="{{url_for('serve_logos', path='logo.png')}}"></a>
+        {% endif %}
       <form  action="{{url_for('search.user')}}">
         <div class="input-group group mt-4" >
           <input class="form-control" title="Enter your Search Query." placeholder="Enter your Search Query" type="search" name='q' required>
