@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import logging
+import hashlib
 from os.path import join
 import re
 from datetime import datetime
@@ -20,6 +21,9 @@ def carbon_print(tracker_results, task_name):
     with open(join(CARBON_DIR,filename),'a', encoding="utf-8") as f:
         f.write(task_name+': '+str(tracker_results)+'\n')
 
+def hash_username(username):
+    user_hash = hashlib.shake_256(username.encode()).hexdigest(4)
+    return user_hash
 
 def read_urls(url_file):
     with open(url_file, 'r', encoding="utf-8") as fd:

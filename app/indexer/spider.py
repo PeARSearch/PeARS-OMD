@@ -11,8 +11,8 @@ from datetime import datetime
 from pytz import timezone
 from langdetect import detect
 from app.indexer.htmlparser import extract_txt, extract_html
-from app import (LANGS, OMD_PATH, 
-        AUTH_TOKEN, FILE_SIZE_LIMIT, IGNORED_EXTENSIONS, GATEWAY_TIMEZONE)
+from app import LANGS, OMD_PATH, AUTH_TOKEN, FILE_SIZE_LIMIT, IGNORED_EXTENSIONS, GATEWAY_TIMEZONE
+from app.utils_db import uptodate
 
 app_dir_path = dirname(dirname(realpath(__file__)))
 user_app_dir_path = join(app_dir_path,'userdata')
@@ -22,7 +22,7 @@ def get_xml(xml_url):
     try:
         #xml = requests.get(xml_url, timeout=120, \
         #    headers={'Authorization': AUTH_TOKEN}, stream =True).raw
-        #print(xml.read())
+        #print(xml.read().decode())
         xml = requests.get(xml_url, timeout=120, \
             headers={'Authorization': AUTH_TOKEN}, stream =True).raw
     except RuntimeError as error:
@@ -34,6 +34,7 @@ def read_xml(xml):
     parse = None
     try:
         xml_content = xml.read()
+        xml_content = xml_content.replace(b'&',b' and ')
         parse = xmltodict.parse(xml_content)
     except:
         logging.error(">> ERROR: SPIDER: PARSE XML: File may have some bad XML. Could not parse.")
@@ -167,7 +168,10 @@ def get_doc_content(url, convertible, content_type):
     elif is_folder_description:
         _, body_str, _, language = extract_txt(url + "?description")
     elif content_type in ['text/plain', 'text/x-tex']:
-        title, body_str, _, language = extract_txt(url)
+        if url.startswith(join(OMD_PATH,'shared')):
+            title, body_str, _, language = extract_txt(url + "?direct")
+        else:
+            title, body_str, _, language = extract_txt(url)
     elif content_type in ['text/html']:
         title, body_str, _, language = extract_html(url)
 
@@ -187,9 +191,9 @@ def get_doc_owner(doc):
     return owner
 
 def get_doc_shared_with(doc):
-    group = []
+    group = ""
     try:
-        group = doc['@shared_with'].split(',')
+        group = doc['@shared_with']
     except:
         logging.info(">> SPIDER: GET DOC SHARED_WITH: No group found.")
     return group
@@ -201,5 +205,43 @@ def get_last_modified(doc):
     except:
         logging.info(">> SPIDER: GET LAST MODIFIED: No date found.")
         return None
-    last_modified = datetime.strptime(last_modified, '%Y-%m-%d %H:%M:%S').astimezone(timezone(GATEWAY_TIMEZONE))
+    gt_tz = timezone(GATEWAY_TIMEZONE)
+    last_modified = datetime.strptime(last_modified, '%Y-%m-%d %H:%M:%S')
+    last_modified = gt_tz.localize(last_modified)
     return last_modified
+
+def clean_snippets(body_str, description, title):
+    snippet = ""
+    if body_str.startswith("<omd_index>"):
+        if description != title:
+            body_str = description
+        else:
+            body_str = f"Directory {title}"
+    if body_str == "":
+        description = description or "No description"
+    else:
+        snippet = ' '.join(body_str.split()[:50])
+    return title, description, snippet, body_str
+
+def get_doc_info(doc, urldir):
+    url, process = get_doc_url(doc, urldir)
+    print(f"\n>> {url}")
+    if not process:
+        return None
+    last_modified = get_last_modified(doc)
+    group = get_doc_owner(doc)
+    shared_with = get_doc_shared_with(doc)
+    if len(shared_with) > 0:
+        group = f"{group},{shared_with}"
+    if last_modified is not None and uptodate(url, last_modified, group):
+        return None
+    print(f"{url} is not up to date. Reindexing.")
+    convertible = assess_convertibility(doc)
+    content_type, islink = get_doc_content_type(doc, url)
+    title = get_doc_title(doc, url)
+    description = get_doc_description(doc, title)
+    body_title, body_str, language = get_doc_content(url, convertible, content_type)
+    if title is None:
+        title = body_title
+    title, description, snippet, body_str = clean_snippets(body_str, description, title)
+    return url, group, islink, title, description, snippet, body_str, language

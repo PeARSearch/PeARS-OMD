@@ -5,6 +5,7 @@
 from os.path import dirname, join, realpath
 import multiprocessing
 import math
+import hashlib
 from glob import glob
 from flask import session
 import joblib
@@ -55,9 +56,9 @@ def compute_scores(query, query_vector, tokenized, pod_name):
             continue
         #Get doc idx for row i of the matrix
         #Retrieve corresponding URL
-        print(f"Looking for vector {i} on {pod_name}")
+        #print(f"Looking for vector {i} on {pod_name}")
         url = Urls.query.filter_by(pod=pod_name).filter_by(vector=i).first().url
-        print(url)
+        #print(url)
         vec_scores[url] = cos
         completeness_scores[url] = m_completeness[0][i]
     #except:
@@ -95,11 +96,12 @@ def score_pods(query, query_vector, lang, username = None):
     podsum = []
     npzs = []
     if username is not None:
-        private_folders = Pods.query.filter(Pods.name.startswith(f"{username}/")).filter(Pods.name.endswith(f"/{lang}/private")).all()
+        owner_hash = hashlib.shake_256(username.encode()).hexdigest(4)
+        private_folders = Pods.query.filter(Pods.url.startswith(f"{owner_hash}/")).filter(Pods.url.endswith(f"/{lang}/user")).all()
         for pf in private_folders:
-            npzs.append(join(pod_dir, pf.name+'.npz'))
+            npzs.append(join(pod_dir, pf.url+'.npz'))
             pods.append(pf)
-    npzs.extend(glob(join(pod_dir, f"*/*/{lang}/shared.npz")))
+    npzs.extend(glob(join(pod_dir, f"*/*/{lang}/others.npz")))
     for npz in npzs:
         podname = npz.replace(pod_dir + "/", "").replace(".npz", "")
         s = np.sum(load_npz(npz).toarray(), axis=0)
@@ -113,14 +115,14 @@ def score_pods(query, query_vector, lang, username = None):
     m_cosines = 1 - distance.cdist(query_vector, podsum.todense(), 'cosine')
 
     # For each pod, retrieve cosine to query
-    pods.extend(db.session.query(Pods).filter_by(language=lang).filter(Pods.name.endswith('/shared')).all())
+    pods.extend(db.session.query(Pods).filter_by(language=lang).filter(Pods.url.endswith('/others')).all())
     for p in pods:
-        if p.name in podnames:
-            cosine_score = m_cosines[0][podnames.index(p.name)]
-            print(">> Exact matches:", p.name, cosine_score)
+        if p.url in podnames:
+            cosine_score = m_cosines[0][podnames.index(p.url)]
+            print(">> Exact matches:", p.url, cosine_score)
             if math.isnan(cosine_score):
                 cosine_score = 0
-            pod_scores[p.name] = cosine_score
+            pod_scores[p.url] = cosine_score
     print("POD SCORES:",pod_scores)
     for k in sorted(pod_scores, key=pod_scores.get, reverse=True):
         if len(best_pods) < max_pods + 1:

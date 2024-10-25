@@ -5,7 +5,7 @@
 
 from os.path import dirname, join, realpath, basename
 from flask import Blueprint, jsonify, request, session, flash, render_template
-from app.utils_db import delete_url
+from app.utils_db import delete_url, delete_pod
 from app.api.models import Urls, Pods
 from app import db, OMD_PATH, AUTH_TOKEN
 from app.auth.controllers import login_required
@@ -28,10 +28,11 @@ def api_delete():
 
 def return_url_delete(path):
     message =""
+    pod = None
     try:
         u = db.session.query(Urls).filter_by(url=path).first()
-        pod_name = u.pod
-        pod_username = pod_name.split('/')[0]
+        pod_address = u.pod
+        pod = db.session.query(Pods).filter_by(url=pod_address).first()
     except AttributeError as err:
         message = "URL not found in the database"
         return False, message
@@ -43,12 +44,38 @@ def return_url_delete(path):
             message = "Deleted document with url "+u.url+'.'
             return True, message
     try:
-        assert pod_username == session['username']
+        print(session['username'], pod.owner.split(','))
+        assert session['username'] in pod.owner.split(',')
     except AssertionError as err:
         message = "You cannot delete other users' documents."
         return False, message
     delete_url(u.url)
     message = "Deleted document with url "+u.url+'.'
+    return True, message
+
+
+def return_pod_delete(path):
+    message =""
+    try:
+        p = db.session.query(Pods).filter_by(url=path).first()
+    except AttributeError as err:
+        message = "URL not found in the database"
+        return False, message
+    access_token = request.headers.get('Token') #Get token from request header
+    print(">> return_url_delete: access_token: OMD_SESSION_ID", access_token)
+    if access_token:
+        if access_token == AUTH_TOKEN: #if it equals to system-wide security token, then it is call from OMD backend
+            delete_pod(p.url)
+            message = "Deleted pod with path "+p.url+'.'
+            return True, message
+    try:
+        print(session['username'], p.owner.split(','))
+        assert session['username'] in p.owner.split(',')
+    except AssertionError as err:
+        message = "You cannot delete other users' pods."
+        return False, message
+    delete_pod(p.url)
+    message = "Deleted pod with path "+p.url+'.'
     return True, message
 
 
