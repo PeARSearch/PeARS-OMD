@@ -22,7 +22,7 @@ def get_xml(xml_url):
     try:
         #xml = requests.get(xml_url, timeout=120, \
         #    headers={'Authorization': AUTH_TOKEN}, stream =True).raw
-        #print(xml.read().decode())
+        #print(xml.read())
         xml = requests.get(xml_url, timeout=120, \
             headers={'Authorization': AUTH_TOKEN}, stream =True).raw
     except RuntimeError as error:

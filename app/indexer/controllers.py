@@ -19,7 +19,7 @@ from app.utils import read_docs, read_urls, carbon_print, hash_username
 from app.utils_db import create_pod, create_url_in_db, delete_url, delete_old_urls
 from app.indexer.posix import posix_doc
 from app.auth.controllers import login_required
-from app.forms import IndexerForm
+from app.forms import IndexerForm, DeviceForm, GroupForm, ChoiceObj
 
 app_dir_path = dirname(dirname(realpath(__file__)))
 pod_dir = join(app_dir_path,'pods')
@@ -30,12 +30,7 @@ indexer = Blueprint('indexer', __name__, url_prefix='/indexer')
 
 
 def get_num_db_entries():
-    username = session['username']
-    user_hash = hash_username(username)
-    num_db_entries = 0
-    pods = Pods.query.filter(Pods.url.startswith(f"{user_hash}/")).all()
-    for pod in pods:
-        num_db_entries += len(Urls.query.filter_by(pod=pod.url).all())
+    num_db_entries = len(Urls.query.all())
     return num_db_entries
 
 # Set the route and accepted methods
@@ -47,8 +42,21 @@ def index():
     currently in the database for that user.
     """
     num_db_entries = get_num_db_entries()
-    form = IndexerForm(request.form)
-    return render_template("indexer/index.html", num_entries=num_db_entries, form=form)
+    crawl_form = IndexerForm(request.form)
+
+    all_devices = ['d1','d2','d3']
+    session['devices_selected'] = ['d1','d2']
+    devices = ChoiceObj('devices', session.get('devices_selected') )
+    device_form = DeviceForm(obj=devices)
+    device_form.devices.choices =  [(c, c) for c in all_devices]
+
+    all_groups = list(set([p.owner for p in Pods.query.all()]))
+    session['groups_selected'] = ['aurelie','alexey']
+    groups = ChoiceObj('groups', session.get('groups_selected') )
+    group_form = GroupForm(obj=groups)
+    group_form.groups.choices =  [(c, c) for c in all_groups]
+
+    return render_template("indexer/index.html", num_entries=num_db_entries, form1=crawl_form, form2=device_form, form3=group_form)
 
 
 @indexer.route("/from_crawl", methods=["GET","POST"])
@@ -118,7 +126,7 @@ def run_indexing(url, pod_path, title, snippet, description, lang, doc):
 
 @indexer.route("/progress_crawl")
 @login_required
-def progress_crawl(username=None, device=None):
+def progress_crawl(username=None, device=None, start_url=None):
 
     def get_device_from_url(omd_url):
         device = ''
