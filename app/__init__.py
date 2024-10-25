@@ -173,7 +173,7 @@ else:
 
 class UrlsModelView(ModelView):
     list_template = 'admin/pears_list.html'
-    column_exclude_list = ['vector','cc']
+    column_exclude_list = ['vector','cc','date_created']
     column_searchable_list = ['url', 'title', 'description', 'pod']
     column_editable_list = ['description']
     can_edit = True
