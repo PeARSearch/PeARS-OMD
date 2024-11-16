@@ -145,17 +145,22 @@ class MyAdminIndexView(AdminIndexView):
     """Class for displaying admin view to OMD admins only."""
     def is_accessible(self):
         access_token = request.headers.get('Token')
-        if not access_token:     
-            access_token = request.cookies.get('OMD_SESSION_ID')  
+        if not access_token: 
+            access_token = request.cookies.get('OMD_SESSION_ID') 
         if not access_token:
             return abort(404)
         url = join(OMD_PATH, 'signin/')
         data = {'action': 'getUserInfo', 'session_id': access_token}
         resp = requests.post(url, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
-        is_admin = False
         if resp.json().get('valid'):
             is_admin = resp.json().get('isAdmin')
-        return is_admin # This does the trick rendering the view only if the user is admin
+            if is_admin:
+                return is_admin # This does the trick rendering the view only if the user is admin
+            else:
+                return abort(404)
+        else:
+            return abort(404)
+
 
 class MyUserIndexView(AdminIndexView):
     """Class for displaying admin view to signed in users only."""
