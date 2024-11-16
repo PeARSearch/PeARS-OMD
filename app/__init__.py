@@ -12,7 +12,7 @@ from decouple import Config, RepositoryEnv
 from dotenv import load_dotenv
 
 # Import flask and template operators
-from flask import Flask, render_template, request, flash
+from flask import Flask, render_template, request, flash, abort
 from flask_admin import Admin, AdminIndexView
 
 # Import SQLAlchemy
@@ -142,14 +142,18 @@ class MyAdminIndexView(AdminIndexView):
         if not access_token:     
             access_token = request.cookies.get('OMD_SESSION_ID')  
         if not access_token:
-            return False
+            return abort(404)
         url = join(OMD_PATH, 'signin/')
         data = {'action': 'getUserInfo', 'session_id': access_token}
         resp = requests.post(url, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
-        is_admin = False
         if resp.json().get('valid'):
             is_admin = resp.json().get('isAdmin')
-        return is_admin # This does the trick rendering the view only if the user is admin
+            if is_admin:
+                return is_admin # This does the trick rendering the view only if the user is admin
+            else:
+                return abort(404)
+        else:
+            return abort(404)
 
 class MyUserIndexView(AdminIndexView):
     """Class for displaying admin view to signed in users only."""
@@ -158,13 +162,13 @@ class MyUserIndexView(AdminIndexView):
         if not access_token:     
             access_token = request.cookies.get('OMD_SESSION_ID')  
         if not access_token:
-            return False
+            return abort(404)
         url = join(OMD_PATH, 'signin/')
         data = {'action': 'getUserInfo', 'session_id': access_token}
         resp = requests.post(url, json=data, timeout=30, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
         if resp.status_code < 400 and resp.json()['valid']:
             return True # This does the trick rendering the view only if the user is signed in
-        return False
+        return abort(404)
 
 if LOCAL_MODE:
     admin = Admin(app, name='PeARS DB', template_mode='bootstrap3', index_view=MyUserIndexView())
@@ -258,6 +262,12 @@ class PodsModelView(ModelView):
 
 admin.add_view(PodsModelView(Pods, db.session))
 admin.add_view(UrlsModelView(Urls, db.session))
+
+@app.errorhandler(404)
+def page_not_found(e):
+      # note that we set the 404 status explicitly
+      flash("404. Page not found. Please go back to search page.")
+      return render_template("404.html"), 404
 
 from app.cli.controllers import pears as pears_module
 app.register_blueprint(pears_module)
