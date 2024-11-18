@@ -183,6 +183,15 @@ class UrlsModelView(ModelView):
     can_edit = True
     page_size = 50
     form_widget_args = {
+        'url': {
+            'readonly': True
+        },
+        'title': {
+            'readonly': True
+        },
+        'pod': {
+            'readonly': True
+        },
         'vector': {
             'readonly': True
         },
@@ -219,13 +228,25 @@ class PodsModelView(ModelView):
     list_template = 'admin/pears_list.html'
     column_exclude_list = ['DS_vector','word_vector']
     column_searchable_list = ['url', 'name', 'description', 'language']
-    can_edit = True
+    can_edit = False
     page_size = 50
     form_widget_args = {
-        'DS_vector': {
+        'name': {
             'readonly': True
         },
-        'word_vector': {
+        'language': {
+            'readonly': True
+        },
+        'owner': {
+            'readonly': True
+        },
+        'url': {
+            'readonly': True
+        },
+        'description': {
+            'readonly': True
+        },
+        'DS_vector': {
             'readonly': True
         },
         'date_created': {
