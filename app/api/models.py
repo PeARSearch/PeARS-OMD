@@ -111,3 +111,47 @@ class Pods(Base):
 
     def as_dict(self):
        return {c.name: str(getattr(self, c.name)) for c in self.__table__.columns}
+
+
+class Locations(Base):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(1000))
+    subscribed = db.Column(db.Boolean)
+
+    def __init__(self, name=None, subscribed=False):
+        self.name = name
+        self.subscribed = subscribed
+
+    @property
+    def serialize(self):
+            return {
+                'name': self.name,
+                'subscribed': self.subscribed
+                }
+
+    def as_dict(self):
+       return {c.name: str(getattr(self, c.name)) for c in self.__table__.columns}
+
+
+class Groups(Base):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(1000))
+    identifier = db.Column(db.String(64))
+    subscribed = db.Column(db.Boolean)
+
+    def __init__(self, name=None, identifier=None, subscribed=False):
+        self.name = name
+        self.identifier = identifier
+        self.subscribed = subscribed
+
+    @property
+    def serialize(self):
+            return {
+                'name': self.name,
+                'identifier': self.identifier,
+                'subscribed': self.subscribed
+                }
+
+    def as_dict(self):
+       return {c.name: str(getattr(self, c.name)) for c in self.__table__.columns}
+

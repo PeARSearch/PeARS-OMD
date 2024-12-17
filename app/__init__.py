@@ -69,6 +69,15 @@ try:
     if LOGO_PATH == '' or not isfile(join(LOGO_PATH, "logo.png")):
         LOGO_PATH = join(dir_path,'app', 'static','assets')
 
+    # Secrets
+    app.config['SECRET_KEY'] = os.getenv("SECRET_KEY")                         
+    app.config['SESSION_COOKIE_HTTPONLY'] = False
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    app.config['CSRF_ENABLED'] = True
+    app.config['CSRF_SESSION_KEY'] = os.getenv("CSRF_SESSION_KEY")
+    app.config['SESSION_COOKIE_NAME'] = os.getenv("SESSION_COOKIE_NAME")
+
+
 except:
     logging.error(">>\tERROR: __init__.py: the pears.ini file in the conf directory is incorrectly configured.")
     sys.exit()
@@ -129,7 +138,7 @@ with app.app_context():
     db.create_all()
 
 from flask_admin.contrib.sqla import ModelView
-from app.api.models import Pods, Urls
+from app.api.models import Pods, Urls, Locations
 from app.api.controllers import return_url_delete, return_pod_delete
 
 from flask_admin import expose
@@ -265,7 +274,14 @@ class PodsModelView(ModelView):
 
         return True
 
+class LocationsModelView(ModelView):
+    list_template = 'admin/pears_list.html'
+    column_searchable_list = ['name']
+    can_edit = False
+    page_size = 50
 
+
+admin.add_view(LocationsModelView(Locations, db.session))
 admin.add_view(PodsModelView(Pods, db.session))
 admin.add_view(UrlsModelView(Urls, db.session))
 
