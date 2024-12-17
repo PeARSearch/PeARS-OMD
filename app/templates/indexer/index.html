@@ -18,7 +18,53 @@ SPDX-License-Identifier: AGPL-3.0-only
   <div class="row p-3">
     <div class="col-md-12">
       <div class="card">
-	      <div class="card-header text"><span style="padding-right:20px"><ion-icon name="folder-open"></ion-icon></span><b>Crawl your On My Disk folders</b></div>
+        <div class="card-body">
+          <form method="POST" accept-charset="UTF-8" enctype="multipart/form-data" action="{{url_for('indexer.update_all')}}">
+              <button class="btn btn-success" type="submit">Update all subscribed content</button>
+	  </form>
+	</div><!-- card body -->
+    </div><!-- card -->
+
+    <hr>
+    <div class="card">
+      <div class="card-header text"><span style="padding-right:20px"><ion-icon name="home"></ion-icon></span><b>Your devices</b></div>
+        <div class="card-body">
+          <form method="POST" accept-charset="UTF-8" enctype="multipart/form-data" action="{{url_for('indexer.update_folder_subscriptions')}}" autocomplete="off">
+            {{ form2.hidden_tag() }}
+            <div class="input-group group mt-4" >
+	      {{form2.folders}}
+            </div>
+              <button class="btn btn-success" type="submit" style="margin-top: 20px">Update subscriptions</button>
+           {% for message in messages %}
+            <div class="notification is-danger">
+		    <b>{{ message }}</b>
+            </div>
+           {% endfor %}
+	  </form>
+      </div>
+    </div>
+
+    <hr>
+    <div class="card">
+      <div class="card-header text"><span style="padding-right:20px"><ion-icon name="people"></ion-icon></span><b>Your groups</b></div>
+        <div class="card-body">
+          <form method="POST" accept-charset="UTF-8" enctype="multipart/form-data" action="{{url_for('indexer.from_crawl')}}" autocomplete="off">
+            {{ form3.hidden_tag() }}
+            <div class="input-group group mt-4" >
+	      {{form3.groups}}
+            </div>
+           {% for message in messages %}
+            <div class="notification is-danger">
+		    <b>{{ message }}</b>
+            </div>
+           {% endfor %}
+	  </form>
+      </div>
+    </div>
+      
+    <hr>
+    <div class="card">
+      <div class="card-header text"><span style="padding-right:20px"><ion-icon name="folder-open"></ion-icon></span><b>Crawl a specific On My Disk folder</b></div>
         <div class="card-body">
           <form method="POST" accept-charset="UTF-8" enctype="multipart/form-data" action="{{url_for('indexer.from_crawl')}}" autocomplete="off">
             {{ form1.hidden_tag() }}
@@ -36,39 +82,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 	</div><!-- card body -->
     </div><!-- card -->
 
-    <div class="card">
-      <div class="card-header text"><span style="padding-right:20px"><ion-icon name="home"></ion-icon></span><b>Your devices</b></div>
-        <div class="card-body">
-          <form method="POST" accept-charset="UTF-8" enctype="multipart/form-data" action="{{url_for('indexer.from_crawl')}}" autocomplete="off">
-            {{ form2.hidden_tag() }}
-            <div class="input-group group mt-4" >
-	      {{form2.devices}}
-            </div>
-           {% for message in messages %}
-            <div class="notification is-danger">
-		    <b>{{ message }}</b>
-            </div>
-           {% endfor %}
-	  </form>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-header text"><span style="padding-right:20px"><ion-icon name="people"></ion-icon></span><b>Your groups</b></div>
-        <div class="card-body">
-          <form method="POST" accept-charset="UTF-8" enctype="multipart/form-data" action="{{url_for('indexer.from_crawl')}}" autocomplete="off">
-            {{ form3.hidden_tag() }}
-            <div class="input-group group mt-4" >
-	      {{form3.groups}}
-            </div>
-           {% for message in messages %}
-            <div class="notification is-danger">
-		    <b>{{ message }}</b>
-            </div>
-           {% endfor %}
-	  </form>
-      </div>
-    </div>
  </div>
 </div>
 {% endblock %}

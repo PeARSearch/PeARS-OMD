@@ -23,8 +23,8 @@ class LoginForm(FlaskForm):
 class IndexerForm(FlaskForm):
     url = StringField('The url to index from', [DataRequired(), url()], description="https://onmydisk.net/username/devicename/")
 
-class DeviceForm(FlaskForm):
-    devices = MultiCheckboxField(None)
+class FoldersForm(FlaskForm):
+    folders = MultiCheckboxField(None)
 
 class GroupForm(FlaskForm):
     groups = MultiCheckboxField(None)

@@ -21,14 +21,32 @@ def carbon_print(tracker_results, task_name):
     with open(join(CARBON_DIR,filename),'a', encoding="utf-8") as f:
         f.write(task_name+': '+str(tracker_results)+'\n')
 
+def clean_comma_separated_name(name):
+    name = ','.join([ind for ind in name.split(',') if not ind.isspace()])
+    return name
+
 def hash_username(username):
-    user_hash = hashlib.shake_256(username.encode()).hexdigest(4)
+    user_hash = hashlib.shake_256(username.encode()).hexdigest(8)
     return user_hash
 
 def read_urls(url_file):
     with open(url_file, 'r', encoding="utf-8") as fd:
         urls = fd.read().splitlines()
     return urls
+
+def get_device_from_url(omd_url):
+    device = ''
+    m = re.search(u'onmydisk.net/([^/]*)/([^/]*)/', omd_url)
+    if m:
+        device = m.group(2)
+    return device
+
+def get_username_from_url(url):
+    username = None
+    m = re.search(u'onmydisk.net/([^/]*)/', url)
+    if m:
+        username = m.group(1)
+    return username
 
 
 def read_docs(doc_file):

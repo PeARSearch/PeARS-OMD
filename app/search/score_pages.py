@@ -15,7 +15,7 @@ from scipy.sparse import csr_matrix, load_npz
 from scipy.spatial import distance
 from app.api.models import Urls, Pods
 from app import app, db, tracker
-from app.utils import get_language, carbon_print
+from app.utils import get_language, carbon_print, hash_username
 from app.indexer.mk_page_vector import compute_query_vectors
 from app.search.overlap_calculation import generic_overlap, completeness, posix
 
@@ -96,7 +96,7 @@ def score_pods(query, query_vector, lang, username = None):
     podsum = []
     npzs = []
     if username is not None:
-        owner_hash = hashlib.shake_256(username.encode()).hexdigest(4)
+        owner_hash = hash_username(username)
         private_folders = Pods.query.filter(Pods.url.startswith(f"{owner_hash}/")).filter(Pods.url.endswith(f"/{lang}/user")).all()
         for pf in private_folders:
             npzs.append(join(pod_dir, pf.url+'.npz'))

@@ -13,6 +13,7 @@ from langdetect import detect
 from app.indexer.htmlparser import extract_txt, extract_html
 from app import LANGS, OMD_PATH, AUTH_TOKEN, FILE_SIZE_LIMIT, IGNORED_EXTENSIONS, GATEWAY_TIMEZONE
 from app.utils_db import uptodate
+from app.utils import clean_comma_separated_name
 
 app_dir_path = dirname(dirname(realpath(__file__)))
 user_app_dir_path = join(app_dir_path,'userdata')
@@ -23,8 +24,7 @@ def get_xml(xml_url):
         #xml = requests.get(xml_url, timeout=120, \
         #    headers={'Authorization': AUTH_TOKEN}, stream =True).raw
         #print(xml.read())
-        xml = requests.get(xml_url, timeout=120, \
-            headers={'Authorization': AUTH_TOKEN}, stream =True).raw
+        xml = requests.get(xml_url, timeout=120, headers={'Authorization': AUTH_TOKEN}, stream =True).raw
     except RuntimeError as error:
         logging.error(">> ERROR: SPIDER: GET XML: Request failed. Moving on.")
         logging.error(error)
@@ -194,6 +194,7 @@ def get_doc_shared_with(doc):
     group = ""
     try:
         group = doc['@shared_with']
+        group = clean_comma_separated_name(group)
     except:
         logging.info(">> SPIDER: GET DOC SHARED_WITH: No group found.")
     return group

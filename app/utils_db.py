@@ -12,7 +12,7 @@ import joblib
 from app import db, models
 from app import OMD_PATH, LANGS, VEC_SIZE, SERVER_HOST, GATEWAY_TIMEZONE
 from app.utils import hash_username
-from app.api.models import Urls, Pods
+from app.api.models import Urls, Pods, Locations, Groups
 from app.api.models import installed_languages
 from app.indexer.posix import load_posix, dump_posix
 import numpy as np
@@ -108,6 +108,28 @@ def create_url_in_db(target_url, title, snippet, description, idv, pod_path):
     db.session.commit()
     print(f"Adding URL {target_url}, {idv}, {pod_path}")
     return u.id
+
+
+def update_locations_in_db(locations):
+    #Add locations not in the database
+    for location in locations:
+        l = db.session.query(Locations).filter_by(name=location).first()
+        if l:
+            continue
+        l = Locations(name=location)
+        l.subscribed = False
+        db.session.add(l)
+        db.session.commit()
+        print(f"Adding Location {location}")
+
+    #Delete locations that do not exist anymore
+    locations_in_db = db.session.query(Locations).all()
+    for l in locations_in_db:
+        if l.name not in locations:
+            print(f">> {l.name} does not exist anymore.")
+            db.session.delete(l)
+            db.session.commit()
+
 
 ##############
 # ADDITIONS
