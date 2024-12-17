@@ -41,6 +41,7 @@ def login():
             is_admin = user_info.json()['isAdmin']
             session_token = user_info.json()['session_id']
             # Fill in session info
+            session.permanent = False
             session['logged_in'] = True
             session['username'] = username
             session['token'] = session_token
