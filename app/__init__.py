@@ -121,6 +121,7 @@ from app.api.controllers import api as api_module
 from app.search.controllers import search as search_module
 from app.pages.controllers import pages as pages_module
 from app.settings.controllers import settings as settings_module
+from app.sites.controllers import websites as websites_module
 
 # Register blueprint(s)
 app.register_blueprint(auth_module)
@@ -129,6 +130,7 @@ app.register_blueprint(api_module)
 app.register_blueprint(search_module)
 app.register_blueprint(pages_module)
 app.register_blueprint(settings_module)
+app.register_blueprint(websites_module)
 # ..
 
 # Build the database:
@@ -138,7 +140,7 @@ with app.app_context():
     db.create_all()
 
 from flask_admin.contrib.sqla import ModelView
-from app.api.models import Pods, Urls, Locations
+from app.api.models import Pods, Urls, Locations, Groups, Sites
 from app.api.controllers import return_url_delete, return_pod_delete
 
 from flask_admin import expose
@@ -193,7 +195,7 @@ else:
 
 class UrlsModelView(ModelView):
     list_template = 'admin/pears_list.html'
-    column_exclude_list = ['vector','cc']
+    column_exclude_list = ['vector','cc','date_created','date_modified']
     column_searchable_list = ['url', 'title', 'description', 'pod']
     column_editable_list = ['description']
     can_edit = True
@@ -280,8 +282,22 @@ class LocationsModelView(ModelView):
     can_edit = False
     page_size = 50
 
+class GroupsModelView(ModelView):
+    list_template = 'admin/pears_list.html'
+    column_searchable_list = ['name','identifier']
+    can_edit = False
+    page_size = 50
 
+class SitesModelView(ModelView):
+    list_template = 'admin/pears_list.html'
+    column_searchable_list = ['title','owner','url','description']
+    can_edit = False
+    page_size = 50
+
+
+admin.add_view(SitesModelView(Sites, db.session))
 admin.add_view(LocationsModelView(Locations, db.session))
+admin.add_view(GroupsModelView(Groups, db.session))
 admin.add_view(PodsModelView(Pods, db.session))
 admin.add_view(UrlsModelView(Urls, db.session))
 

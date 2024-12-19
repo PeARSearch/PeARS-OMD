@@ -18,24 +18,27 @@ SPDX-License-Identifier: AGPL-3.0-only
   <div class="row p-3">
     <div class="col-md-12">
       <div class="card">
-        <div class="card-body">
+        <div class="card-body input-group">
+          <form method="POST" accept-charset="UTF-8" enctype="multipart/form-data" action="{{url_for('indexer.pull_from_gateway')}}">
+              <button class="btn btn-success" type="submit" style="margin: 0px 20px 0px 0px">Pull latest groups and locations</button>
+	  </form>
           <form method="POST" accept-charset="UTF-8" enctype="multipart/form-data" action="{{url_for('indexer.update_all')}}">
-              <button class="btn btn-success" type="submit">Update all subscribed content</button>
+              <button class="btn btn-success" type="submit" style="margin: 0px 20px 0px 20px">Update all subscribed content</button>
 	  </form>
 	</div><!-- card body -->
     </div><!-- card -->
 
     <hr>
     <div class="card">
-      <div class="card-header text"><span style="padding-right:20px"><ion-icon name="home"></ion-icon></span><b>Your devices</b></div>
+      <div class="card-header text"><span style="padding-right:20px"><ion-icon name="home"></ion-icon></span><b>Your locations</b></div>
         <div class="card-body">
           <form method="POST" accept-charset="UTF-8" enctype="multipart/form-data" action="{{url_for('indexer.update_folder_subscriptions')}}" autocomplete="off">
             {{ form2.hidden_tag() }}
             <div class="input-group group mt-4" >
 	      {{form2.folders}}
             </div>
-              <button class="btn btn-success" type="submit" style="margin-top: 20px">Update subscriptions</button>
-           {% for message in messages %}
+            <button class="btn btn-success" type="submit" style="margin-top: 20px">Update subscriptions</button>
+            {% for message in messages %}
             <div class="notification is-danger">
 		    <b>{{ message }}</b>
             </div>
@@ -48,12 +51,13 @@ SPDX-License-Identifier: AGPL-3.0-only
     <div class="card">
       <div class="card-header text"><span style="padding-right:20px"><ion-icon name="people"></ion-icon></span><b>Your groups</b></div>
         <div class="card-body">
-          <form method="POST" accept-charset="UTF-8" enctype="multipart/form-data" action="{{url_for('indexer.from_crawl')}}" autocomplete="off">
+          <form method="POST" accept-charset="UTF-8" enctype="multipart/form-data" action="{{url_for('indexer.update_group_subscriptions')}}" autocomplete="off">
             {{ form3.hidden_tag() }}
             <div class="input-group group mt-4" >
 	      {{form3.groups}}
             </div>
-           {% for message in messages %}
+            <button class="btn btn-success" type="submit" style="margin-top: 20px">Update subscriptions</button>
+            {% for message in messages %}
             <div class="notification is-danger">
 		    <b>{{ message }}</b>
             </div>

@@ -4,7 +4,7 @@
 
 import logging
 import hashlib
-from os.path import join
+from os.path import join, realpath, dirname
 import re
 from datetime import datetime
 from math import sqrt
@@ -13,6 +13,10 @@ import numpy as np
 from scipy.spatial import distance
 from app import LANGS, CARBON_DIR
 from markupsafe import Markup, escape
+from flask import session
+
+app_dir_path = dirname(realpath(__file__))
+user_app_dir_path = join(app_dir_path,'userdata')
 
 
 def carbon_print(tracker_results, task_name):
@@ -24,6 +28,16 @@ def carbon_print(tracker_results, task_name):
 def clean_comma_separated_name(name):
     name = ','.join([ind for ind in name.split(',') if not ind.isspace()])
     return name
+
+def mk_group_name(owner, shared_with):
+    if len(shared_with) > 0:
+        group = [ind.strip() for ind in shared_with.split(',') if not ind.isspace()]
+        if owner not in group:
+            group.append(owner)
+        group = ', '.join(group)
+    else:
+        group = owner
+    return group
 
 def hash_username(username):
     user_hash = hashlib.shake_256(username.encode()).hexdigest(8)
@@ -48,6 +62,22 @@ def get_username_from_url(url):
         username = m.group(1)
     return username
 
+def init_crawl(username=None, start_urls=None):
+    if not username and 'username' in session:
+        username = session['username']
+    if 'start_urls' in session:
+        print("Start urls in session.")
+        start_urls = session['start_urls']
+        session.pop('start_urls')
+    elif not start_urls and 'toindex' in session:
+        print("Reading start urls from toindex field in session.")
+        start_url = session['toindex'][1] 
+        if start_url[-1] != '/':
+            start_url+='/'
+        start_urls = [start_url]
+        session.pop('toindex')
+    print("INIT CRAWL START URLS", start_urls)
+    return username, start_urls
 
 def read_docs(doc_file):
     """ Function to read the pre-processed documents, as obtained

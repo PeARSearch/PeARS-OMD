@@ -1,0 +1,38 @@
+<!--
+SPDX-FileCopyrightText: 2024 PeARS Project, <community@pearsproject.org>, 
+
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
+{% extends "base/base.html" %}
+{% from "base/_formhelpers.html" import render_field %}
+
+{% block body %}
+<div class="container">
+  <div class="row p-3">
+        <div id="sidebar-wrapper">
+          <div class="alert alert-info alert-dismissible">
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <div class="d-flex justify-content-start">
+	      {% if session.get('theme') == 'dark' %}
+	        <img src="{{ url_for('static', filename='happy_pears_dark.png')}}" width="40px" style="margin-right:10px">
+	      {% else %}
+	        <img src="{{ url_for('static', filename='happy_pears.png')}}" width="40px" style="margin-right:10px">
+              {% endif %}
+	      <h3>Welcome {{username}}!</h3>
+            </div>
+	  </div>
+        </div>     
+    <div class="card-group">
+      <div class="card">
+          <div class="card-body">
+	    <p>Username: {{username}}</p>
+	    <p>#User pages: {{num_user_files}}</p>
+	    <p>#Shared pages: {{num_shared_files}}</p>
+          </div>
+          <div class="card-footer clearfix" style="height:38px"></div>
+      </div>
+    </div>
+  </div><!-- row -->
+</div>
+{% endblock %}

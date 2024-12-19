@@ -12,8 +12,8 @@ from pytz import timezone
 from langdetect import detect
 from app.indexer.htmlparser import extract_txt, extract_html
 from app import LANGS, OMD_PATH, AUTH_TOKEN, FILE_SIZE_LIMIT, IGNORED_EXTENSIONS, GATEWAY_TIMEZONE
-from app.utils_db import uptodate
-from app.utils import clean_comma_separated_name
+from app.utils_db import uptodate, check_group_is_subscribed
+from app.utils import clean_comma_separated_name, mk_group_name
 
 app_dir_path = dirname(dirname(realpath(__file__)))
 user_app_dir_path = join(app_dir_path,'userdata')
@@ -226,17 +226,21 @@ def clean_snippets(body_str, description, title):
 
 def get_doc_info(doc, urldir):
     url, process = get_doc_url(doc, urldir)
-    print(f"\n>> {url}")
     if not process:
         return None
     last_modified = get_last_modified(doc)
-    group = get_doc_owner(doc)
+    owner = get_doc_owner(doc)
     shared_with = get_doc_shared_with(doc)
-    if len(shared_with) > 0:
-        group = f"{group},{shared_with}"
+    group = mk_group_name(owner, shared_with)
+    print(f"\n>> {url} {group}")
+
+    #If document belong to a group that is currently unsubscribed, ignore
+    if not check_group_is_subscribed(group):
+        print(f">> {url} is in an unsubscribed group. Returning none.")
+        return None
     if last_modified is not None and uptodate(url, last_modified, group):
         return None
-    print(f"{url} is not up to date. Reindexing.")
+    #print(f"{url} is not up to date. Reindexing.")
     convertible = assess_convertibility(doc)
     content_type, islink = get_doc_content_type(doc, url)
     title = get_doc_title(doc, url)

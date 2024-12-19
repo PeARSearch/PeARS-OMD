@@ -28,7 +28,7 @@ def compute_vec(lang, text, pod_m):
 
 def compute_vectors_local_docs(target_url, pod_path, title, description, doc, lang):
     pod_m = load_npz(join(pod_dir, pod_path+'.npz'))
-    print("Computing vectors for", target_url, "(",pod_path,")",lang)
+    #print("Computing vectors for", target_url, "(",pod_path,")",lang)
     filename = target_url.split('/')[-1]
     #print(target_url, pod_path, title, description, doc, lang)
     text = filename + " " + title + " " + description + " " + doc

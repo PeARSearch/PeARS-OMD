@@ -8,19 +8,19 @@ import logging
 from math import ceil
 from os import remove
 from os.path import dirname, join, realpath, isfile
-from flask import Blueprint, request, session, render_template, Response, redirect, url_for
+from flask import Blueprint, request, session, render_template, Response, redirect, url_for, flash
 
 from app import app, db, tracker
 from app import LANGS
-from app.api.models import Urls, Pods, Locations
+from app.api.models import Urls, Pods, Locations, Groups
 from app.indexer import mk_page_vector
 from app.indexer.spider import process_xml, get_doc_info
-from app.utils import read_docs, read_urls, carbon_print, get_device_from_url, get_username_from_url
-from app.utils_db import create_pod, create_url_in_db, delete_url, delete_old_urls
+from app.utils import read_docs, read_urls, carbon_print, get_device_from_url, get_username_from_url, init_crawl
+from app.utils_db import create_pod, create_url_in_db, delete_url, delete_old_urls, delete_unsubscribed, subscribe_location
 from app.indexer.posix import posix_doc
 from app.auth.controllers import login_required
 from app.forms import IndexerForm, FoldersForm, GroupForm, ChoiceObj
-from app.settings.controllers import get_user_folders, get_user_groups, get_user_links, get_user_sites
+from app.settings.controllers import get_user_devices, get_locations_and_groups, get_user_links, get_user_sites
 
 app_dir_path = dirname(dirname(realpath(__file__)))
 pod_dir = join(app_dir_path,'pods')
@@ -45,23 +45,32 @@ def index():
     num_db_entries = get_num_db_entries()
     crawl_form = IndexerForm(request.form)
 
-    username = session['username']
-    all_folders = get_user_folders(username)
-    locations = db.session.query(Locations).all()
-    folders_selected = [l.name for l in locations if l.subscribed]
-    folders = ChoiceObj('folders', folders_selected)
-    folders_form = FoldersForm(obj=folders)
-    folders_form.folders.choices =  [(c, c) for c in all_folders]
+    devices_in_db = db.session.query(Locations).filter_by(device=True).all()
+    all_devices = [l.name for l in devices_in_db]
+    devices_selected = [l.name for l in devices_in_db if l.subscribed]
+    print("DEVICES SELECTED", devices_selected)
+    devices = ChoiceObj('folders', devices_selected)
+    devices_form = FoldersForm(obj=devices)
+    devices_form.folders.choices =  [(c, c) for c in all_devices]
 
-    all_groups = get_user_groups(username)
-    #Replace with info from DB
-    session['groups_selected'] = [all_groups[0]]
-    groups = ChoiceObj('groups', session.get('groups_selected') )
+    groups_in_db = db.session.query(Groups).all()
+    all_groups = [g.name for g in groups_in_db]
+    groups_selected = [g.name for g in groups_in_db if g.subscribed]
+    groups = ChoiceObj('groups', groups_selected)
     group_form = GroupForm(obj=groups)
     group_form.groups.choices =  [(c, c) for c in all_groups]
 
-    return render_template("indexer/index.html", num_entries=num_db_entries, form1=crawl_form, form2=folders_form, form3=group_form)
+    return render_template("indexer/index.html", num_entries=num_db_entries, form1=crawl_form, form2=devices_form, form3=group_form)
 
+
+@indexer.route("/pull/", methods=["POST"])
+@login_required
+def pull_from_gateway():
+    username = session['username']
+    start_urls = get_user_devices(username)
+    get_locations_and_groups(username=username, start_urls=start_urls)
+    flash("Pull locations and groups from gateway.")
+    return redirect(url_for('indexer.index'))
 
 
 @indexer.route("/update_all/", methods=["POST"])
@@ -78,20 +87,35 @@ def update_all():
 @indexer.route("/update_folder_subscriptions/", methods=["POST"])
 @login_required
 def update_folder_subscriptions():
-    num_db_entries = get_num_db_entries()
     if request.method == "POST":
         subscriptions = request.form.getlist('folders')
         print("SUBSCRIBING:", subscriptions)
         locations = db.session.query(Locations).all()
         for l in locations:
-            if l.name in subscriptions:
-                l.subscribed = True
-            else:
-                l.subscribed = False
+            l.subscribed = False
+            for sub in subscriptions:
+                if l.name.startswith(sub):
+                    l.subscribed = True
             db.session.add(l)
             db.session.commit()
     return redirect(url_for('indexer.index'))
 
+
+@indexer.route("/update_group_subscriptions/", methods=["POST"])
+@login_required
+def update_group_subscriptions():
+    if request.method == "POST":
+        subscriptions = request.form.getlist('groups')
+        print("SUBSCRIBING:", subscriptions)
+        groups = db.session.query(Groups).all()
+        for g in groups:
+            if g.name in subscriptions:
+                g.subscribed = True
+            else:
+                g.subscribed = False
+            db.session.add(g)
+            db.session.commit()
+    return redirect(url_for('indexer.index'))
 
 
 @indexer.route("/from_crawl", methods=["GET","POST"])
@@ -105,10 +129,8 @@ def from_crawl():
 
     def process_start_url(url, username):
         logging.debug(f">> INDEXER: CONTROLLER: from_crawl: Now crawling {u}")
-        user_url_file = join(user_app_dir_path, username+".toindex")
-        #Every contributor gets their own file to avoid race conditions
-        with open(user_url_file, 'w', encoding="utf8") as f:
-            f.write(url + "\n")
+        session["toindex"] = [username, url]
+        subscribe_location(url)
    
     if request.method == "POST":
         form = IndexerForm(request.form)
@@ -143,6 +165,10 @@ def run_indexing(url, pod_path, title, snippet, description, lang, doc):
     posix_doc(tokenized_text, idx, pod_path)
 
 
+
+
+
+
 @indexer.route("/progress_crawl")
 @login_required
 def progress_crawl(username=None, start_urls=None):
@@ -151,33 +177,25 @@ def progress_crawl(username=None, start_urls=None):
     Reads the start URL given by the user and
     recursively crawls down directories from there.
     """
-    if 'username' in session:
-        username = session['username']
-    if 'start_urls' in session:
-        print(session)
-        start_urls = session['start_urls']
-        session.pop('start_urls')
-        print(session)
-    elif not start_urls:
-        start_url = read_urls(join(user_app_dir_path, username+".toindex"))[0]
-        if start_url[-1] != '/':
-            start_url+='/'
-        start_urls = [start_url]
-        logging.info(f">> INDEXER: Running progress crawl from {start_url}.")
 
+    username, links = init_crawl(username, start_urls)
 
     def generate(links):
         with app.app_context():
             logging.debug("\n\n>>> INDEXER: CONTROLLER: READING DOCS")
             m = 0
             c = 0
-            while len(links) > 0:
+            yield "data:10|Deleting unsubscribed locations...\n\n"
+            delete_unsubscribed()
+            if not links:
+                yield "data:100|Finished!\n\n"
+            while links and len(links) > 0:
                 start_link = links[0]
                 print(f"\n\nProcessing {start_link}.")
                 device = get_device_from_url(start_link)
                 docs, urldir = process_xml(start_link, username)
                 urls = [join(urldir,doc['@url'].split('?')[0]) for doc in docs]
-                print(">>>>>>>>>>>>>>>>>>>>>>\n",urls)
+                #print(">>>>>>>>>>>>>>>>>>>>>>\n",urls)
                 delete_old_urls(urls, urldir)
                 c = 0
                 m += len(docs)
@@ -189,7 +207,7 @@ def progress_crawl(username=None, start_urls=None):
                     if doc_info is None:
                         continue
                     url, owner, islink, title, description, snippet, body_str, language = doc_info
-                    print(f"\n{url}, owner: {owner}, islink: {islink}, title: {title}, description: {description[:20]}, body_str: {body_str[:20]}, language: {language}\n")
+                    #print(f"\n{url}, owner: {owner}, islink: {islink}, title: {title}, description: {description[:20]}, body_str: {body_str[:20]}, language: {language}\n")
                     pod_path = create_pod(url, owner, language, device)
                     run_indexing(url, pod_path, title, snippet, description, language, body_str)
                     if islink:
@@ -210,4 +228,4 @@ def progress_crawl(username=None, start_urls=None):
                     search_emissions = tracker.stop_task()
                     carbon_print(search_emissions, task_name)
 
-    return Response(generate(start_urls), mimetype='text/event-stream')
+    return Response(generate(links), mimetype='text/event-stream')
