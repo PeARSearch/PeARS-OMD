@@ -23,16 +23,21 @@ SPDX-License-Identifier: AGPL-3.0-only
             </div>
 	  </div>
         </div>     
-    <div class="card-group">
       <div class="card">
           <div class="card-body">
 	    <p>Username: {{username}}</p>
 	    <p>#User pages: {{num_user_files}}</p>
 	    <p>#Shared pages: {{num_shared_files}}</p>
           </div>
-          <div class="card-footer clearfix" style="height:38px"></div>
       </div>
-    </div>
+      <div class="card text-white bg-info mb-3">
+	      <div class="card-header">Tree</div>
+          <div class="card-body">
+		  {% for line in tree %}
+		  {{line}}<br>
+		  {% endfor %}
+          </div>
+      </div>
   </div><!-- row -->
 </div>
 {% endblock %}
