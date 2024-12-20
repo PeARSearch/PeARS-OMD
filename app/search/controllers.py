@@ -80,7 +80,7 @@ def run_user_search(query):
     else:
         languages = [lang]
     for lang in languages:
-        r, s = run_search(query+' -'+lang, url_filter=[join(url,username), join(url,'shared'), f'http://{SERVER_HOST}/'])
+        r, s = run_search(query+' -'+lang, url_filter=[join(url,username)])
         for k,v in r.items():
             if v is not None:
                 i = list(r.keys()).index(k)
