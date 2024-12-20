@@ -41,7 +41,7 @@ def pull_sites_from_gateway():
         owner = site['owner']
         link = join(OMD_PATH, site['link'][1:])
         name = site['name']
-        description = 'dud'
+        description = site['customAttributes']['description']
         all_sites.append({'url': link, 'title': name, 'owner': owner, 'description': description})
     update_sites_in_db(all_sites)
     return redirect(url_for('websites.index'))
