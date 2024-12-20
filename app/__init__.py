@@ -177,15 +177,19 @@ class MyUserIndexView(AdminIndexView):
     """Class for displaying admin view to signed in users only."""
     def is_accessible(self):
         access_token = request.headers.get('Token')
-        if not access_token:     
-            access_token = request.cookies.get('OMD_SESSION_ID')  
         if not access_token:
+            #print("Request access token 1")
+            access_token = request.cookies.get('OMD_SESSION_ID')  
+            #print(access_token)
+        if not access_token:
+            #print("Request access token 2")
             return abort(404)
         url = join(OMD_PATH, 'signin/')
         data = {'action': 'getUserInfo', 'session_id': access_token}
         resp = requests.post(url, json=data, timeout=30, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
         if resp.status_code < 400 and resp.json()['valid']:
             return True # This does the trick rendering the view only if the user is signed in
+        #print("Abort 404",resp.status_code,resp.json()['valid'])
         return abort(404)
 
 if LOCAL_MODE:
@@ -198,7 +202,7 @@ class UrlsModelView(ModelView):
     column_exclude_list = ['vector','cc','date_created','date_modified']
     column_searchable_list = ['url', 'title', 'description', 'pod']
     column_editable_list = ['description']
-    can_edit = True
+    can_edit = False
     page_size = 50
     form_widget_args = {
         'vector': {
@@ -237,7 +241,7 @@ class PodsModelView(ModelView):
     list_template = 'admin/pears_list.html'
     column_exclude_list = ['DS_vector','word_vector']
     column_searchable_list = ['url', 'name', 'description', 'language']
-    can_edit = True
+    can_edit = False
     page_size = 50
     form_widget_args = {
         'DS_vector': {
@@ -296,8 +300,8 @@ class SitesModelView(ModelView):
 
 
 admin.add_view(SitesModelView(Sites, db.session))
-admin.add_view(LocationsModelView(Locations, db.session))
-admin.add_view(GroupsModelView(Groups, db.session))
+#admin.add_view(LocationsModelView(Locations, db.session))
+#admin.add_view(GroupsModelView(Groups, db.session))
 admin.add_view(PodsModelView(Pods, db.session))
 admin.add_view(UrlsModelView(Urls, db.session))
 

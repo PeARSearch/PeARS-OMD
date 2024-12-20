@@ -341,12 +341,13 @@ def delete_pod(pod_path):
         db.session.commit()
     return "Deleted pod with path "+pod_path
 
-def delete_old_urls(urls, urldir):
+def delete_old_urls(urls):
     """Compare set of urls in a folder with
     current state of database and delete urls
     that do not exist anymore.
     """
-    urls_in_db = db.session.query(Urls).filter(Urls.url.startswith(urldir)).all()
+    print(">> DELETING OLD URLS")
+    urls_in_db = db.session.query(Urls).all()
     for u in urls_in_db:
         if u.url not in urls:
             print(f">> {u.url} does not exist anymore.")
@@ -363,7 +364,7 @@ def delete_unsubscribed():
         if urls is not None:
             for u in urls:
                 #This is going to be slow for many urls...
-                print("\t>>>DELETING",u)
+                print(f">> {u.url} has been unsubscribed.")
                 db.session.delete(u)
                 db.session.commit()
 

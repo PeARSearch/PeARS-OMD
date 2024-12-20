@@ -20,7 +20,7 @@ from app.utils_db import create_pod, create_url_in_db, delete_url, delete_old_ur
 from app.indexer.posix import posix_doc
 from app.auth.controllers import login_required
 from app.forms import IndexerForm, FoldersForm, GroupForm, ChoiceObj
-from app.settings.controllers import get_user_devices, get_locations_and_groups, get_user_links, get_user_sites
+from app.settings.controllers import get_user_devices, get_locations_and_groups, get_user_links
 
 app_dir_path = dirname(dirname(realpath(__file__)))
 pod_dir = join(app_dir_path,'pods')
@@ -69,7 +69,6 @@ def pull_from_gateway():
     username = session['username']
     start_urls = get_user_devices(username)
     get_locations_and_groups(username=username, start_urls=start_urls)
-    flash("Pull locations and groups from gateway.")
     return redirect(url_for('indexer.index'))
 
 
@@ -185,8 +184,7 @@ def progress_crawl(username=None, start_urls=None):
             logging.debug("\n\n>>> INDEXER: CONTROLLER: READING DOCS")
             m = 0
             c = 0
-            yield "data:10|Deleting unsubscribed locations...\n\n"
-            delete_unsubscribed()
+            recorded_urls = []
             if not links:
                 yield "data:100|Finished!\n\n"
             while links and len(links) > 0:
@@ -195,8 +193,8 @@ def progress_crawl(username=None, start_urls=None):
                 device = get_device_from_url(start_link)
                 docs, urldir = process_xml(start_link, username)
                 urls = [join(urldir,doc['@url'].split('?')[0]) for doc in docs]
+                recorded_urls.extend(urls)
                 #print(">>>>>>>>>>>>>>>>>>>>>>\n",urls)
-                delete_old_urls(urls, urldir)
                 c = 0
                 m += len(docs)
                 if tracker is not None:
@@ -211,6 +209,7 @@ def progress_crawl(username=None, start_urls=None):
                     pod_path = create_pod(url, owner, language, device)
                     run_indexing(url, pod_path, title, snippet, description, language, body_str)
                     if islink:
+                        print("Appending link to list:",url)
                         links.append(url)
                     c += 1
                     p = ceil(c / m * 100)
@@ -222,6 +221,9 @@ def progress_crawl(username=None, start_urls=None):
                     yield "data:" + str(p) + "|" + start_link + "\n\n"
                 del(links[0])
                 if len(links) == 0:
+                    yield "data:90|Cleaning up...\n\n"
+                    delete_old_urls(recorded_urls)
+                    delete_unsubscribed()
                     yield "data:100|Finished!\n\n"
                     
                 if tracker is not None:
