@@ -32,7 +32,7 @@ def remove_boilerplates(response, lang):
 def BS_parse(url):
     req = None
     try:
-        req = requests.get(url, allow_redirects=True, timeout=30, headers={'Authorization': AUTH_TOKEN})
+        req = requests.get(url, allow_redirects=True, timeout=30, headers={'Authorization': 'token:'+AUTH_TOKEN})
         req.encoding = 'utf-8'
     except Exception:
         print("Request failed when trying to index", url, "...")
@@ -49,7 +49,7 @@ def BS_parse(url):
 def extract_links(url):
     links = []
     try:
-        req = requests.get(url, timeout=10, headers={'Authorization': AUTH_TOKEN})
+        req = requests.get(url, timeout=10, headers={'Authorization': 'token:'+AUTH_TOKEN})
         if "text/html" not in req.headers["content-type"]:
             print("Not a HTML document...")
             return links
@@ -120,7 +120,7 @@ def extract_txt(url):
     language = LANGS[0]
     logging.debug(f">> INDEXER: HTMLPARSER: extract_txt: title: {title}")
     try:
-        req = requests.get(url, timeout=120, headers={'Authorization': AUTH_TOKEN})
+        req = requests.get(url, timeout=120, headers={'Authorization': 'token:'+AUTH_TOKEN})
         req.encoding = 'utf-8'
     except Exception:
         return title, body_str, snippet, language

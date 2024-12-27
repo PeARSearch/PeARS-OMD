@@ -183,7 +183,8 @@ def update_sites_in_db(sites):
         s = db.session.query(Sites).filter_by(url=site['url']).first()
         if not s:
             s = Sites(url=site['url'])
-        s.subscribed = False
+            s.subscribed = False
+        s.name = site['name']
         s.title = site['title']
         s.owner = site['owner']
         s.description = site['description']
@@ -341,7 +342,7 @@ def delete_pod(pod_path):
         db.session.commit()
     return "Deleted pod with path "+pod_path
 
-def delete_old_urls(urls):
+def delete_old_urls(start_urls, urls):
     """Compare set of urls in a folder with
     current state of database and delete urls
     that do not exist anymore.
@@ -349,7 +350,7 @@ def delete_old_urls(urls):
     print(">> DELETING OLD URLS")
     urls_in_db = db.session.query(Urls).all()
     for u in urls_in_db:
-        if u.url not in urls:
+        if any(u.url.startswith(s) for s in start_urls) and u.url not in urls:
             print(f">> {u.url} does not exist anymore.")
             delete_url(u.url)
 
@@ -358,12 +359,17 @@ def delete_unsubscribed():
     unsubscribed location.
     """
     print(">> DELETING UNSUBSCRIBED URLS")
-    locations = db.session.query(Locations).filter_by(subscribed=False).all()
-    for location in locations:
-        urls = db.session.query(Urls).filter(Urls.url.startswith(location.name)).all()
-        if urls is not None:
-            for u in urls:
-                #This is going to be slow for many urls...
+    urls = db.session.query(Urls).all()
+    if urls is not None:
+        for u in urls:
+            #This is going to be slow for many urls...
+            url = u.url
+            if url[-1] == '/':
+                loc = url
+            else:
+                loc = '/'.join(url.split('/')[:-1])+'/'
+            l = db.session.query(Locations).filter_by(name=loc).first()
+            if l and not l.subscribed:
                 print(f">> {u.url} has been unsubscribed.")
                 db.session.delete(u)
                 db.session.commit()

@@ -1,0 +1,75 @@
+<!--
+SPDX-FileCopyrightText: 2022 PeARS Project, <community@pearsproject.org>, 
+
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
+{% extends "base/base.html" %}
+{% from "base/_formhelpers.html" import render_field %}
+
+{% block body %}
+<div class="container">
+  <div class="row p-3">
+        <div id="sidebar-wrapper">
+          <div class="alert alert-info alert-dismissible">
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <div class="d-flex justify-content-start">
+	      {% if session.get('theme') == 'dark' %}
+	        <img src="{{ url_for('static', filename='happy_pears_dark.png')}}" width="40px" style="margin-right:10px">
+	      {% else %}
+	        <img src="{{ url_for('static', filename='happy_pears.png')}}" width="40px" style="margin-right:10px">
+              {% endif %}
+	      <p><b>Your public indexer:</b> Did you know that you can host your own website directly from your local computer, using the OnMyDisk service? Subscribe here to the public webpages and files hosted by fellow OnMyDisk users, to make them searchable from your PeARS.</p>
+            </div>
+	  </div>
+        </div>     
+      <div class="card">
+        <div class="card-body input-group">
+          <form method="POST" accept-charset="UTF-8" enctype="multipart/form-data" action="{{url_for('subscriptions.pull_sites_from_gateway')}}">
+              <button class="btn btn-success" type="submit" style="margin: 0px 20px 0px 0px">Pull websites from OnMyDisk network</button>
+	  </form>
+	</div><!-- card body -->
+    </div><!-- card -->
+  </div><!-- row -->
+
+  <hr>
+  <div class="row p-3">
+	{% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="notification is-danger">
+		    <br><b>{{ messages[0] }}</b>
+            </div>
+        {% endif %}
+        {% endwith %}
+    <div class="card-group">
+      <div class="card">
+          <div class="card-body">
+		  {% for site in sites %}
+			  <div class="card mt-2">
+			    <div class="card-body" style="padding: 20px 0px 20px 0px">
+			      <div class="d-flex justify-content-between"><!-- card header: links -->
+				<div><ion-icon name="globe"></ion-icon> <a href="{{site['url']}}" style="text-decoration: none; font-size: large"><b>{{site['title']}}</b></a></div>
+				<div>
+				    {% if site['subscribed'] %}
+				        <a class="btn btn-link" href="{{url_for('subscriptions.unsubscribe_from_site')}}?sitename={{site['title']}}" data-toggle="tooltip" title="Unsubscribe from this site"><ion-icon name="close-circle-outline"></ion-icon></a>
+				    {% else %}
+				        <a class="btn btn-link" href="{{url_for('subscriptions.subscribe_to_site')}}?sitename={{site['title']}}" data-toggle="tooltip" title="Subscribe to this site"><ion-icon name="cloud-download-outline"></ion-icon></a>  
+				    {% endif %}
+				  <a class="btn btn-link" href="{{url_for('search.index')}}"  data-toggle="tooltip" title="Report this entry"><ion-icon name="flag-outline"></ion-icon></a> 
+				</div>
+			      </div><!-- card heard: links -->
+
+			      <p class="card-text small"><a href="{{site['url']}}" class="card-link">{{site['url']}}</a></p><!-- explicit link-->
+			      <p class="card-text small" style="margin-top:-10px">
+			      <br>{{site['description']}}<!--snippet-->
+			      <hr>
+			    </div><!-- div card-body -->
+			  </div><!-- div card mt-2 -->
+		  {% endfor %}
+          </div>
+          <div class="card-footer clearfix" style="height:38px"></div>
+      </div>
+    </div>
+  </div><!-- row -->
+</div>
+{% endblock %}

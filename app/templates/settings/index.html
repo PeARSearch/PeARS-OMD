@@ -19,15 +19,15 @@ SPDX-License-Identifier: AGPL-3.0-only
 	      {% else %}
 	        <img src="{{ url_for('static', filename='happy_pears.png')}}" width="40px" style="margin-right:10px">
               {% endif %}
-	      <h3>Welcome {{username}}!</h3>
+	      <p><b>Your profile:</b></p>
             </div>
 	  </div>
         </div>     
       <div class="card">
           <div class="card-body">
-	    <p>Username: {{username}}</p>
-	    <p>#User pages: {{num_user_files}}</p>
-	    <p>#Shared pages: {{num_shared_files}}</p>
+		  <p><b>Username</b>: {{username}}</p>
+		  <p><b>#User pages</b>: {{num_user_files}}</p>
+		  <p><b>#Shared pages</b>: {{num_shared_files}}</p>
           </div>
       </div>
       <div class="card text-white bg-info mb-3">

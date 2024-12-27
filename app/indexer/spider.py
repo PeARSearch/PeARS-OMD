@@ -22,9 +22,9 @@ def get_xml(xml_url):
     xml = None
     try:
         #xml = requests.get(xml_url, timeout=120, \
-        #    headers={'Authorization': AUTH_TOKEN}, stream =True).raw
+        #        headers={'Authorization': 'token:'+AUTH_TOKEN}, stream =True).raw
         #print(xml.read())
-        xml = requests.get(xml_url, timeout=120, headers={'Authorization': AUTH_TOKEN}, stream =True).raw
+        xml = requests.get(xml_url, timeout=120, headers={'Authorization': 'token:'+AUTH_TOKEN}, stream =True).raw
     except RuntimeError as error:
         logging.error(">> ERROR: SPIDER: GET XML: Request failed. Moving on.")
         logging.error(error)
@@ -75,7 +75,6 @@ def get_doc_url(doc, urldir):
 
     url = ""
     process = True
-
     if doc['@url'][0] == '/':
         url = doc['@url'][1:]
     else:
@@ -232,7 +231,7 @@ def get_doc_info(doc, urldir):
     owner = get_doc_owner(doc)
     shared_with = get_doc_shared_with(doc)
     group = mk_group_name(owner, shared_with)
-    print(f"\n>> {url} {group}")
+    #print(f"\n>> {url} {group}")
 
     #If document belong to a group that is currently unsubscribed, ignore
     if not check_group_is_subscribed(group):

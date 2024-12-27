@@ -48,8 +48,8 @@ SPDX-License-Identifier: AGPL-3.0-only
                 </li>
                 <li class="nav-item"><a class="nav-link" href="{{url_for('search.index')}}">Search</a></li>
 		{% if session['logged_in'] %}
-                <li class="nav-item"><a class="nav-link" href="{{url_for('indexer.index')}}">Indexer</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{url_for('websites.index')}}">Sites</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{url_for('indexer.index')}}">Private</a></li>
+		<li class="nav-item"><a class="nav-link" href="{{url_for('subscriptions.index')}}">Public</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{url_for('settings.index')}}">Profile</a></li>
 		{% endif %}
 		{% if session['admin'] %}

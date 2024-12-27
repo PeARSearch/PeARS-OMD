@@ -162,13 +162,15 @@ class Groups(Base):
 class Sites(Base):
     id = db.Column(db.Integer, primary_key=True)
     url = db.Column(db.String(1000))
-    title = db.Column(db.String(200))
+    name = db.Column(db.String(200))
+    title = db.Column(db.String(1000))
     description = db.Column(db.String(1000))
     owner = db.Column(db.String(100))
     subscribed = db.Column(db.Boolean)
 
-    def __init__(self, url=None, title=None, description=None, owner=False, subscribed=False):
+    def __init__(self, url=None, name=None, title=None, description=None, owner=False, subscribed=False):
         self.url = url
+        self.name = name
         self.title = title
         self.description = description
         self.owner = owner
@@ -178,6 +180,7 @@ class Sites(Base):
     def serialize(self):
             return {
                 'url': self.url,
+                'name': self.name,
                 'title': self.title,
                 'description': self.description,
                 'owner': self.owner,

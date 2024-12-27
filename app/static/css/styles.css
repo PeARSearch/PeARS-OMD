@@ -106,7 +106,7 @@ ion-icon {
 }
 
 .btn-success {
-  --bs-btn-color: var(--secondary-color);
+  --bs-btn-color: white;
   --bs-btn-bg: var(--primary-color);
   --bs-btn-border-color: var(--primary-color);
   --bs-btn-hover-bg: var(--hover-color);

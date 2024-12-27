@@ -121,7 +121,7 @@ from app.api.controllers import api as api_module
 from app.search.controllers import search as search_module
 from app.pages.controllers import pages as pages_module
 from app.settings.controllers import settings as settings_module
-from app.sites.controllers import websites as websites_module
+from app.subscriptions.controllers import subscriptions as subscriptions_module
 
 # Register blueprint(s)
 app.register_blueprint(auth_module)
@@ -130,7 +130,7 @@ app.register_blueprint(api_module)
 app.register_blueprint(search_module)
 app.register_blueprint(pages_module)
 app.register_blueprint(settings_module)
-app.register_blueprint(websites_module)
+app.register_blueprint(subscriptions_module)
 # ..
 
 # Build the database:

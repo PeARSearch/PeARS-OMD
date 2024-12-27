@@ -9,9 +9,19 @@ SPDX-License-Identifier: AGPL-3.0-only
 {% block body %}
   <div class="row">
     <div class="col">
-      <div class="alert alert-success text-center">
-        <b>{{num_entries}} pages recorded</b>
-      </div>
+        <div id="sidebar-wrapper">
+          <div class="alert alert-info alert-dismissible">
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <div class="d-flex justify-content-start">
+	      {% if session.get('theme') == 'dark' %}
+	        <img src="{{ url_for('static', filename='happy_pears_dark.png')}}" width="40px" style="margin-right:10px">
+	      {% else %}
+	        <img src="{{ url_for('static', filename='happy_pears.png')}}" width="40px" style="margin-right:10px">
+              {% endif %}
+	      <p><b>Your private indexer:</b> This page is dedicated to indexing your private files, as well a the files you share with trusted users. Pull current information from all your devices to sync your search engine with your remote devices. Change the content you want search to be subscribed to. Update your search index.</p>
+            </div>
+	  </div>
+        </div>     
     </div>
   </div>
 
@@ -20,7 +30,7 @@ SPDX-License-Identifier: AGPL-3.0-only
       <div class="card">
         <div class="card-body input-group">
           <form method="POST" accept-charset="UTF-8" enctype="multipart/form-data" action="{{url_for('indexer.pull_from_gateway')}}">
-              <button class="btn btn-success" type="submit" style="margin: 0px 20px 0px 0px">Pull latest groups and locations</button>
+              <button class="btn btn-success" type="submit" style="margin: 0px 20px 0px 0px">Pull from locations</button>
 	  </form>
           <form method="POST" accept-charset="UTF-8" enctype="multipart/form-data" action="{{url_for('indexer.update_all')}}">
               <button class="btn btn-success" type="submit" style="margin: 0px 20px 0px 20px">Update all subscribed content</button>
@@ -30,8 +40,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 
     <hr>
     <div class="card">
-      <div class="card-header text"><span style="padding-right:20px"><ion-icon name="home"></ion-icon></span><b>Your locations</b></div>
+      <div class="card-header text"><span style="padding-right:20px"><ion-icon name="home"></ion-icon></span><b>Subscriptions: your locations</b></div>
         <div class="card-body">
+		<p>The locations listed here are the physical devices you have registered on the OnMyDisk network, as well as any folder shared with you by other users. 
+		To control which locations should be searchable on your local search engine, simply tick or untick the corresponding boxes, and click on 'Update subscriptions'.</p>
           <form method="POST" accept-charset="UTF-8" enctype="multipart/form-data" action="{{url_for('indexer.update_folder_subscriptions')}}" autocomplete="off">
             {{ form2.hidden_tag() }}
             <div class="input-group group mt-4" >
@@ -49,8 +61,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 
     <hr>
     <div class="card">
-      <div class="card-header text"><span style="padding-right:20px"><ion-icon name="people"></ion-icon></span><b>Your groups</b></div>
+      <div class="card-header text"><span style="padding-right:20px"><ion-icon name="people"></ion-icon></span><b>Subscriptions: your groups</b></div>
         <div class="card-body">
+		<p><b>Work in progress!</b> This is a list of all the groups you belong to. At the moment, this list is incorrect and subscriptions cannot be made, due to 
+		the 'shared_with' field of files not being set correctly in the xml. Come back later :)</p>
           <form method="POST" accept-charset="UTF-8" enctype="multipart/form-data" action="{{url_for('indexer.update_group_subscriptions')}}" autocomplete="off">
             {{ form3.hidden_tag() }}
             <div class="input-group group mt-4" >

@@ -11,7 +11,7 @@ from os.path import dirname, join, realpath, isfile
 from flask import Blueprint, request, session, render_template, Response, redirect, url_for, flash
 
 from app import app, db, tracker
-from app import LANGS
+from app import OMD_PATH, LANGS
 from app.api.models import Urls, Pods, Locations, Groups
 from app.indexer import mk_page_vector
 from app.indexer.spider import process_xml, get_doc_info
@@ -137,7 +137,8 @@ def from_crawl():
             u = request.form['url']
             device = get_device_from_url(u)
             username = get_username_from_url(u)
-            if not device or not username:
+            is_site = True if u.startswith(join(OMD_PATH, 'sites')) else False
+            if not is_site and (not device or not username):
                 #The url given by the user is missing a username or device name
                 num_db_entries = get_num_db_entries() 
                 messages = ["Please ensure the entered URL contains both your username and one of your devices' names."]
@@ -178,6 +179,10 @@ def progress_crawl(username=None, start_urls=None):
     """
 
     username, links = init_crawl(username, start_urls)
+    #print("USERNAME", username, "LINKS",links)
+    init_links = links.copy()
+    for link in links:
+        subscribe_location(link)
 
     def generate(links):
         with app.app_context():
@@ -193,6 +198,7 @@ def progress_crawl(username=None, start_urls=None):
                 device = get_device_from_url(start_link)
                 docs, urldir = process_xml(start_link, username)
                 urls = [join(urldir,doc['@url'].split('?')[0]) for doc in docs]
+                urls = [join(OMD_PATH, url[1:]) if url.startswith('/shared') else url for url in urls]
                 recorded_urls.extend(urls)
                 #print(">>>>>>>>>>>>>>>>>>>>>>\n",urls)
                 c = 0
@@ -211,6 +217,7 @@ def progress_crawl(username=None, start_urls=None):
                     if islink:
                         print("Appending link to list:",url)
                         links.append(url)
+                        subscribe_location(url)
                     c += 1
                     p = ceil(c / m * 100)
                     if p == 0:
@@ -220,14 +227,15 @@ def progress_crawl(username=None, start_urls=None):
 
                     yield "data:" + str(p) + "|" + start_link + "\n\n"
                 del(links[0])
-                if len(links) == 0:
-                    yield "data:90|Cleaning up...\n\n"
-                    delete_old_urls(recorded_urls)
-                    delete_unsubscribed()
-                    yield "data:100|Finished!\n\n"
-                    
-                if tracker is not None:
-                    search_emissions = tracker.stop_task()
-                    carbon_print(search_emissions, task_name)
+            if len(links) == 0:
+                yield "data:90|Cleaning up...\n\n"
+                #print("START URLS", init_links)
+                delete_old_urls(init_links, recorded_urls)
+                delete_unsubscribed()
+                yield "data:100|Finished!\n\n"
+                
+            if tracker is not None:
+                search_emissions = tracker.stop_task()
+                carbon_print(search_emissions, task_name)
 
     return Response(generate(links), mimetype='text/event-stream')

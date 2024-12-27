@@ -46,7 +46,7 @@ def toggle_theme():
 
 def get_user_devices(username):
     xml_url = join(OMD_PATH, username)
-    xml = requests.get(xml_url, timeout=30, headers={'Authorization': AUTH_TOKEN}, stream=True).raw
+    xml = requests.get(xml_url, timeout=30, headers={'Authorization': 'token:'+AUTH_TOKEN}, stream=True).raw
     xml_content = xml.read()
     parse = xmltodict.parse(xml_content)
     folders = []
@@ -88,7 +88,7 @@ def get_locations_and_groups(username=None, start_urls=None):
 
 def get_user_links(username):
     xml_url = join(OMD_PATH, username, 'links')
-    xml = requests.get(xml_url, timeout=30, headers={'Authorization': AUTH_TOKEN}, stream=True).raw
+    xml = requests.get(xml_url, timeout=30, headers={'Authorization': 'token:'+AUTH_TOKEN}, stream=True).raw
     xml_content = xml.read()
     docs = []
     links = []
@@ -114,7 +114,10 @@ def return_tree(paths, min_length):
 
 
 def return_location_graph():
+    tree = []
     locations_in_db = db.session.query(Locations).all()
+    if len(locations_in_db) == 0:
+        return tree
     path_length_to_locations = {}
     for l in locations_in_db:
         path_length = len(l.name.split('/')) - 4 # -4 because of https:// and end slash
