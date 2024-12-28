@@ -8,7 +8,6 @@ import requests
 from os.path import dirname, realpath, join, isdir, exists
 from flask import Blueprint, request, render_template, redirect, session, url_for, flash
 from app import db, OMD_PATH, AUTH_TOKEN
-from app.forms import SiteSubscriptionForm
 from app.api.models import Sites
 from app.auth.controllers import login_required
 from app.utils_db import update_sites_in_db
