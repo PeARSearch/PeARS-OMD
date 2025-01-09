@@ -135,40 +135,39 @@ import requests
 
 # Flask and Flask-SQLAlchemy initialization here
 
-class MyAdminIndexView(AdminIndexView):
-    """Class for displaying admin view to OMD admins only."""
-    def is_accessible(self):
-        access_token = request.headers.get('Token')
-        if not access_token:     
-            access_token = request.cookies.get('OMD_SESSION_ID')  
-        if not access_token:
-            return abort(404)
-        url = join(OMD_PATH, 'signin/')
-        data = {'action': 'getUserInfo', 'session_id': access_token}
-        resp = requests.post(url, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
-        if resp.json().get('valid'):
+def can_access_flaskadmin():
+    access_token = request.headers.get('Token')
+    if not access_token:     
+        access_token = request.cookies.get('OMD_SESSION_ID')  
+    if not access_token:
+        return abort(404)
+    url = join(OMD_PATH, 'signin/')
+    data = {'action': 'getUserInfo', 'session_id': access_token}
+    resp = requests.post(url, json=data, timeout=30 if LOCAL_MODE else None, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
+    if resp.json()['valid']:
+        # for local mode
+        if LOCAL_MODE:
+            if resp.status_code < 400:
+                return True # This does the trick rendering the view only if the user is signed in
+        # for non-local mode
+        else: 
             is_admin = resp.json().get('isAdmin')
             if is_admin:
                 return is_admin # This does the trick rendering the view only if the user is admin
             else:
                 return abort(404)
-        else:
-            return abort(404)
+    return abort(404)
+
+
+class MyAdminIndexView(AdminIndexView):
+    """Class for displaying admin view to OMD admins only."""
+    def is_accessible(self):
+        return can_access_flaskadmin()
 
 class MyUserIndexView(AdminIndexView):
     """Class for displaying admin view to signed in users only."""
     def is_accessible(self):
-        access_token = request.headers.get('Token')
-        if not access_token:     
-            access_token = request.cookies.get('OMD_SESSION_ID')  
-        if not access_token:
-            return abort(404)
-        url = join(OMD_PATH, 'signin/')
-        data = {'action': 'getUserInfo', 'session_id': access_token}
-        resp = requests.post(url, json=data, timeout=30, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
-        if resp.status_code < 400 and resp.json()['valid']:
-            return True # This does the trick rendering the view only if the user is signed in
-        return abort(404)
+        return can_access_flaskadmin()
 
 if LOCAL_MODE:
     admin = Admin(app, name='PeARS DB', template_mode='bootstrap3', index_view=MyUserIndexView())
@@ -202,6 +201,10 @@ class UrlsModelView(ModelView):
             'readonly': True
         },
     }
+
+    def is_accessible(self):
+        return can_access_flaskadmin()
+
     def delete_model(self, model):
         success = True
         try:
@@ -256,6 +259,10 @@ class PodsModelView(ModelView):
             'readonly': True
         },
     }
+
+    def is_accessible(self):
+        return can_access_flaskadmin()
+
     def delete_model(self, model):
         try:
             self.on_model_delete(model)
