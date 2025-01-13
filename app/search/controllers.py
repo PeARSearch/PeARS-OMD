@@ -80,7 +80,7 @@ def run_user_search(query):
     else:
         languages = [lang]
     for lang in languages:
-        r, s = run_search(query+' -'+lang, url_filter=[join(url,username)])
+        r, s = run_search(query+' -'+lang, url_filter=[join(url,username), join(url, 'sites')])
         for k,v in r.items():
             if v is not None:
                 i = list(r.keys()).index(k)
@@ -122,10 +122,12 @@ def order_results(results, scores):
     return sorted_results
 
 
-def remove_username_from_url(url):
+def clean_url(url):
     # If not a shared doc, remove whatever comes immediately after "onmydisk.net/", until the next slash 
-    if join(OMD_PATH,'shared') not in url:
-        return re.sub(r"^("+OMD_PATH+r").+?/(.+)", r"\1\2", url)
+    if join(OMD_PATH,'shared') not in url and join(OMD_PATH,'sites') not in url:
+        url = re.sub(r"^("+OMD_PATH+r").+?/(.+)", r"\1\2", url)
+    if url.endswith('?direct'):
+        url = url[:-7]
     return url
 
 
@@ -136,8 +138,8 @@ def prepare_gui_results(query, results):
     for _, r in results.items():
         r['title'] = r['title'][:70]
         r['snippet'] = beautify_snippet(r['snippet'], query)
-        # remove username from URL so that link to OMD works correctly
-        r['url'] = remove_username_from_url(r['url'])
+        # remove stuff from URL so that link to OMD works correctly
+        r['url'] = clean_url(r['url'])
         displayresults.append(list(r.values()))
     return displayresults
 
