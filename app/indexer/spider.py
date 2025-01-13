@@ -79,7 +79,7 @@ def get_doc_url(doc, urldir):
         url = doc['@url'][1:]
     else:
         url = doc['@url']
-    if url.startswith('shared/'):
+    if url.startswith('shared/') or url.startswith('sites/'):
         url = join(OMD_PATH, url)
     else:
         url = join(urldir, url)
@@ -167,11 +167,12 @@ def get_doc_content(url, convertible, content_type):
     elif is_folder_description:
         _, body_str, _, language = extract_txt(url + "?description")
     elif content_type in ['text/plain', 'text/x-tex']:
-        if url.startswith(join(OMD_PATH,'shared')):
+        if url.startswith(join(OMD_PATH,'shared')) or url.startswith(join(OMD_PATH,'sites')):
             title, body_str, _, language = extract_txt(url + "?direct")
         else:
             title, body_str, _, language = extract_txt(url)
     elif content_type in ['text/html']:
+        print(">> Calling extract_html")
         title, body_str, _, language = extract_html(url)
 
     # Hack. Revert to main language if language is not installed
@@ -234,10 +235,11 @@ def get_doc_info(doc, urldir):
     #print(f"\n>> {url} {group}")
 
     #If document belong to a group that is currently unsubscribed, ignore
-    if not check_group_is_subscribed(group):
+    if not check_group_is_subscribed(group) and not url.startswith(join(OMD_PATH,"sites")):
         print(f">> {url} is in an unsubscribed group. Returning none.")
         return None
     if last_modified is not None and uptodate(url, last_modified, group):
+        print(f">> {url} is up to date. Returning none.")
         return None
     #print(f"{url} is not up to date. Reindexing.")
     convertible = assess_convertibility(doc)
