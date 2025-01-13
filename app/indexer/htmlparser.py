@@ -38,6 +38,7 @@ def BS_parse(url):
         print("Request failed when trying to index", url, "...")
         return False, req
     if req.status_code != 200:
+        print("Failure on status code",req.status_code)
         logging.exception(
             "Warning: " + str(req.url) + ' has a status code of: ' +
             str(req.status_code) + ' omitted from database.\n')
@@ -83,8 +84,8 @@ def extract_html(url):
         if url.startswith('http'):
             og_title = bs_obj.find("meta", property="og:title")
             og_description = bs_obj.find("meta", property="og:description")
-            logging.debug(f"OG TITLE {og_title}")
-            logging.debug(f"OG DESC {og_description}")
+            #print(f"OG TITLE {og_title}")
+            #print(f"OG DESC {og_description}")
 
             # Process title
             if not og_title:
@@ -95,7 +96,13 @@ def extract_html(url):
                 title = og_title['content']
  
             # Get body string
-            body_str = remove_boilerplates(req, LANGS[0]) #Problematic...
+            #body_str = remove_boilerplates(req, LANGS[0]) #Problematic...
+            try:
+                body_str = bs_obj.gettext()
+            except:
+                if og_description:
+                    body_str = og_description['content'][:1000]
+            #print("BODY",body_str)
             try:
                 language = detect(title + " " + body_str)
                 logging.debug(f"\t>> INFO: Language for {url}: {language}")
@@ -109,6 +116,7 @@ def extract_html(url):
                 snippet = og_description['content'][:1000]
             else:
                 snippet = ' '.join(body_str.split()[:10]) #10 to conform with EU regulations
+    #print(body_str)
     return title, body_str, snippet, language
 
 
