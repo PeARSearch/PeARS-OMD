@@ -13,7 +13,7 @@ from joblib import Parallel, delayed
 import numpy as np
 from scipy.sparse import csr_matrix, load_npz
 from scipy.spatial import distance
-from app.api.models import Urls, Pods
+from app.api.models import Urls, Pods, Groups, Sites
 from app import app, db, tracker
 from app.utils import get_language, carbon_print, hash_username
 from app.indexer.mk_page_vector import compute_query_vectors
@@ -67,6 +67,54 @@ def compute_scores(query, query_vector, tokenized, pod_name):
     return vec_scores, completeness_scores, posix_scores
 
 
+def get_user_pods(username, lang):
+    '''Return user's own pods'''
+    npzs = []
+    pods = []
+    owner_hash = hash_username(username)
+    private_folders = Pods.query.filter(Pods.url.startswith(f"{owner_hash}/")).filter(Pods.url.endswith(f"/{lang}/user")).all()
+    for pf in private_folders:
+        npzs.append(join(pod_dir, pf.url+'.npz'))
+        pods.append(pf)
+    return npzs, pods
+
+
+def get_group_pods(username, lang):
+    '''Return pods for groups the user belongs to'''
+    npzs = []
+    pods = []
+    user_groups = Groups.query.all()
+    group_folders = []
+    #print("USER GROUPS",[group.identifier for group in user_groups])
+    for g in user_groups:
+        members = [m.strip() for m in g.name.split(',')]
+        if username in members:
+            group = Pods.query.filter(Pods.url.startswith(f"{g.identifier}/")).filter(Pods.url.endswith(f"/{lang}/group")).all()
+            group_folders.extend(group)
+    print("GROUP FOLDERS", [group.url for group in group_folders])
+    for gf in group_folders:
+        npzs.append(join(pod_dir, gf.url+'.npz'))
+        pods.append(gf)
+    return npzs, pods
+
+
+def get_site_pods(lang):
+    '''Return pods for sites.
+    NB: sites cannot have the name of a device on the OMD network
+    '''
+    npzs = []
+    pods = []
+    sites = Sites.query.all()
+    site_names = [s.name for s in sites]
+    pods_in_db = Pods.query.all()
+    for pod in pods_in_db:
+        location = pod.url.split('/')[1]
+        if location in site_names:
+            pods.append(pod)
+            npzs.append(join(pod_dir, pod.url+'.npz'))
+    return npzs, pods
+
+
 def score_pods(query, query_vector, lang, username = None):
     """Score pods for a query.
     We score pods that have shared content in them, since the user's pod
@@ -96,12 +144,21 @@ def score_pods(query, query_vector, lang, username = None):
     podsum = []
     npzs = []
     if username is not None:
-        owner_hash = hash_username(username)
-        private_folders = Pods.query.filter(Pods.url.startswith(f"{owner_hash}/")).filter(Pods.url.endswith(f"/{lang}/user")).all()
-        for pf in private_folders:
-            npzs.append(join(pod_dir, pf.url+'.npz'))
-            pods.append(pf)
+        #Get user pods
+        user_npzs, user_pods = get_user_pods(username, lang)
+        npzs.extend(user_npzs)
+        pods.extend(user_pods)
+        #Get group pods
+        group_npzs, group_pods = get_group_pods(username, lang)
+        npzs.extend(group_npzs)
+        pods.extend(group_pods)
+        #Get site pods
+        site_npzs, site_pods = get_site_pods(lang)
+        npzs.extend(site_npzs)
+        pods.extend(site_pods)
+    #Get public files
     npzs.extend(glob(join(pod_dir, f"*/*/{lang}/others.npz")))
+    pods.extend(db.session.query(Pods).filter_by(language=lang).filter(Pods.url.endswith('/others')).all())
     for npz in npzs:
         podname = npz.replace(pod_dir + "/", "").replace(".npz", "")
         s = np.sum(load_npz(npz).toarray(), axis=0)
@@ -115,7 +172,6 @@ def score_pods(query, query_vector, lang, username = None):
     m_cosines = 1 - distance.cdist(query_vector, podsum.todense(), 'cosine')
 
     # For each pod, retrieve cosine to query
-    pods.extend(db.session.query(Pods).filter_by(language=lang).filter(Pods.url.endswith('/others')).all())
     for p in pods:
         if p.url in podnames:
             cosine_score = m_cosines[0][podnames.index(p.url)]
@@ -221,7 +277,8 @@ def run_search(query, url_filter=None):
     best_pods = score_pods(query, q_vector, lang, username)
     print("\tQ:",query,"BEST PODS:",best_pods)
 
-    max_thread = int(multiprocessing.cpu_count() * 0.5)
+    #max_thread = int(multiprocessing.cpu_count() * 0.5)
+    max_thread = 1
     with Parallel(n_jobs=max_thread, prefer="threads") as parallel:
         delayed_funcs = [delayed(score_docs)(query, q_vector, tokenized, pod) for pod in best_pods]
         scores = parallel(delayed_funcs)
