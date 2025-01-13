@@ -45,7 +45,7 @@ def return_url_delete(path):
             return True, message
     try:
         print(session['username'], pod.owner.split(','))
-        assert session['username'] in pod.owner.split(',')
+        assert session['username'] in pod.owner.split(',') or path.startswith(join(OMD_PATH,'shared/')) or path.startswith(join(OMD_PATH,'sites/'))
     except AssertionError as err:
         message = "You cannot delete other users' documents."
         return False, message
