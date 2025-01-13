@@ -16,7 +16,7 @@ from app.api.models import Urls, Pods, Locations, Groups
 from app.indexer import mk_page_vector
 from app.indexer.spider import process_xml, get_doc_info
 from app.utils import read_docs, read_urls, carbon_print, get_device_from_url, get_username_from_url, init_crawl
-from app.utils_db import create_pod, create_url_in_db, delete_url, delete_old_urls, delete_unsubscribed, subscribe_location
+from app.utils_db import create_pod, create_url_in_db, delete_url, delete_old_urls, delete_unsubscribed, delete_old_pods, subscribe_location
 from app.indexer.posix import posix_doc
 from app.auth.controllers import login_required
 from app.forms import IndexerForm, FoldersForm, GroupForm, ChoiceObj
@@ -61,7 +61,6 @@ def index():
     group_form.groups.choices =  [(c, c) for c in all_groups]
 
     return render_template("indexer/index.html", num_entries=num_db_entries, form1=crawl_form, form2=devices_form, form3=group_form)
-
 
 @indexer.route("/pull/", methods=["POST"])
 @login_required
@@ -198,7 +197,7 @@ def progress_crawl(username=None, start_urls=None):
                 device = get_device_from_url(start_link)
                 docs, urldir = process_xml(start_link, username)
                 urls = [join(urldir,doc['@url'].split('?')[0]) for doc in docs]
-                urls = [join(OMD_PATH, url[1:]) if url.startswith('/shared') else url for url in urls]
+                urls = [join(OMD_PATH, url[1:]) if url.startswith('/shared') or url.startswith('/sites') else url for url in urls]
                 recorded_urls.extend(urls)
                 #print(">>>>>>>>>>>>>>>>>>>>>>\n",urls)
                 c = 0
@@ -230,7 +229,8 @@ def progress_crawl(username=None, start_urls=None):
             if len(links) == 0:
                 yield "data:90|Cleaning up...\n\n"
                 #print("START URLS", init_links)
-                delete_old_urls(init_links, recorded_urls)
+                #delete_old_urls(init_links, recorded_urls)
+                delete_old_pods()
                 delete_unsubscribed()
                 yield "data:100|Finished!\n\n"
                 

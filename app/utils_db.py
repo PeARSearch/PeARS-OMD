@@ -321,6 +321,11 @@ def delete_url(url):
     db.session.delete(u)
     db.session.commit()
     u = db.session.query(Urls).filter_by(url=url).first()
+    
+    #If pod empty, delete
+    if len(db.session.query(Urls).filter_by(pod=pod).all()) == 0:
+        delete_pod(pod)
+    
     return "Deleted document with url "+url
 
 def delete_pod(pod_path):
@@ -341,6 +346,15 @@ def delete_pod(pod_path):
         db.session.delete(pod)
         db.session.commit()
     return "Deleted pod with path "+pod_path
+
+def delete_old_pods():
+    pods = db.session.query(Pods).all()
+    for pod in pods:
+        urls_in_db = db.session.query(Urls).filter_by(pod=pod.url).all()
+        if len(urls_in_db) == 0:
+            print(f"Removing empty pod {pod.url}")
+            delete_pod(pod.url)
+    
 
 def delete_old_urls(start_urls, urls):
     """Compare set of urls in a folder with
