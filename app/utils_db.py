@@ -300,6 +300,14 @@ def update_db_idvs_after_npz_delete(idv, pod):
     db.session.execute(update_stmt)
 
 
+def delete_urls_recursively(url):
+    """Delete url and all chidren
+    """
+    urls_in_db = db.session.query(Urls).filter(Urls.url.startswith(url)).all()
+    for u in urls_in_db:
+        delete_url(u.url)
+
+
 def delete_url(url):
     """ Delete url with some url on some pod.
     """
@@ -362,6 +370,8 @@ def delete_old_urls(start_urls, urls):
     that do not exist anymore.
     """
     print(">> DELETING OLD URLS")
+    print("START_URLS",start_urls)
+    print("URLS",urls)
     urls_in_db = db.session.query(Urls).all()
     for u in urls_in_db:
         if any(u.url.startswith(s) for s in start_urls) and u.url not in urls:
@@ -377,6 +387,11 @@ def delete_unsubscribed():
     if urls is not None:
         for u in urls:
             #This is going to be slow for many urls...
+            group_id = u.pod.split('/')[0]
+            group = db.session.query(Groups).filter_by(identifier=group_id).first()
+            if group and not group.subscribed:
+                print(f">> {u.url} has been unsubscribed.")
+                delete_url(u.url)
             url = u.url
             if url[-1] == '/':
                 loc = url
@@ -385,6 +400,4 @@ def delete_unsubscribed():
             l = db.session.query(Locations).filter_by(name=loc).first()
             if l and not l.subscribed:
                 print(f">> {u.url} has been unsubscribed.")
-                db.session.delete(u)
-                db.session.commit()
-
+                delete_url(u.url)
