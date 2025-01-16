@@ -14,13 +14,14 @@ from app import app, db, tracker
 from app import OMD_PATH, LANGS
 from app.api.models import Urls, Pods, Locations, Groups
 from app.indexer import mk_page_vector
-from app.indexer.spider import process_xml, get_doc_info
+from app.indexer.spider import process_xml, process_html_links, get_doc_info
 from app.utils import read_docs, read_urls, carbon_print, get_device_from_url, get_username_from_url, init_crawl
 from app.utils_db import create_pod, create_url_in_db, delete_url, delete_old_urls, delete_unsubscribed, delete_old_pods, subscribe_location
 from app.indexer.posix import posix_doc
 from app.auth.controllers import login_required
 from app.forms import IndexerForm, FoldersForm, GroupForm, ChoiceObj
 from app.settings.controllers import get_user_devices, get_locations_and_groups, get_user_links
+from app.indexer.htmlparser import extract_html
 
 app_dir_path = dirname(dirname(realpath(__file__)))
 pod_dir = join(app_dir_path,'pods')
@@ -165,9 +166,6 @@ def run_indexing(url, pod_path, title, snippet, description, lang, doc):
 
 
 
-
-
-
 @indexer.route("/progress_crawl")
 @login_required
 def progress_crawl(username=None, start_urls=None):
@@ -217,6 +215,13 @@ def progress_crawl(username=None, start_urls=None):
                         print("Appending link to list:",url)
                         links.append(url)
                         subscribe_location(url)
+                    html_links = process_html_links(url+'?direct')
+                    print(url,html_links)
+                    for link in html_links:
+                        title, body_str, snippet, _ = extract_html(link)
+                        description = ""
+                        run_indexing(link, pod_path, title, snippet, description, language, body_str)
+
                     c += 1
                     p = ceil(c / m * 100)
                     if p == 0:
