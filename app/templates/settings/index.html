@@ -19,19 +19,35 @@ SPDX-License-Identifier: AGPL-3.0-only
 	      {% else %}
 	        <img src="{{ url_for('static', filename='happy_pears.png')}}" width="40px" style="margin-right:10px">
               {% endif %}
-	      <p><b>Your profile:</b></p>
+	      <p><b>Your profile:</b> This page gives a summary of the content indexed on your local PeARS. Below, you will also find an overview of the On My Disk folders 
+	      you have permission to index.</p>
             </div>
 	  </div>
         </div>     
       <div class="card">
           <div class="card-body">
-		  <p><b>Username</b>: {{username}}</p>
-		  <p><b>#User pages</b>: {{num_user_files}}</p>
-		  <p><b>#Shared pages</b>: {{num_shared_files}}</p>
+	  <p><b>Your username:</b> {{username}}</p>
+		  <table class="table table-striped">
+		  <tbody>
+		    <tr>
+		      <th scope="row">User pages</th>
+		      <td>{{num_user_files}}</td>
+		    </tr>
+		    <tr>
+		      <th scope="row">Public pages</th>
+		      <td>{{num_shared_files}}</td>
+		    </tr>
+		    <tr>
+		      <th scope="row">Subscribed websites</th>
+		      <td>{{num_subscribed_sites}}</td>
+		    </tr>
+		  </tbody>
+		  </table>
           </div>
       </div>
+      <hr>
       <div class="card text-white bg-info mb-3">
-	      <div class="card-header">Tree</div>
+	      <div class="card-header"><b>Your On My Disk folder overview</b></div>
           <div class="card-body">
 		  {% for line in tree %}
 		  {{line}}<br>

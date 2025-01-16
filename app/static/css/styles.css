@@ -105,6 +105,13 @@ ion-icon {
     padding-right: 10px;
 }
 
+.btn-update {
+	margin-left: 20px;
+	--bs-btn-padding-y: .15rem;
+	--bs-btn-padding-x: .2rem; 
+	--bs-btn-font-size: .80rem;
+	}
+
 .btn-success {
   --bs-btn-color: white;
   --bs-btn-bg: var(--primary-color);
