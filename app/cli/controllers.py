@@ -5,13 +5,21 @@
 from collections import Counter
 from shutil import copy2, copytree
 from os.path import dirname, realpath, join
+import re
+import json
 from datetime import datetime
 from pathlib import Path
 import joblib
+import requests
 from flask import Blueprint
 import click
+import pandas as pd
 from scipy.sparse import load_npz, save_npz
-from app import db, Urls, Pods
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from app import app, db, Urls, Pods
+from app.auth import VIEW_FUNCTIONS_PERMISSIONS
+from app.auth.controllers import get_func_identifier
 from app.indexer.posix import load_posix
 from app.utils_db import rm_from_npz, rm_doc_from_pos
 
@@ -365,3 +373,325 @@ def showindexfile(username, indexfile):
                 for doc_id, _ in token_id.items():
                     idx.append(doc_id)
                 print(str(i),':',idx)
+
+
+#####################
+# PERMISSION CHECKER
+#####################
+
+@pears.cli.command('list_endpoint_permissions')
+@click.argument("export_mode")
+def list_endpoints(export_mode=None):
+    
+    assert export_mode in ["csv", "json"]
+
+    endpoint_permissions = {}
+    for ep, func in app.view_functions.items():
+        func_id = get_func_identifier(func)
+        permissions = VIEW_FUNCTIONS_PERMISSIONS.get(func_id)
+        if permissions is None:
+            # admin + DB management endpoints
+            # TODO: find a less hacky way to get the permissions for these
+            if ep.split(".")[0] in ["admin", "sites", "pods", "urls"]:
+                permissions = {"login": True}
+            else:
+                # TODO: is this always true??
+                permissions = {"login": False}
+        endpoint_permissions[ep] = permissions
+
+    if export_mode == "csv":
+        rows = []
+        for ep, permissions in endpoint_permissions.items():
+            row_dict = {"endpoint": ep}
+            row_dict.update(permissions)
+            rows.append(row_dict)
+        pd.DataFrame(rows).to_csv("endpoint_permissions.csv")
+
+    elif export_mode == "json":
+        with open("endpoint_permissions.json", "w") as f:
+            json.dump(endpoint_permissions, f, indent=4)
+
+
+@pears.cli.command('test_endpoint_permissions')
+@click.argument("manual")
+def test_endpoint_permissions(manual=False):
+    if manual:
+        permissions = pd.read_csv("endpoint_permissions__manual.csv", index_col=0)
+    else:
+        permissions = pd.read_csv("endpoint_permissions.csv", index_col=0)
+
+    permissions = (
+        permissions
+        .dropna(subset=["login"])  # drop entries with missing permissions (= endpoints that are marked for deletion)
+        .fillna({"skip": False, "reset_login": False}) # fill in False for unspecified skip/reset column entries
+    )
+
+    # selenium 
+    # (setup for firefox: getting the right gecko driver on ubuntu, see https://stackoverflow.com/a/78110627)
+    # uncomment the right version depending on your system
+    # geckodriver_path = "/snap/bin/geckodriver" # for recent ubuntus
+    geckodriver_path = "/usr/local/bin/geckodriver"  # for other systems
+    driver_service = webdriver.FirefoxService(executable_path=geckodriver_path)
+    def _start_browser():
+        return webdriver.Firefox(service=driver_service)
+
+    # which endpoints have which arugments?
+    # (for now, we'll skip the ones that take arguments)
+    endpoints_to_arguments = {}
+    endpoints_to_methods = {}
+    for rule in app.url_map.iter_rules():
+        endpoints_to_arguments[rule.endpoint] = rule.arguments
+        endpoints_to_methods[rule.endpoint] = rule.methods
+
+    # read test user login info
+    with open("testusers.json") as f:
+        test_users = json.load(f)
+    
+    TEST_CASES = [
+        {"logged_in": False},
+        {"logged_in": True}
+    ]
+
+    results = []
+    for tc in TEST_CASES:
+
+        print(f"Running test case: {tc}")
+        browser = _start_browser()
+
+        user = None
+        csrf_token = None
+        if tc["logged_in"]:
+            user = test_users["testuser"]
+            csrf_token = _selenium_test_login(browser, user)
+        else:
+            csrf_token = _selenium_get_csrf_without_login(browser)
+        _cookies = browser.get_cookies()
+        
+        if _cookies:
+            cookies = {c["name"]: c["value"] for c in _cookies}
+        else:
+            cookies = {}
+        print(cookies)
+
+        urls = app.url_map.bind("localhost:9090", "/")
+        for _, ep_data in permissions.iterrows():
+            ep = ep_data["endpoint"]
+
+            endpoint_results = {
+                "user": user["username"] if user else None,
+                "endpoint": ep,
+                "methods": endpoints_to_methods[ep],
+                "permissions_login": ep_data["login"],
+                "arguments": None,
+                "url": None,
+                "received_status": None,
+                "test_result": 0,  ## 0 = not applicable, -1 = failure, +1 = success 
+                "test_result_note": None,
+                "test_skipped_reason": None
+            }
+            results.append(endpoint_results)
+            if ep_data["skip"]:
+                print(f"\t skipping endpoint {ep} according to instructions")
+                endpoint_results["test_skipped_reason"] = "marked for skipping in permission sheet"
+                continue
+            print(ep)
+
+            url_args = {}
+            get_args = {}
+            form_args = {} 
+            argtype = ep_data["argtype"]
+            if argtype == "url":
+                url_args = _parse_endpoint_example_args(ep_data["argex"])
+            elif argtype == "get":
+                get_args = _parse_endpoint_example_args(ep_data["argex"])
+            elif argtype == "form":
+                form_args = _parse_endpoint_example_args(ep_data["argex"])
+                form_args["csrf_token"] = csrf_token
+            url = urls.build(ep, url_args, force_external=True)
+            endpoint_results["url"] = url
+            print("\t", ep, "->", url)
+
+            # use requests to see if we get the right status code
+            # (selenium can't do this out of the box, cf https://github.com/seleniumhq/selenium-google-code-issue-archive/issues/141)
+            chosen_method = None
+            num_attempts = 5
+            for attempt in range(num_attempts):
+                try:
+                    methods = endpoints_to_methods[ep]
+                    if "GET" in methods:
+                        chosen_method = "GET"
+                        r = requests.get(url, params=get_args, cookies=cookies)
+                    elif "POST" in methods:
+                        chosen_method = "POST"
+                        if get_args:
+                            raise ValueError("Trying to use GET arguments in POST request!")
+                        r = requests.post(url, data=form_args, cookies=cookies)
+                    else:
+                        raise ValueError("Got endpoint that supports neither GET nor POST, don't know what to do!")
+                    break
+                except ConnectionError:
+                    print(f"\tAttempt {attempt+1}, can't connect to {url}")
+            else: 
+                print(f"\tNo success after {num_attempts} attemps, giving up on {url}")
+                endpoint_results["test_skipped_reason"] = "connection_failure"
+                continue
+
+            should_have_access = _should_have_access(tc, ep_data)
+            received_status_code = r.status_code
+            endpoint_results["received_status"] = received_status_code
+
+            if received_status_code == 200 and not should_have_access:
+                # check if we've been redirected to the login/confirmation page
+                if r.history and r.history[-1].status_code == 302 and (r.url.startswith("http://localhost:9090/auth/login?next=") or r.url.startswith("http://localhost:9090/auth/inactive")):
+                    endpoint_results["test_result"] = 1
+                    endpoint_results["test_result_note"] = "redirected to home page as expected"
+                elif ep_data["admin"] and r.url == "http://localhost:9090/":
+                    # we have been sent back to the home page, let's check if we get the admin-only message
+                    if _selenium_check_admin_warning_displayed(browser, url):
+                        endpoint_results["test_result"] = 1
+                        endpoint_results["test_result_note"] = "should not have access, is appropriately redirected to home page with admin-only warning"
+                    else:
+                        endpoint_results["test_result"] = -1
+                        endpoint_results["test_result_note"] = "should not have access, is redirected to home page but without message"
+                elif r.history and r.history[-1].status_code == 302 and r.url.startswith("http://localhost:9090/admin/"):
+                    # sent back to one of the admin pages?
+                    # check for error code
+                    if _senelium_check_admin_permission_denied_msg(browser, url):
+                        endpoint_results["test_result"] = 1
+                        endpoint_results["test_result_note"] = "sent back to admin page with 'permission denied' message, this is appropriate here"
+                    else:
+                        endpoint_results["test_result"] = 0
+                        endpoint_results["test_result_note"] = "sent to admin page without 'permission denied' message, don't know what's going on"
+
+                else:
+                    endpoint_results["test_result"] = -1
+                    endpoint_results["test_result_note"] = "appears to have access but should not"
+    
+            elif received_status_code == 200 and should_have_access:
+                if r.history and r.history[-1].status_code == 302 and (r.url.startswith("http://localhost:9090/auth/login?next=")  or r.url.startswith("http://localhost:9090/auth/inactive")):
+
+                    # exception: some endpoints *should* redirect to /auth/inactive, with a message
+                    if ep == "auth.resend_confirmation" and r.url.startswith("http://localhost:9090/auth/inactive") and _selenium_check_confirmation_mail_sent_displayed(browser, url):
+                        endpoint_results["test_result"] = 1
+                        endpoint_results["test_result_note"] = "should have access, verified flash contents using selenium"
+                    else:
+                        endpoint_results["test_result"] = -1
+                        endpoint_results["test_result_note"] = "should have access but is unexpectedly redirected to login/inactive page"                    
+                
+                # have we been redirected to the home page
+                elif r.history and r.history[-1].status_code == 302 and r.url == "http://localhost:9090/":
+                    if chosen_method == "GET" and _selenium_check_admin_warning_displayed(browser, url):
+                        endpoint_results["test_result"] = -1
+                        endpoint_results["test_result_note"] = "should have access but unexpectedly rerouted to home page with admin warning"
+                    else:
+                        endpoint_results["test_result"] = 1
+                        endpoint_results["test_result_note"] = "rerouted to home page, no warnings found; I'm assuming this means the endpoint was successfully accessed"
+
+                # sent back to one of the admin pages?
+                elif r.history and r.history[-1].status_code == 302 and r.url.startswith("http://localhost:9090/admin/"):
+                    # check for error code
+                    if _senelium_check_admin_permission_denied_msg(browser, url):
+                        endpoint_results["test_result"] = -1
+                        endpoint_results["test_result_note"] = "sent back to admin page with 'permission denied' message, while we should have access"
+                    else:
+                        endpoint_results["test_result"] = 0
+                        endpoint_results["test_result_note"] = "sent to admin page without 'permission denied' message, don't know what's going on"
+
+                else:
+                    endpoint_results["test_result"] = 1
+                    endpoint_results["test_result_note"] = "should have access and does"
+
+            elif str(received_status_code).startswith("4") and not should_have_access:
+                endpoint_results["test_result"] = 1
+                endpoint_results["test_result_note"] = "should not have access and gets 4xx response"
+            
+            elif str(received_status_code).startswith("4") and should_have_access:
+                endpoint_results["test_result"] = -1
+                endpoint_results["test_result_note"] = "should have access but gets 4xx response"
+
+            else:
+                endpoint_results["test_result"] = 0
+                endpoint_results["test_skipped_reason"] = "can't interpret test outcome"
+
+            # if the test logged us out (for now: auth.logout): log us back in
+            if ep_data["reset_login"] and endpoint_results["test_result"] == 1:
+                if user is not None:
+                    csrf_token = _selenium_test_login(browser, user)
+                else:
+                    csrf_token = _selenium_get_csrf_without_login(browser)
+
+        browser.quit()
+        df_results = (
+            pd.DataFrame(results)
+        )
+        df_results_styled = (
+            df_results
+            .style
+            .applymap(
+            lambda res: (
+                "background-color: green" if res > 0 else 
+                "background-color: yellow" if res == 0 else
+                "background-color: red"
+                ), 
+            subset=["test_result"]
+            )
+        )
+        df_results_styled.to_html("permission_tests.html")
+        df_results.to_csv("permission_tests.csv")
+
+def _selenium_test_login(browser, user):
+    # go to login page 
+    browser.get("http://localhost:9090/auth/login")
+
+    # get the CSRF token (needed to test POST requests)
+    csrf_token = browser.find_element(By.ID, value="csrf_token").get_attribute("value")
+
+    # fill out and submit the login form
+    browser.find_element(By.ID, value="username").send_keys(user["username"])
+    browser.find_element(By.ID, value="password").send_keys(user["password"])
+    browser.find_element(By.ID, value="submit_button").click()
+
+    return csrf_token
+
+def _selenium_get_csrf_without_login(browser):
+    browser.get("http://localhost:9090/auth/login")
+    csrf_token = browser.find_element(By.ID, value="csrf_token").get_attribute("value")
+    return csrf_token
+
+def _selenium_check_admin_warning_displayed(browser, target_url):
+        browser.get(target_url) # redo the request with selenium
+        divs = browser.find_elements(By.CLASS_NAME, value="notification.is-danger")
+        if divs and "The page you requested is admin only." in divs[0].text:
+            return True
+        return False
+
+def _senelium_check_admin_permission_denied_msg(browser, target_url):
+        browser.get(target_url) # redo the request with selenium
+        divs = browser.find_elements(By.CLASS_NAME, value="alert.alert-danger.alert-dismissable")
+        if divs and "Permission denied." in divs[0].text:
+            return True
+        return False
+
+
+def _selenium_check_confirmation_mail_sent_displayed(browser, target_url):
+    browser.get(target_url) # redo the request with selenium
+    divs = browser.find_elements(By.CLASS_NAME, value="notification.is-danger")
+    
+    if divs and "A new confirmation email has been sent." in divs[0].text:
+        return True
+    return False
+
+def _should_have_access(test_case, endpoint_info):
+    if endpoint_info["login"] and not test_case["logged_in"]:
+        return False
+    return True
+
+def _parse_endpoint_example_args(arg_string):
+    args = {}
+    for item in arg_string.split(","):
+        item = item.strip()
+        m = re.match(r"(?P<key>\S+?):(?P<val>\S+)", item)
+        if not m:
+            raise ValueError("Argument examples don't follow the correct format!")
+        args[m.group("key")] = m.group("val")
+    return args

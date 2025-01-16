@@ -10,11 +10,66 @@ from flask import Blueprint, request, render_template, make_response, session, f
 from flask_cors import cross_origin
 from app.forms import LoginForm
 from app import AUTH_TOKEN, OMD_PATH
+from . import VIEW_FUNCTIONS_PERMISSIONS
 
 # Define the blueprint:
 auth = Blueprint('auth', __name__, url_prefix='/auth')
 
+# Login required decorator
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        url = join(OMD_PATH, 'signin/')
+        
+        access_token = request.headers.get('Token') #Get token from request header
+        #print(">> login_required: access_token: OMD_SESSION_ID", access_token)
+        if access_token:
+            #backend_to_backend
+            if access_token == AUTH_TOKEN: #if it equals to system-wide security token, then it is call from OMD backend
+                #print("Backend to backend")
+                if 'access_token' in getfullargspec(f).args:
+                    kwargs['access_token'] = access_token
+                return f(*args, **kwargs)
 
+        #Otherwise, it is frontend calling
+        if not access_token:
+            access_token = request.cookies.get('OMD_SESSION_ID')
+            #print(">> login_required: access_token: OMD_SESSION_ID", access_token)
+        if not access_token: # still no token - relogin is needed
+            session['logged_in'] = False
+            session['token'] = ''
+            return render_template('search/anonymous.html'), 401
+
+        #Token is present and it is user's session token. Check if this token is already stored in session
+	#to avoid excess OMD api calls on every key press
+        if bool(session.get('logged_in')) and  session.get('token') == access_token:
+            if 'access_token' in getfullargspec(f).args:
+                kwargs['access_token'] = access_token
+            return f(*args, **kwargs)
+        #Token is present but we need to check if OMD session is valid
+        data = {'action': 'getUserInfo', 'session_id': access_token}
+        resp = requests.post(url, json=data, timeout=30, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
+        if resp.status_code < 400 and resp.json()['valid']:
+            session['logged_in'] = True
+            session['username'] = resp.json()['username']
+            session['token'] = access_token #save token	in session
+            if 'access_token' in getfullargspec(f).args:
+                kwargs['access_token'] = access_token
+            return f(*args, **kwargs)
+        session['logged_in'] = False 	
+        return render_template('search/anonymous.html'), 401
+    
+    VIEW_FUNCTIONS_PERMISSIONS[get_func_identifier(f)] = {
+        "login": True
+    }
+    return decorated_function
+
+
+def get_func_identifier(func):
+    return func.__module__ + "." + func.__name__
+
+
+# The actual endpoints
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
     # Declare the login form using FlaskForm library
@@ -58,9 +113,10 @@ def login():
             return resp_frontend
     else:
         flash("Hello, unknown user.")
-        return render_template( 'auth/login.html', form=form), 401
+        return render_template( 'auth/login.html', form=form), 200
 
 
+@login_required
 @auth.route('/logout', methods=['GET','POST'])
 def logout():
     access_token = request.cookies.get('OMD_SESSION_ID')
@@ -78,47 +134,3 @@ def logout():
     resp_frontend.set_cookie('OMD_SESSION_ID', '', expires=0, samesite='Lax')
     return resp_frontend
 
-
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        url = join(OMD_PATH, 'signin/')
-        
-        access_token = request.headers.get('Token') #Get token from request header
-        #print(">> login_required: access_token: OMD_SESSION_ID", access_token)
-        if access_token:
-            #backend_to_backend
-            if access_token == AUTH_TOKEN: #if it equals to system-wide security token, then it is call from OMD backend
-                #print("Backend to backend")
-                if 'access_token' in getfullargspec(f).args:
-                    kwargs['access_token'] = access_token
-                return f(*args, **kwargs)
-
-        #Otherwise, it is frontend calling
-        if not access_token:
-            access_token = request.cookies.get('OMD_SESSION_ID')
-            #print(">> login_required: access_token: OMD_SESSION_ID", access_token)
-        if not access_token: # still no token - relogin is needed
-            session['logged_in'] = False
-            session['token'] = ''
-            return render_template('search/anonymous.html'), 401
-
-        #Token is present and it is user's session token. Check if this token is already stored in session
-	#to avoid excess OMD api calls on every key press
-        if bool(session.get('logged_in')) and  session.get('token') == access_token:
-            if 'access_token' in getfullargspec(f).args:
-                kwargs['access_token'] = access_token
-            return f(*args, **kwargs)
-        #Token is present but we need to check if OMD session is valid
-        data = {'action': 'getUserInfo', 'session_id': access_token}
-        resp = requests.post(url, json=data, timeout=30, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
-        if resp.status_code < 400 and resp.json()['valid']:
-            session['logged_in'] = True
-            session['username'] = resp.json()['username']
-            session['token'] = access_token #save token	in session
-            if 'access_token' in getfullargspec(f).args:
-                kwargs['access_token'] = access_token
-            return f(*args, **kwargs)
-        session['logged_in'] = False 	
-        return render_template('search/anonymous.html'), 401
-    return decorated_function
