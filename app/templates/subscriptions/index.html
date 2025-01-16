@@ -23,51 +23,37 @@ SPDX-License-Identifier: AGPL-3.0-only
             </div>
 	  </div>
         </div>     
+  </div><!-- row -->
+  <div class="row">
       <div class="card">
+        <div class="card-header text">
+		<p><b>Discover cool websites hosted on OMD! <a href="{{url_for('subscriptions.show_all_sites')}}">Browse the current list</a></b></p>
+	</div><!-- card header -->
         <div class="card-body input-group">
-          <form method="POST" accept-charset="UTF-8" enctype="multipart/form-data" action="{{url_for('subscriptions.pull_sites_from_gateway')}}">
-              <button class="btn btn-success" type="submit" style="margin: 0px 20px 0px 0px">Pull websites from OnMyDisk network</button>
+          <form method="POST" accept-charset="UTF-8" enctype="multipart/form-data" action="{{url_for('indexer.update_all')}}">
+              <button class="btn btn-success" type="submit">Index all subscribed content</button>
 	  </form>
 	</div><!-- card body -->
     </div><!-- card -->
-  </div><!-- row -->
 
-  <hr>
-  <div class="row p-3">
-	{% with messages = get_flashed_messages() %}
-        {% if messages %}
-            <div class="notification is-danger">
-		    <br><b>{{ messages[0] }}</b>
-            </div>
-        {% endif %}
-        {% endwith %}
-    <div class="card-group">
-      <div class="card">
-          <div class="card-body">
-		  {% for site in sites %}
-			  <div class="card mt-2">
-			    <div class="card-body" style="padding: 20px 0px 20px 0px">
-			      <div class="d-flex justify-content-between"><!-- card header: links -->
-				<div><ion-icon name="globe"></ion-icon> <a href="{{site['url']}}" style="text-decoration: none; font-size: large"><b>{{site['title']}}</b></a></div>
-				<div>
-				    {% if site['subscribed'] %}
-				        <a class="btn btn-link" href="{{url_for('subscriptions.unsubscribe_from_site')}}?sitename={{site['title']}}" data-toggle="tooltip" title="Unsubscribe from this site"><ion-icon name="close-circle-outline"></ion-icon></a>
-				    {% else %}
-				        <a class="btn btn-link" href="{{url_for('subscriptions.subscribe_to_site')}}?sitename={{site['title']}}" data-toggle="tooltip" title="Subscribe to this site"><ion-icon name="cloud-download-outline"></ion-icon></a>  
-				    {% endif %}
-				  <a class="btn btn-link" href="{{url_for('search.index')}}"  data-toggle="tooltip" title="Report this entry"><ion-icon name="flag-outline"></ion-icon></a> 
-				</div>
-			      </div><!-- card heard: links -->
-
-			      <p class="card-text small"><a href="{{site['url']}}" class="card-link">{{site['url']}}</a></p><!-- explicit link-->
-			      <p class="card-text small" style="margin-top:-10px">
-			      <br>{{site['description']}}<!--snippet-->
-			      <hr>
-			    </div><!-- div card-body -->
-			  </div><!-- div card mt-2 -->
-		  {% endfor %}
-          </div>
-          <div class="card-footer clearfix" style="height:38px"></div>
+    <hr>
+    <div class="card">
+      <div class="card-header text"><span style="padding-right:20px"><ion-icon name="home"></ion-icon></span><b>Subscriptions: your websites</b></div>
+        <div class="card-body">
+	  <p>This is a list of websites you are subscribed to on the On My Disk network. You can search their content directly from your local PeARS. If you want to unsubscribe,
+	   simply untick the box and click on 'Update subscriptions'.</p>
+              <form method="POST" accept-charset="UTF-8" enctype="multipart/form-data" action="{{url_for('subscriptions.update_site_subscriptions')}}" autocomplete="off">
+              {{ form.hidden_tag() }}
+              <div class="input-group group mt-4" >
+               {{form.sites}}
+              </div>
+              <button class="btn btn-success" type="submit" style="margin-top: 20px">Update subscriptions</button>
+              {% for message in messages %}
+                <div class="notification is-danger">
+		    <b>{{ message }}</b>
+                </div>
+              {% endfor %}
+	    </form>
       </div>
     </div>
   </div><!-- row -->

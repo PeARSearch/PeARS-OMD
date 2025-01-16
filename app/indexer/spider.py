@@ -10,10 +10,10 @@ import requests
 from datetime import datetime
 from pytz import timezone
 from langdetect import detect
-from app.indexer.htmlparser import extract_txt, extract_html
+from app.indexer.htmlparser import extract_txt, extract_html, extract_links
 from app import LANGS, OMD_PATH, AUTH_TOKEN, FILE_SIZE_LIMIT, IGNORED_EXTENSIONS, GATEWAY_TIMEZONE
-from app.utils_db import uptodate, check_group_is_subscribed
-from app.utils import clean_comma_separated_name, mk_group_name
+from app.utils_db import uptodate, check_group_is_subscribed, create_pod
+from app.utils import clean_comma_separated_name, mk_group_name, get_device_from_url
 
 app_dir_path = dirname(dirname(realpath(__file__)))
 user_app_dir_path = join(app_dir_path,'userdata')
@@ -211,7 +211,9 @@ def get_last_modified(doc):
     last_modified = gt_tz.localize(last_modified)
     return last_modified
 
-def clean_snippets(body_str, description, title):
+def clean_url_and_snippets(url, body_str, description, title):
+    if url.endswith('?direct'):
+        url = url[:-7]
     snippet = ""
     if body_str.startswith("<omd_index>"):
         if description != title:
@@ -222,7 +224,7 @@ def clean_snippets(body_str, description, title):
         description = description or "No description"
     else:
         snippet = ' '.join(body_str.split()[:50])
-    return title, description, snippet, body_str
+    return url, title, description, snippet, body_str
 
 def get_doc_info(doc, urldir):
     url, process = get_doc_url(doc, urldir)
@@ -249,5 +251,29 @@ def get_doc_info(doc, urldir):
     body_title, body_str, language = get_doc_content(url, convertible, content_type)
     if title is None:
         title = body_title
-    title, description, snippet, body_str = clean_snippets(body_str, description, title)
+    url, title, description, snippet, body_str = clean_url_and_snippets(url, body_str, description, title)
     return url, group, islink, title, description, snippet, body_str, language
+
+def process_html_links(url):
+    links = extract_links(url)
+    processed_links = []
+    for link in links:
+        if link not in processed_links:
+            processed_links.append(link)
+            links.extend(extract_links(link))
+            links = list(set(links))
+        if set(links) == set(processed_links):
+            break
+    return links
+
+def index_site(start_link, username):
+    if not url.endswith('?direct'):
+        url = url+'?direct'
+    device = get_device_from_url(start_link)
+    docs, urldir = process_xml(start_link, username)
+    for doc in docs:
+        doc_info = get_doc_info(doc, urldir)
+        if doc_info is None:
+            continue
+        url, owner, islink, title, description, snippet, body_str, language = doc_info
+        pod_path = create_pod(url, owner, language, device)

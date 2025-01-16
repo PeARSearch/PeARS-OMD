@@ -28,3 +28,6 @@ class FoldersForm(FlaskForm):
 
 class GroupForm(FlaskForm):
     groups = MultiCheckboxField(None)
+
+class SiteForm(FlaskForm):
+    sites = MultiCheckboxField(None)
