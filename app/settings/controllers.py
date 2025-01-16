@@ -13,7 +13,7 @@ from os.path import dirname, realpath, join, isdir, exists
 from flask import Blueprint, request, render_template, redirect, session
 from app import db, OMD_PATH, AUTH_TOKEN
 from app.auth.controllers import login_required
-from app.api.models import Urls, Locations
+from app.api.models import Urls, Locations, Sites
 from app.utils import clean_comma_separated_name, init_crawl, mk_group_name
 from app.utils_db import update_locations_in_db, update_groups_in_db
 from app.indexer.spider import process_xml, get_doc_info, get_doc_owner, get_doc_shared_with, get_doc_url, get_doc_content_type
@@ -30,8 +30,10 @@ def index():
     username = session.get('username')
     num_user_files = len(Urls.query.filter(Urls.url.contains(f'/{username}/')).all())
     num_shared_files = len(Urls.query.filter(Urls.url.contains(f'/shared/')).all())
+    num_subscribed_sites = len(Sites.query.filter(Sites.subscribed==True).all())
     tree = return_location_graph()
-    return render_template("settings/index.html", username=username, num_user_files=num_user_files, num_shared_files=num_shared_files, tree=tree)
+    return render_template("settings/index.html", username=username, num_user_files=num_user_files, num_shared_files=num_shared_files, \
+            num_subscribed_sites=num_subscribed_sites, tree=tree)
 
 @settings.route("/toggle-theme")
 def toggle_theme():
