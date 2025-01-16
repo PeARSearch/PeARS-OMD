@@ -12,7 +12,7 @@ from decouple import Config, RepositoryEnv
 from dotenv import load_dotenv
 
 # Import flask and template operators
-from flask import Flask, render_template, request, flash, send_from_directory, abort
+from flask import Flask, render_template, request, flash, abort, send_from_directory
 from flask_admin import Admin, AdminIndexView
 
 # Import SQLAlchemy
@@ -152,45 +152,39 @@ import requests
 
 # Flask and Flask-SQLAlchemy initialization here
 
-class MyAdminIndexView(AdminIndexView):
-    """Class for displaying admin view to OMD admins only."""
-    def is_accessible(self):
-        access_token = request.headers.get('Token')
-        if not access_token: 
-            access_token = request.cookies.get('OMD_SESSION_ID') 
-        if not access_token:
-            return abort(404)
-        url = join(OMD_PATH, 'signin/')
-        data = {'action': 'getUserInfo', 'session_id': access_token}
-        resp = requests.post(url, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
-        if resp.json().get('valid'):
+def can_access_flaskadmin():
+    access_token = request.headers.get('Token')
+    if not access_token:     
+        access_token = request.cookies.get('OMD_SESSION_ID')  
+    if not access_token:
+        return abort(404)
+    url = join(OMD_PATH, 'signin/')
+    data = {'action': 'getUserInfo', 'session_id': access_token}
+    resp = requests.post(url, json=data, timeout=30 if LOCAL_MODE else None, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
+    if resp.json()['valid']:
+        # for local mode
+        if LOCAL_MODE:
+            if resp.status_code < 400:
+                return True # This does the trick rendering the view only if the user is signed in
+        # for non-local mode
+        else: 
             is_admin = resp.json().get('isAdmin')
             if is_admin:
                 return is_admin # This does the trick rendering the view only if the user is admin
             else:
                 return abort(404)
-        else:
-            return abort(404)
+    return abort(404)
 
+
+class MyAdminIndexView(AdminIndexView):
+    """Class for displaying admin view to OMD admins only."""
+    def is_accessible(self):
+        return can_access_flaskadmin()
 
 class MyUserIndexView(AdminIndexView):
     """Class for displaying admin view to signed in users only."""
     def is_accessible(self):
-        access_token = request.headers.get('Token')
-        if not access_token:
-            #print("Request access token 1")
-            access_token = request.cookies.get('OMD_SESSION_ID')  
-            #print(access_token)
-        if not access_token:
-            #print("Request access token 2")
-            return abort(404)
-        url = join(OMD_PATH, 'signin/')
-        data = {'action': 'getUserInfo', 'session_id': access_token}
-        resp = requests.post(url, json=data, timeout=30, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
-        if resp.status_code < 400 and resp.json()['valid']:
-            return True # This does the trick rendering the view only if the user is signed in
-        #print("Abort 404",resp.status_code,resp.json()['valid'])
-        return abort(404)
+        return can_access_flaskadmin()
 
 if LOCAL_MODE:
     admin = Admin(app, name='PeARS DB', template_mode='bootstrap3', index_view=MyUserIndexView())
@@ -205,6 +199,15 @@ class UrlsModelView(ModelView):
     can_edit = False
     page_size = 50
     form_widget_args = {
+        'url': {
+            'readonly': True
+        },
+        'title': {
+            'readonly': True
+        },
+        'pod': {
+            'readonly': True
+        },
         'vector': {
             'readonly': True
         },
@@ -215,6 +218,10 @@ class UrlsModelView(ModelView):
             'readonly': True
         },
     }
+
+    def is_accessible(self):
+        return can_access_flaskadmin()
+
     def delete_model(self, model):
         success = True
         try:
@@ -244,10 +251,22 @@ class PodsModelView(ModelView):
     can_edit = False
     page_size = 50
     form_widget_args = {
-        'DS_vector': {
+        'name': {
             'readonly': True
         },
-        'word_vector': {
+        'language': {
+            'readonly': True
+        },
+        'owner': {
+            'readonly': True
+        },
+        'url': {
+            'readonly': True
+        },
+        'description': {
+            'readonly': True
+        },
+        'DS_vector': {
             'readonly': True
         },
         'date_created': {
@@ -257,6 +276,10 @@ class PodsModelView(ModelView):
             'readonly': True
         },
     }
+
+    def is_accessible(self):
+        return can_access_flaskadmin()
+
     def delete_model(self, model):
         try:
             self.on_model_delete(model)
@@ -304,6 +327,12 @@ admin.add_view(SitesModelView(Sites, db.session))
 #admin.add_view(GroupsModelView(Groups, db.session))
 admin.add_view(PodsModelView(Pods, db.session))
 admin.add_view(UrlsModelView(Urls, db.session))
+
+@app.errorhandler(404)
+def page_not_found(e):
+      # note that we set the 404 status explicitly
+      flash("404. Page not found. Please go back to search page.")
+      return render_template("404.html"), 404
 
 from app.cli.controllers import pears as pears_module
 app.register_blueprint(pears_module)
