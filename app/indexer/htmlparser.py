@@ -3,12 +3,12 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 import logging
-from urllib.parse import urljoin
+from os.path import join
 import requests
 import justext
 from bs4 import BeautifulSoup
 from langdetect import detect
-from app import LANGS, AUTH_TOKEN
+from app import LANGS, AUTH_TOKEN, OMD_PATH
 from app.indexer import detect_open
 from app.api.models import installed_languages
 
@@ -32,39 +32,45 @@ def remove_boilerplates(response, lang):
 def BS_parse(url):
     req = None
     try:
-        req = requests.get(url, allow_redirects=True, timeout=30, headers={'Authorization': 'token:'+AUTH_TOKEN})
+        if url.endswith('?direct'):
+            req = requests.get(url, timeout=10, headers={'Authorization': 'token:'+AUTH_TOKEN})
+        else:
+            req = requests.get(url, timeout=10)
         req.encoding = 'utf-8'
     except Exception:
         print("Request failed when trying to index", url, "...")
         return False, req
     if req.status_code != 200:
         print("Failure on status code",req.status_code)
-        logging.exception(
-            "Warning: " + str(req.url) + ' has a status code of: ' +
-            str(req.status_code) + ' omitted from database.\n')
+        logging.exception("Warning: " + str(req.url) + ' has a status code of: ' + str(req.status_code) + ' omitted from database.\n')
         return False, req
     bs_obj = BeautifulSoup(req.text, "lxml")
+    #print(bs_obj.prettify())
     return bs_obj, req
 
 
 def extract_links(url):
     links = []
+    print("Extracting links from",url)
     try:
-        req = requests.get(url, timeout=10, headers={'Authorization': 'token:'+AUTH_TOKEN})
+        #Calling page directly without authorization, since the site is public
+        req = requests.get(url, timeout=10)
+        print(req.headers)
         if "text/html" not in req.headers["content-type"]:
-            print("Not a HTML document...")
+            print(url, "not a HTML document...")
             return links
     except Exception:
         return links
-    bs_obj, req = BS_parse(url)
+    bs_obj = BeautifulSoup(req.text, "lxml")
     if not bs_obj:
         return links
     hrefs = bs_obj.findAll('a', href=True)
+
+    #Clean base url
+    ref = url.replace(OMD_PATH,'/').replace('?direct','')
     for h in hrefs:
-        if h['href'].startswith('http') and '#' not in h['href']:
-            links.append(h['href'])
-        else:
-            links.append(urljoin(url, h['href']))
+        if h['href'].startswith(ref):
+            links.append(join(OMD_PATH,h['href'][1:]))
     return links
 
 
@@ -80,42 +86,46 @@ def extract_html(url):
     if not bs_obj:
         logging.error(f"\t>> ERROR: extract_html: Failed to get BeautifulSoup object.")
         return title, body_str, snippet, language
-    if hasattr(bs_obj.title, 'string'):
-        if url.startswith('http'):
-            og_title = bs_obj.find("meta", property="og:title")
-            og_description = bs_obj.find("meta", property="og:description")
-            #print(f"OG TITLE {og_title}")
-            #print(f"OG DESC {og_description}")
+    if url.startswith('http'):
+        og_title = bs_obj.find("meta", property="og:title")
+        og_description = bs_obj.find("meta", property="og:description")
+        #print(f"OG TITLE {og_title}")
+        #print(f"OG DESC {og_description}")
 
-            # Process title
-            if not og_title:
+        # Process title
+        if og_title:
+            title = og_title['content']
+        else:
+            if bs_obj.title:
                 title = bs_obj.title.string
-                if title is None:
-                    title = ""
             else:
-                title = og_title['content']
- 
-            # Get body string
-            #body_str = remove_boilerplates(req, LANGS[0]) #Problematic...
-            try:
-                body_str = bs_obj.gettext()
-            except:
-                if og_description:
-                    body_str = og_description['content'][:1000]
-            #print("BODY",body_str)
-            try:
-                language = detect(title + " " + body_str)
-                logging.debug(f"\t>> INFO: Language for {url}: {language}")
-            except Exception:
-                title = ""
-                logging.error(f"\t>> ERROR: extract_html: Couldn't detect page language.")
-                return title, body_str, snippet, language
+                title = url
 
-            # Process snippet
-            if og_description:
-                snippet = og_description['content'][:1000]
-            else:
-                snippet = ' '.join(body_str.split()[:10]) #10 to conform with EU regulations
+        # Get body string
+        try:
+            body_str = bs_obj.gettext()
+        except:
+            print("Could not get body string from beautifulsoup.")
+        
+        if og_description:
+            body_str = og_description['content'][:1000]
+        ps = bs_obj.findAll('p')
+        for p in ps:
+            body_str+=p.text+' '
+        #print("BODY",body_str)
+        try:
+            language = detect(title + " " + body_str)
+            logging.debug(f"\t>> INFO: Language for {url}: {language}")
+        except Exception:
+            title = ""
+            logging.error(f"\t>> ERROR: extract_html: Couldn't detect page language.")
+            return title, body_str, snippet, language
+
+        # Process snippet
+        if og_description:
+            snippet = og_description['content'][:1000]
+        else:
+            snippet = ' '.join(body_str.split()[:10]) #10 to conform with EU regulations
     #print(body_str)
     return title, body_str, snippet, language
 
