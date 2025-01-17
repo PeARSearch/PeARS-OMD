@@ -116,8 +116,8 @@ def login():
         return render_template( 'auth/login.html', form=form), 200
 
 
-@login_required
 @auth.route('/logout', methods=['GET','POST'])
+@login_required
 def logout():
     access_token = request.cookies.get('OMD_SESSION_ID')
     url = join(OMD_PATH, 'signout/')
