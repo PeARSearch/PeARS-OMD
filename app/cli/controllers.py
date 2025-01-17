@@ -11,6 +11,7 @@ from datetime import datetime
 from pathlib import Path
 import joblib
 import requests
+from requests.exceptions import ChunkedEncodingError
 from flask import Blueprint
 import click
 import pandas as pd
@@ -500,14 +501,8 @@ def test_endpoint_permissions(manual=False):
             csrf_token = _selenium_test_login(browser, user)
         else:
             csrf_token = _selenium_get_csrf_without_login(browser)
-        _cookies = browser.get_cookies()
+        cookies = _read_cookies(browser)
         
-        if _cookies:
-            cookies = {c["name"]: c["value"] for c in _cookies}
-        else:
-            cookies = {}
-        print(cookies)
-
         urls = app.url_map.bind("localhost:9090", "/")
         for _, ep_data in permissions.iterrows():
             ep = ep_data["endpoint"]
@@ -566,6 +561,8 @@ def test_endpoint_permissions(manual=False):
                     break
                 except ConnectionError:
                     print(f"\tAttempt {attempt+1}, can't connect to {url}")
+                except ChunkedEncodingError:
+                    print(f"\tAttempt {attempt+1}, response from {url} ended prematurely")
             else: 
                 print(f"\tNo success after {num_attempts} attemps, giving up on {url}")
                 endpoint_results["test_skipped_reason"] = "connection_failure"
@@ -654,6 +651,7 @@ def test_endpoint_permissions(manual=False):
                     csrf_token = _selenium_test_login(browser, user)
                 else:
                     csrf_token = _selenium_get_csrf_without_login(browser)
+                cookies = _read_cookies(browser)
 
         browser.quit()
         df_results = (
@@ -673,6 +671,17 @@ def test_endpoint_permissions(manual=False):
         )
         df_results_styled.to_html("permission_tests.html")
         df_results.to_csv("permission_tests.csv")
+
+def _read_cookies(browser):
+    _cookies = browser.get_cookies()
+    
+    if _cookies:
+        cookies = {c["name"]: c["value"] for c in _cookies}
+    else:
+        cookies = {}
+    print(cookies)
+    return cookies
+
 
 def _selenium_test_login(browser, user):
     # go to login page 
