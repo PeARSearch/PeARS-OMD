@@ -12,7 +12,7 @@ import joblib
 from app import db, models
 from app import OMD_PATH, LANGS, VEC_SIZE, SERVER_HOST, GATEWAY_TIMEZONE
 from app.utils import hash_username
-from app.api.models import Urls, Pods
+from app.api.models import Urls, Pods, Locations, Groups, Sites
 from app.api.models import installed_languages
 from app.indexer.posix import load_posix, dump_posix
 import numpy as np
@@ -44,12 +44,23 @@ def uptodate(url, date, group):
         return up_to_date
     utc_tz = timezone('UTC')
     db_datetime = utc_tz.localize(u.date_modified).astimezone(timezone(GATEWAY_TIMEZONE))
-    print(f"DB DATE: {db_datetime}, LAST MODIFIED: {date}")
+    #print(f"DB DATE: {db_datetime}, LAST MODIFIED: {date}")
     group_hash = hash_username(group)
     db_group_hash = u.pod.split('/')[0]
     if db_datetime >= date and group_hash == db_group_hash:
         up_to_date = True
     return up_to_date
+
+def check_group_is_subscribed(group):
+    """ Check whether the given group is marked as
+    subscribed in the database.
+    """
+    g = db.session.query(Groups).filter_by(name=group).first()
+    if g and g.subscribed:
+        return True
+    return False
+
+
 
 ##############
 # CREATIONS
@@ -106,8 +117,89 @@ def create_url_in_db(target_url, title, snippet, description, idv, pod_path):
     u.pod = pod_path
     db.session.add(u)
     db.session.commit()
-    print(f"Adding URL {target_url}, {idv}, {pod_path}")
+    #print(f"Adding URL {target_url}, {idv}, {pod_path}")
     return u.id
+
+
+def subscribe_location(location):
+    l = db.session.query(Locations).filter_by(name=location).first()
+    if l:
+        l.subscribed = True
+        db.session.add(l)
+        db.session.commit()
+        print(f"Subscribing Location {location}")
+
+
+def update_locations_in_db(locations, device=False):
+    #Add locations not in the database
+    for location in locations:
+        l = db.session.query(Locations).filter_by(name=location).first()
+        if l:
+            continue
+        l = Locations(name=location)
+        l.device = device
+        l.subscribed = False
+        db.session.add(l)
+        db.session.commit()
+        print(f"Adding Location {location}")
+
+    #Delete locations that do not exist anymore
+    locations_in_db = db.session.query(Locations).all()
+    for l in locations_in_db:
+        if l.name not in locations:
+            #Device case vs non-device case
+            if (device and l.device) or (not device and not l.device):
+                print(f">> {l.name} does not exist anymore.")
+                db.session.delete(l)
+                db.session.commit()
+
+
+def update_groups_in_db(groups):
+    #Add groups not in the database
+    for group in groups:
+        g = db.session.query(Groups).filter_by(name=group).first()
+        if g:
+            continue
+        g = Groups(name=group)
+        g.subscribed = True
+        g.identifier = hash_username(group)
+        db.session.add(g)
+        db.session.commit()
+        print(f"Adding Group {group}")
+
+    #Delete groups that do not exist anymore
+    groups_in_db = db.session.query(Groups).all()
+    for g in groups_in_db:
+        if g.name not in groups:
+            print(f">> {g.name} does not exist anymore.")
+            db.session.delete(g)
+            db.session.commit()
+
+
+def update_sites_in_db(sites):
+    #Add sites not in the database
+    site_urls = [s['url'] for s in sites]
+    for site in sites:
+        s = db.session.query(Sites).filter_by(url=site['url']).first()
+        if not s:
+            s = Sites(url=site['url'])
+            s.subscribed = False
+        s.name = site['name']
+        s.title = site['title']
+        s.owner = site['owner']
+        s.description = site['description']
+        db.session.add(s)
+        db.session.commit()
+        print(f"Adding Site {site}")
+
+    #Delete sites that do not exist anymore
+    sites_in_db = db.session.query(Sites).all()
+    for s in sites_in_db:
+        if s.url not in site_urls:
+            print(f">> {s.url} does not exist anymore.")
+            db.session.delete(s)
+            db.session.commit()
+
 
 ##############
 # ADDITIONS
@@ -208,6 +300,14 @@ def update_db_idvs_after_npz_delete(idv, pod):
     db.session.execute(update_stmt)
 
 
+def delete_urls_recursively(url):
+    """Delete url and all chidren
+    """
+    urls_in_db = db.session.query(Urls).filter(Urls.url.startswith(url)).all()
+    for u in urls_in_db:
+        delete_url(u.url)
+
+
 def delete_url(url):
     """ Delete url with some url on some pod.
     """
@@ -229,6 +329,11 @@ def delete_url(url):
     db.session.delete(u)
     db.session.commit()
     u = db.session.query(Urls).filter_by(url=url).first()
+    
+    #If pod empty, delete
+    if len(db.session.query(Urls).filter_by(pod=pod).all()) == 0:
+        delete_pod(pod)
+    
     return "Deleted document with url "+url
 
 def delete_pod(pod_path):
@@ -250,13 +355,49 @@ def delete_pod(pod_path):
         db.session.commit()
     return "Deleted pod with path "+pod_path
 
-def delete_old_urls(urls, urldir):
+def delete_old_pods():
+    pods = db.session.query(Pods).all()
+    for pod in pods:
+        urls_in_db = db.session.query(Urls).filter_by(pod=pod.url).all()
+        if len(urls_in_db) == 0:
+            print(f"Removing empty pod {pod.url}")
+            delete_pod(pod.url)
+    
+
+def delete_old_urls(start_urls, urls):
     """Compare set of urls in a folder with
     current state of database and delete urls
     that do not exist anymore.
     """
-    urls_in_db = db.session.query(Urls).filter(Urls.url.startswith(urldir)).all()
+    print(">> DELETING OLD URLS")
+    print("START_URLS",start_urls)
+    print("URLS",urls)
+    urls_in_db = db.session.query(Urls).all()
     for u in urls_in_db:
-        if u.url not in urls:
+        if any(u.url.startswith(s) for s in start_urls) and u.url not in urls:
             print(f">> {u.url} does not exist anymore.")
             delete_url(u.url)
+
+def delete_unsubscribed():
+    """Delete urls which now belong to an
+    unsubscribed location.
+    """
+    print(">> DELETING UNSUBSCRIBED URLS")
+    urls = db.session.query(Urls).all()
+    if urls is not None:
+        for u in urls:
+            #This is going to be slow for many urls...
+            group_id = u.pod.split('/')[0]
+            group = db.session.query(Groups).filter_by(identifier=group_id).first()
+            if group and not group.subscribed:
+                print(f">> {u.url} has been unsubscribed.")
+                delete_url(u.url)
+            url = u.url
+            if url[-1] == '/':
+                loc = url
+            else:
+                loc = '/'.join(url.split('/')[:-1])+'/'
+            l = db.session.query(Locations).filter_by(name=loc).first()
+            if l and not l.subscribed:
+                print(f">> {u.url} has been unsubscribed.")
+                delete_url(u.url)

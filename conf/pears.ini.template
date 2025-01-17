@@ -10,6 +10,9 @@ LOCAL_MODE=false
 
 # Secrets
 AUTH_TOKEN=<your token, identical to the one in the OMD client>
+SESSION_COOKIE_NAME=<some session name>
+CSRF_SESSION_KEY=<some long string>
+SECRET_KEY=<some long string>
 
 # Languages
 LANGUAGES=en,fr,ru,sl

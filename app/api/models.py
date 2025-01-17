@@ -111,3 +111,82 @@ class Pods(Base):
 
     def as_dict(self):
        return {c.name: str(getattr(self, c.name)) for c in self.__table__.columns}
+
+
+class Locations(Base):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(1000))
+    device = db.Column(db.Boolean)
+    subscribed = db.Column(db.Boolean)
+
+    def __init__(self, name=None, device=False, subscribed=False):
+        self.name = name
+        self.device = device
+        self.subscribed = subscribed
+
+    @property
+    def serialize(self):
+            return {
+                'name': self.name,
+                'device': self.device,
+                'subscribed': self.subscribed
+                }
+
+    def as_dict(self):
+       return {c.name: str(getattr(self, c.name)) for c in self.__table__.columns}
+
+
+class Groups(Base):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(1000))
+    identifier = db.Column(db.String(64))
+    subscribed = db.Column(db.Boolean)
+
+    def __init__(self, name=None, identifier=None, subscribed=False):
+        self.name = name
+        self.identifier = identifier
+        self.subscribed = subscribed
+
+    @property
+    def serialize(self):
+            return {
+                'name': self.name,
+                'identifier': self.identifier,
+                'subscribed': self.subscribed
+                }
+
+    def as_dict(self):
+       return {c.name: str(getattr(self, c.name)) for c in self.__table__.columns}
+
+
+class Sites(Base):
+    id = db.Column(db.Integer, primary_key=True)
+    url = db.Column(db.String(1000))
+    name = db.Column(db.String(200))
+    title = db.Column(db.String(1000))
+    description = db.Column(db.String(1000))
+    owner = db.Column(db.String(100))
+    subscribed = db.Column(db.Boolean)
+
+    def __init__(self, url=None, name=None, title=None, description=None, owner=False, subscribed=False):
+        self.url = url
+        self.name = name
+        self.title = title
+        self.description = description
+        self.owner = owner
+        self.subscribed = subscribed
+
+    @property
+    def serialize(self):
+            return {
+                'url': self.url,
+                'name': self.name,
+                'title': self.title,
+                'description': self.description,
+                'owner': self.owner,
+                'subscribed': self.subscribed
+                }
+
+    def as_dict(self):
+       return {c.name: str(getattr(self, c.name)) for c in self.__table__.columns}
+

@@ -10,9 +10,10 @@ import requests
 from datetime import datetime
 from pytz import timezone
 from langdetect import detect
-from app.indexer.htmlparser import extract_txt, extract_html
+from app.indexer.htmlparser import extract_txt, extract_html, extract_links
 from app import LANGS, OMD_PATH, AUTH_TOKEN, FILE_SIZE_LIMIT, IGNORED_EXTENSIONS, GATEWAY_TIMEZONE
-from app.utils_db import uptodate
+from app.utils_db import uptodate, check_group_is_subscribed, create_pod
+from app.utils import clean_comma_separated_name, mk_group_name, get_device_from_url
 
 app_dir_path = dirname(dirname(realpath(__file__)))
 user_app_dir_path = join(app_dir_path,'userdata')
@@ -21,10 +22,9 @@ def get_xml(xml_url):
     xml = None
     try:
         #xml = requests.get(xml_url, timeout=120, \
-        #    headers={'Authorization': AUTH_TOKEN}, stream =True).raw
-        #print(xml.read().decode())
-        xml = requests.get(xml_url, timeout=120, \
-            headers={'Authorization': AUTH_TOKEN}, stream =True).raw
+        #        headers={'Authorization': 'token:'+AUTH_TOKEN}, stream =True).raw
+        #print(xml.read())
+        xml = requests.get(xml_url, timeout=120, headers={'Authorization': 'token:'+AUTH_TOKEN}, stream =True).raw
     except RuntimeError as error:
         logging.error(">> ERROR: SPIDER: GET XML: Request failed. Moving on.")
         logging.error(error)
@@ -75,12 +75,11 @@ def get_doc_url(doc, urldir):
 
     url = ""
     process = True
-
     if doc['@url'][0] == '/':
         url = doc['@url'][1:]
     else:
         url = doc['@url']
-    if url.startswith('shared/'):
+    if url.startswith('shared/') or url.startswith('sites/'):
         url = join(OMD_PATH, url)
     else:
         url = join(urldir, url)
@@ -168,11 +167,12 @@ def get_doc_content(url, convertible, content_type):
     elif is_folder_description:
         _, body_str, _, language = extract_txt(url + "?description")
     elif content_type in ['text/plain', 'text/x-tex']:
-        if url.startswith(join(OMD_PATH,'shared')):
+        if url.startswith(join(OMD_PATH,'shared')) or url.startswith(join(OMD_PATH,'sites')):
             title, body_str, _, language = extract_txt(url + "?direct")
         else:
             title, body_str, _, language = extract_txt(url)
     elif content_type in ['text/html']:
+        print(">> Calling extract_html")
         title, body_str, _, language = extract_html(url)
 
     # Hack. Revert to main language if language is not installed
@@ -194,6 +194,7 @@ def get_doc_shared_with(doc):
     group = ""
     try:
         group = doc['@shared_with']
+        group = clean_comma_separated_name(group)
     except:
         logging.info(">> SPIDER: GET DOC SHARED_WITH: No group found.")
     return group
@@ -210,7 +211,9 @@ def get_last_modified(doc):
     last_modified = gt_tz.localize(last_modified)
     return last_modified
 
-def clean_snippets(body_str, description, title):
+def clean_url_and_snippets(url, body_str, description, title):
+    if url.endswith('?direct'):
+        url = url[:-7]
     snippet = ""
     if body_str.startswith("<omd_index>"):
         if description != title:
@@ -221,21 +224,26 @@ def clean_snippets(body_str, description, title):
         description = description or "No description"
     else:
         snippet = ' '.join(body_str.split()[:50])
-    return title, description, snippet, body_str
+    return url, title, description, snippet, body_str
 
 def get_doc_info(doc, urldir):
     url, process = get_doc_url(doc, urldir)
-    print(f"\n>> {url}")
     if not process:
         return None
     last_modified = get_last_modified(doc)
-    group = get_doc_owner(doc)
+    owner = get_doc_owner(doc)
     shared_with = get_doc_shared_with(doc)
-    if len(shared_with) > 0:
-        group = f"{group},{shared_with}"
-    if last_modified is not None and uptodate(url, last_modified, group):
+    group = mk_group_name(owner, shared_with)
+    #print(f"\n>> {url} {group}")
+
+    #If document belong to a group that is currently unsubscribed, ignore
+    if not check_group_is_subscribed(group) and not url.startswith(join(OMD_PATH,"sites")):
+        print(f">> {url} is in an unsubscribed group. Returning none.")
         return None
-    print(f"{url} is not up to date. Reindexing.")
+    if last_modified is not None and uptodate(url, last_modified, group):
+        print(f">> {url} is up to date. Returning none.")
+        return None
+    #print(f"{url} is not up to date. Reindexing.")
     convertible = assess_convertibility(doc)
     content_type, islink = get_doc_content_type(doc, url)
     title = get_doc_title(doc, url)
@@ -243,5 +251,29 @@ def get_doc_info(doc, urldir):
     body_title, body_str, language = get_doc_content(url, convertible, content_type)
     if title is None:
         title = body_title
-    title, description, snippet, body_str = clean_snippets(body_str, description, title)
+    url, title, description, snippet, body_str = clean_url_and_snippets(url, body_str, description, title)
     return url, group, islink, title, description, snippet, body_str, language
+
+def process_html_links(url):
+    links = extract_links(url)
+    processed_links = []
+    for link in links:
+        if link not in processed_links:
+            processed_links.append(link)
+            links.extend(extract_links(link))
+            links = list(set(links))
+        if set(links) == set(processed_links):
+            break
+    return links
+
+def index_site(start_link, username):
+    if not url.endswith('?direct'):
+        url = url+'?direct'
+    device = get_device_from_url(start_link)
+    docs, urldir = process_xml(start_link, username)
+    for doc in docs:
+        doc_info = get_doc_info(doc, urldir)
+        if doc_info is None:
+            continue
+        url, owner, islink, title, description, snippet, body_str, language = doc_info
+        pod_path = create_pod(url, owner, language, device)

@@ -1,18 +1,18 @@
 <!--
-SPDX-FileCopyrightText: 2022 PeARS Project, <community@pearsproject.org>, 
+SPDX-FileCopyrightText: 2024 PeARS Project, <community@pearsproject.org>, 
 
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <!DOCTYPE html>
-<html lang="en"  class="h-100">
+<html lang="en" class="h-100 {{ 'dark' if session.get('theme') == 'dark' }}">
 
 <head>
     {% block head %}
     <meta http-equiv="content-type" content="text/html; charset=UTF-8">
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png')}}">
     <meta charset="utf-8">
-    <title>PeARS : {% block title %}Search{% endblock %}</title>
+    <title>PeARS : {% block title %}Search your On My Disk files{% endblock %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="{{ url_for('static', filename='css/bootstrap/bootstrap.min.css')}}" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/styles.css')}}" rel="stylesheet">
@@ -48,7 +48,9 @@ SPDX-License-Identifier: AGPL-3.0-only
                 </li>
                 <li class="nav-item"><a class="nav-link" href="{{url_for('search.index')}}">Search</a></li>
 		{% if session['logged_in'] %}
-                <li class="nav-item"><a class="nav-link" href="{{url_for('indexer.index')}}">Indexer</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{url_for('indexer.index')}}">Private</a></li>
+		<li class="nav-item"><a class="nav-link" href="{{url_for('subscriptions.index')}}">Websites</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{url_for('settings.index')}}">Profile</a></li>
 		{% endif %}
 		{% if session['admin'] %}
                 <li class="nav-item"><a class="nav-link" href="{{url_for('admin.index')}}">DB admin</a></li>          
@@ -69,9 +71,15 @@ SPDX-License-Identifier: AGPL-3.0-only
                         <small class="d-lg-none">GitHub</small>
                     </a>
                 </li>
-                <li class="nav-item py-1 col-12 col-lg-auto">
+		<li class="nav-item py-1 col-12 col-lg-auto">
                     <div class="vr d-none d-lg-flex h-100 mx-lg-2 text-white"></div>
-                    <hr class="d-lg-none text-white-50">
+                <li class="nav-item"><a class="nav-link" href="{{url_for('settings.toggle_theme', current_page=request.path)}}">
+                                {% if session.get('theme') == 'dark' %}
+                                <ion-icon name="sunny-outline"></ion-icon>
+                                {% else %}
+                                <ion-icon name="moon-outline"></ion-icon>
+                                {% endif %}
+                        </a>
                 </li>
 		{% if not session['logged_in'] %}
                 <li class="nav-item"><a class="nav-link active" href="{{url_for('auth.login')}}">Login</a></li>
@@ -97,6 +105,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 <script src="{{ url_for('static', filename='js/bootstrap/bootstrap.min.js')}}"></script>
 <script src="{{ url_for('static', filename='js/color.js')}}"></script>
+<script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+<script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
 </body>
 
 </html>

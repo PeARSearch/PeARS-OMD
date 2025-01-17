@@ -41,6 +41,7 @@ def login():
             is_admin = user_info.json()['isAdmin']
             session_token = user_info.json()['session_id']
             # Fill in session info
+            session.permanent = False
             session['logged_in'] = True
             session['username'] = username
             session['token'] = session_token
@@ -49,10 +50,10 @@ def login():
             resp_frontend = make_response(render_template( 'search/user.html', welcome="Welcome "+username))
             # Transfer the cookies from backend response to frontend response
             for name, value in user_info.cookies.items():
-                print("SETTING COOKIE:",name, value)
+                #print("SETTING COOKIE:",name, value)
                 resp_frontend.set_cookie(name, value, samesite='Lax')
             # Cookies returned from OMD may not work in some modern browsers, so make our own OMD_SESSION_ID cookie
-            print("SESSION TOKEN JUST BEFORE SETTING COOKIE", session_token, type(session_token))
+            #print("SESSION TOKEN JUST BEFORE SETTING COOKIE", session_token, type(session_token))
             resp_frontend.set_cookie('OMD_SESSION_ID', session_token, samesite='Lax')
             return resp_frontend
     else:

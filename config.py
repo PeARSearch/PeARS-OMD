@@ -17,22 +17,7 @@ Path(join(BASE_DIR,'app/db')).mkdir(parents=True, exist_ok=True)
 SQLALCHEMY_DATABASE_URI = 'sqlite:///' + join(BASE_DIR, 'app/db/app.db')
 DATABASE_CONNECT_OPTIONS = {}
 
-# Application threads. A common general assumption is
-# using 2 per available processor cores - to handle
-# incoming requests using one and performing background
-# operations using the other.
 THREADS_PER_PAGE = 2
-
-# Enable protection agains *Cross-site Request Forgery (CSRF)*
-CSRF_ENABLED = True
-
-# Use a secure, unique and absolutely secret key for
-# signing the data. Enter your own here.
-CSRF_SESSION_KEY = "sdfkjhlskghisalughlsaighlishgoiegjosgjolgjoeijg"
-
-# Secret key for signing cookies. Enter your own here.
-SECRET_KEY = "xcvbcmvbjxbvjxvhjcxbvmxhvmxbjihkmsghxhcufxmskufhkms"
-
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 # To ensure utf-8 is handled properly by jsonify

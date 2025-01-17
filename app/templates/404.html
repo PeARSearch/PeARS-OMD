@@ -1,24 +1,29 @@
 <!--
-SPDX-FileCopyrightText: 2022 PeARS Project, <community@pearsproject.org>, 
+SPDX-FileCopyrightText: 2025 PeARS Project, <community@pearsproject.org>, 
 
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 {% extends "base/base.html" %}
+{% from "base/_formhelpers.html" import render_search_field %}
 {% block body %}
   <div class="row">
     <div class="col-lg-2"></div>
     <div class="col-lg-8 text-center mt-5">
-      <a href="{{ url_for('search.index')}}"><img width=350px; src="{{ url_for('static', filename='pears-omd-logo.png')}}"></a>
-	{% with messages = get_flashed_messages() %}
+        {% if session.get('theme') == 'dark' %}
+          <a href="{{ url_for('search.index')}}"><img width=350px; src="{{url_for('serve_logos', path='logo-dark.png')}}"></a>
+        {% else %}
+          <a href="{{ url_for('search.index')}}"><img width=350px; src="{{url_for('serve_logos', path='logo.png')}}"></a>
+        {% endif %}
+        {% with messages = get_flashed_messages() %}
         {% if messages %}
             <div class="notification is-danger">
-		    <br><b>{{ messages[0] }}</b>
+                    <br><b>{{ messages[0] }}</b>
             </div>
         {% endif %}
         {% endwith %}
     </div>
-  </div> 
+  </div>
   {% if internal_message %}
   <div class="row">
     <div class="col-lg-8 mt-5 mx-auto">
@@ -28,7 +33,6 @@ SPDX-License-Identifier: AGPL-3.0-only
       </div>
     </div>
   </div>
-      {% endif %}
-
+  {% endif %}
 {% endblock %}
 

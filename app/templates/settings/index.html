@@ -1,0 +1,59 @@
+<!--
+SPDX-FileCopyrightText: 2024 PeARS Project, <community@pearsproject.org>, 
+
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
+{% extends "base/base.html" %}
+{% from "base/_formhelpers.html" import render_field %}
+
+{% block body %}
+<div class="container">
+  <div class="row p-3">
+        <div id="sidebar-wrapper">
+          <div class="alert alert-info alert-dismissible">
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <div class="d-flex justify-content-start">
+	      {% if session.get('theme') == 'dark' %}
+	        <img src="{{ url_for('static', filename='happy_pears_dark.png')}}" width="40px" style="margin-right:10px">
+	      {% else %}
+	        <img src="{{ url_for('static', filename='happy_pears.png')}}" width="40px" style="margin-right:10px">
+              {% endif %}
+	      <p><b>Your profile:</b> This page gives a summary of the content indexed on your local PeARS. Below, you will also find an overview of the On My Disk folders 
+	      you have permission to index.</p>
+            </div>
+	  </div>
+        </div>     
+      <div class="card">
+          <div class="card-body">
+	  <p><b>Your username:</b> {{username}}</p>
+		  <table class="table table-striped">
+		  <tbody>
+		    <tr>
+		      <th scope="row">User pages</th>
+		      <td>{{num_user_files}}</td>
+		    </tr>
+		    <tr>
+		      <th scope="row">Public pages</th>
+		      <td>{{num_shared_files}}</td>
+		    </tr>
+		    <tr>
+		      <th scope="row">Subscribed websites</th>
+		      <td>{{num_subscribed_sites}}</td>
+		    </tr>
+		  </tbody>
+		  </table>
+          </div>
+      </div>
+      <hr>
+      <div class="card text-white bg-info mb-3">
+	      <div class="card-header"><b>Your On My Disk folder overview</b></div>
+          <div class="card-body">
+		  {% for line in tree %}
+		  {{line}}<br>
+		  {% endfor %}
+          </div>
+      </div>
+  </div><!-- row -->
+</div>
+{% endblock %}

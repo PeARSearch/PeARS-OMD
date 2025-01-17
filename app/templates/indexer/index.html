@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: 2022 PeARS Project, <community@pearsproject.org>, 
+SPDX-FileCopyrightText: 2024 PeARS Project, <community@pearsproject.org>, 
 
 SPDX-License-Identifier: AGPL-3.0-only
 -->
@@ -9,24 +9,95 @@ SPDX-License-Identifier: AGPL-3.0-only
 {% block body %}
   <div class="row">
     <div class="col">
-      <div class="alert alert-success text-center">
-        <b>{{num_entries}} pages recorded</b>
-      </div>
+        <div id="sidebar-wrapper">
+          <div class="alert alert-info alert-dismissible">
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <div class="d-flex justify-content-start">
+	      {% if session.get('theme') == 'dark' %}
+	        <img src="{{ url_for('static', filename='happy_pears_dark.png')}}" width="40px" style="margin-right:10px">
+	      {% else %}
+	        <img src="{{ url_for('static', filename='happy_pears.png')}}" width="40px" style="margin-right:10px">
+              {% endif %}
+	      <p><b>Your private indexer:</b> This page is dedicated to indexing your private files, as well a the files you share with trusted users. Pull current information from all your devices to sync your search engine with your remote devices. Change the content you want search to be subscribed to. Update your search index.</p>
+            </div>
+	  </div>
+        </div>     
     </div>
   </div>
 
-  <div class="row p-3">
+  <div class="row">
     <div class="col-md-12">
       <div class="card">
-        <div class="card-header text-center"><b>Crawl</b></div>
-        <div class="card-body">
-          <p> Crawl from  a start URL on your network. For now, the crawl will ignore any file that is not in either .txt or .html format.</p>
+        <div class="card-header text">
+		<div class="d-flex justify-content-start"><b>New to OnMyDisk? Recently added some devices or friends to your OnMyDisk network?</b>
+		  <form method="POST" accept-charset="UTF-8" enctype="multipart/form-data" action="{{url_for('indexer.pull_from_gateway')}}">
+		      <button class="btn btn-primary btn-update" type="submit" id='preloadingbutton'>Update your database</button>
+		      <button class="btn btn-primary btn-update" type="button" id='loadingbutton' style='display:none'>
+		        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+		      </button>
+		  </form>
+		</div>
+	</div><!-- card header -->
+        <div class="card-body input-group">
+          <form method="POST" accept-charset="UTF-8" enctype="multipart/form-data" action="{{url_for('indexer.update_all')}}">
+              <button class="btn btn-success" type="submit">Index all subscribed content</button>
+	  </form>
+	</div><!-- card body -->
+    </div><!-- card -->
 
-          <form method="POST" accept-charset="UTF-8" enctype="multipart/form-data"
-            action="{{url_for('indexer.from_crawl')}}" autocomplete="off">
-            <div class="input-group p-2">
-              {{ form.hidden_tag() }}
-              <p>{{ render_field(form.url) }}</p>
+    <hr>
+    <div class="card">
+      <div class="card-header text"><span style="padding-right:20px"><ion-icon name="home"></ion-icon></span><b>Subscriptions: your locations</b></div>
+        <div class="card-body">
+		<p>The locations listed here are the physical devices you have registered on the OnMyDisk network, as well as any folder shared with you by other users. 
+		To control which locations should be searchable on your local search engine, simply tick or untick the corresponding boxes, and click on 'Update subscriptions'.</p>
+          <form method="POST" accept-charset="UTF-8" enctype="multipart/form-data" action="{{url_for('indexer.update_folder_subscriptions')}}" autocomplete="off">
+            {{ form2.hidden_tag() }}
+            <div class="input-group group mt-4" >
+	      {{form2.folders}}
+            </div>
+            <button class="btn btn-success" type="submit" style="margin-top: 20px">Update subscriptions</button>
+            {% for message in messages %}
+            <div class="notification is-danger">
+		    <b>{{ message }}</b>
+            </div>
+           {% endfor %}
+	  </form>
+      </div>
+    </div>
+
+    <hr>
+    <div class="card">
+      <div class="card-header text"><span style="padding-right:20px"><ion-icon name="people"></ion-icon></span><b>Subscriptions: your groups</b></div>
+        <div class="card-body">
+		<p>This is a list of all the groups you belong to. By default, your PeARS install will index all groups for the locations you are subscribed to. If you 
+		wish to exclude a group from indexing, simply untick it here, and click on 'Update subscriptions'.</p>
+          <form method="POST" accept-charset="UTF-8" enctype="multipart/form-data" action="{{url_for('indexer.update_group_subscriptions')}}" autocomplete="off">
+            {{ form3.hidden_tag() }}
+            <div class="input-group group mt-4" >
+	      {{form3.groups}}
+            </div>
+            <button class="btn btn-success" type="submit" style="margin-top: 20px">Update subscriptions</button>
+            {% for message in messages %}
+            <div class="notification is-danger">
+		    <b>{{ message }}</b>
+            </div>
+           {% endfor %}
+	  </form>
+      </div>
+    </div>
+      
+    <hr>
+    <div class="card">
+      <div class="card-header text"><span style="padding-right:20px"><ion-icon name="folder-open"></ion-icon></span><b>Crawl a specific On My Disk folder</b></div>
+        <div class="card-body">
+		<p>If you wish to manually index one of your On My Disk folders, you can do it here. The folders you have access to are listed in your <a href={{url_for('settings.index')}}>
+			'Profile'</a> page.</p>
+          <form method="POST" accept-charset="UTF-8" enctype="multipart/form-data" action="{{url_for('indexer.from_crawl')}}" autocomplete="off">
+            {{ form1.hidden_tag() }}
+            <div class="input-group group mt-4" >
+              {{ render_field(form1.url) }}
+              <button class="btn btn-success" type="submit" id='searchbutton'><ion-icon name="cloud-download-outline"></ion-icon></button>
             </div>
            {% for message in messages %}
             <div class="notification is-danger">
@@ -34,13 +105,11 @@ SPDX-License-Identifier: AGPL-3.0-only
             </div>
            {% endfor %}
         </div>
-        <div class="card-footer clearfix">
-          <span class="input-group-btn float-end">
-            <input id="submit_button" type="submit" class="btn btn-success" value="Start crawl">
-          </span>
-        </div>
         </form>
-      </div>
-    </div>
-  </div>
+	</div><!-- card body -->
+    </div><!-- card -->
+
+ </div>
+</div>
+<script src="{{ url_for('static', filename='js/loading.js')}}"></script>
 {% endblock %}
