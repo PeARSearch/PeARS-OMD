@@ -395,7 +395,7 @@ def list_endpoints():
         if permissions is None:
             # admin + DB management endpoints
             # TODO: find a less hacky way to get the permissions for these
-            if ep.split(".")[0] in ["admin", "sites", "pods", "urls"]:
+            if ep.split(".")[0] in ["admin", "sites", "pods", "urls", "locations", "groups"]: # NB: locations and groups are not used at the moment, but might be (re-)added (e.g. for testing purposes) in the future
                 permissions = {"login": True}
             else:
                 # TODO: is this always true??
