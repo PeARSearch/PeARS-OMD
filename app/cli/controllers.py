@@ -380,9 +380,14 @@ def showindexfile(username, indexfile):
 #####################
 
 @pears.cli.command('list_endpoint_permissions')
-@click.argument("export_mode")
-def list_endpoints(export_mode=None):
-    
+def list_endpoints():
+    """
+    This command makes a CSV list of all of the endpoints in the entire flask application,
+    and reads from the @login_required decorators which ones require being logged in.
+    The output can be manually annotated to account for endpoints that are missing 
+    @login_required or mistakenly have it. The final list can then be read by the 
+    test_endpoint_permissions command, which checks for any authentication errors. 
+    """
     assert export_mode in ["csv", "json"]
 
     endpoint_permissions = {}
@@ -399,17 +404,49 @@ def list_endpoints(export_mode=None):
                 permissions = {"login": False}
         endpoint_permissions[ep] = permissions
 
-    if export_mode == "csv":
-        rows = []
-        for ep, permissions in endpoint_permissions.items():
-            row_dict = {"endpoint": ep}
-            row_dict.update(permissions)
-            rows.append(row_dict)
-        pd.DataFrame(rows).to_csv("endpoint_permissions.csv")
+    rows = []
+    for ep, permissions in endpoint_permissions.items():
+        row_dict = {"endpoint": ep}
+        row_dict.update(permissions)
+        rows.append(row_dict)
+    pd.DataFrame(rows).to_csv("endpoint_permissions.csv")
 
-    elif export_mode == "json":
-        with open("endpoint_permissions.json", "w") as f:
-            json.dump(endpoint_permissions, f, indent=4)
+
+@pears.cli.command('update_manual_permission_sheet')
+@click.argument("old_annotated_sheet")
+def update_manual_permission_sheet(old_annotated_sheet):
+    """
+    Litle helper command that adds extra rows to a manually annotated version of the 
+    endpoint permissions sheet created by list_endpoint_permissions if any new endpoints 
+    have been added after completing the annotation. 
+    """
+    # set the index to endpoint so we can easily look up rows
+    old_annotated_df = pd.read_csv(old_annotated_sheet, index_col=0).set_index("endpoint")
+    new_unannotated_df = pd.read_csv("endpoint_permissions.csv", index_col=0).set_index("endpoint")
+    columns = old_annotated_df.columns
+    assert all(c in columns for c in new_unannotated_df.columns), "Found unknown columns in endpoint_permissions.csv, please update the new sheet manually"
+    old_endpoints = set(old_annotated_df.index)
+    new_endpoints = set(new_unannotated_df.index).difference(old_endpoints)
+    if not new_endpoints:
+        print("No new endpoints found!")
+        return
+    
+    new_rows = []
+    for ep in new_endpoints:
+        new_entry = {"endpoint": ep}
+        new_entry.update({c: "[[NEW!]]" for c in columns})
+        new_entry.update(new_unannotated_df.loc[ep])
+        new_rows.append(new_entry)
+    new_rows_df = pd.DataFrame(new_rows)
+    new_annotated_df = pd.concat([
+        old_annotated_df.reset_index(names=["endpoint"]), # make "endpoint" a normal column so we can concatenate correctly 
+        new_rows_df
+    ])
+    (
+        new_annotated_df
+        .reset_index(drop=True) # redo the index so we have continuous numbering
+        .to_csv("endpoint_permission__annotated_new.csv")
+    )
 
 
 @pears.cli.command('test_endpoint_permissions')
