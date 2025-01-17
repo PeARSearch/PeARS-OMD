@@ -7,12 +7,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 # PeARS Lite - OMD integration
 
 
-## What and why
+## Executive summary
 
 **What:** *PeARS-OMD* is a version of PeARS used in the context of the project *On My Disk: search integration*. A description of the project can be found [on this page](https://www.ngisearch.eu/view/Events/FirstTenSearchersAnnounced). We are grateful to the Next Generation Internet programme of the European Commission for the financial support given to this project (see credits at the bottom of this README).
 
-**Why:** This PeARS version is tailored for use with the [On My Disk](https://onmydisk.com/) private cloud solution. It includes features for indexing and search over a user's decentralised filesystem.
+This PeARS version is tailored for use with the [On My Disk](https://onmydisk.com/) private cloud solution. It includes features for indexing and search over a user's decentralised filesystem. It also provides search over the websites decentrally hosted on the On My Disk network.
 
+You can only use PeARS-OMD if you have an On My Disk account. You can create an account at: https://onmydisk.net/signup. Next, you will need to install a client so that you can add local folders to On My Disk. Download a client appropriate for your system here: https://onmydisk.com/downloads.html and follow the installation instructions. Once your client is installed, add some folders from your local drive -- these are now accessible from anywhere in the world using the On My Disk web client, and, importantly, they are now ready to be indexed using PeARS.
 
 
 
@@ -20,13 +21,22 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 PeARS-OMD is meant to be run privately on a local machine. The next steps explain how to run the system on a local port and connect it to an On My Disk account.
 
-##### 1. Clone this repo on your machine:
+#### Prerequisites
+
+We will assume that you have an On My Disk client installed on your machine and accessible at *localhost*. Please see the On My Disk set up instructions if you do not have the client yet.
+
+You will have to set up the client for use with PeARS, by navigating to your settings and to the device tab. Please tick 'Use local PeARS server' and enter a string of your choice as authentification token.
+
+![Screenshot of the On My Disk client, showing where to set up the PeARS Authentification token](https://github.com/user-attachments/assets/76cfcff7-15c0-4068-8938-cae779dc608b)
+
+
+#### 1. Clone this repo on your machine:
 
 ```
     git clone https://github.com/PeARSearch/PeARS-OMD.git
 ```
 
-##### 2. **Optional step** Setup a virtualenv in your directory.
+#### 2. **Optional step** Setup a virtualenv in your directory.
 
 If you haven't yet set up virtualenv on your machine, please install it via pip:
 
@@ -47,26 +57,35 @@ Then run:
     virtualenv env && source env/bin/activate
 
 
-##### 3. Install the build dependencies:
+#### 3. Install the build dependencies:
 
 From the PeARS-lite directory, run:
 
     pip install -r requirements.txt
 
 
-##### 4. Set your authentification token
+#### 4. Set up authentification
 
-The PeARS authentification token is set in the *conf/pears.ini* file. Just replace *&lt;your auth token&gt;* with the string of your choice.
+Copy the *conf/pears.ini.template* file to your own *conf/pears.ini*. This file will contain your secret tokens for authentification and security.
 
+    cd conf
+    cp pears.ini.template pears.ini
 
-##### 5. Choose your languages
+You should change the following lines:
+
+    # Secrets
+    AUTH_TOKEN=<your token, identical to the one in the OMD client>
+    SESSION_COOKIE_NAME=<some session name>
+    CSRF_SESSION_KEY=<some long string>
+    SECRET_KEY=<some long string>
+
+The last three lines can be set to any long string of your choice. The first line, AUTH_TOKEN, should be set to the string that you chose in your On My Disk client, under 'Use local PeARS server'.
+
+#### 5. Choose your languages
 
 The list of available languages is also set in *conf/pears.ini*. Currently, the languages that are available out-of-the-box are English, French, Russian, and Slovenian. If you would like all of these language to be available, enter "en,fr,ru,sl" as the value. Please note that the order of the language matters for certain things: it plays a role in the ordering of search results, and the first language in the list is used as a fallback if `langdetect` can't recognize a document's language as one of the installed languages.  
 
-##### 6. Run your pear!
-
-
-You can only use PeARS-OMD if you have an On My Disk account. You can create an account at: https://onmydisk.net/signup. Next, you will need to install a client so that you can add local folders to On My Disk. Download a client appropriate for your system here: https://onmydisk.com/downloads.html and follow the installation instructions. Once your client is installed, add some folders from your local drive -- these are now accessible from anywhere in the world using the On My Disk web client, and, importantly, they are now ready to be indexed using PeARS.  
+#### 6. Run your pear!
 
 To start PeARS, run:
 
@@ -77,23 +96,48 @@ python3 run.py
 You should now see the login page of PeARS at http://localhost:9090/; use your On My Disk credentials to sign in.
 
 
-##### 7. Indexing & searching
+#### 7. Indexing & searching
 
-Once logged in, you can go to the "/indexer" page. The page will show you the number of pages that have already been indexed and prompt you to enter the URL that points to a folder in On My Disk that you want to index:
+Your PeARS is set up to index your private files, as well as the public websites hosted on the On My Disk network. These two functions can be accessed under the tabs 'private' and 'websites' respectively.
 
-![Screenshot of the indexing page](screenshot_indexing.png)
+##### Private indexing
 
-On My Disk URLs are structured as https://onmydisk.net/USER/DEVICE/path/to/folder/. For example: https://onmydisk.net/janedoe/jane-does-laptop/sample-documents/. Be sure to include the final slash. Click "start crawl" to recursively index the folder. Once indexing is complete, you can search these files.
+The first thing you will want to do on your private indexer page is retrieve your account information from the On My Disk gateway. To do this, simply click on 'Update your database'. It will populate the page with your personal information.
 
+![Private indexing page on the PeARS client, showing the 'update your database' button.](https://github.com/user-attachments/assets/526e4900-4854-49b6-bc97-de5cf1c2ed3f)
 
-You can do searches either through API calls (see below) or in the graphical user interface. Results will look like this:
+Under 'Subscriptions: locations', you will find the physical devices you have registered on the OnMyDisk network, as well as any folder shared with you by other users. By default, each location is unticked, meaning that PeARS will not index it. If you want to index a specific location, you can do so by ticking the relevant checkbox and pressing the button 'Update subscriptions'. Next time you run your indexer, that location will be included in the indexing.
+
+Under 'Subscriptions: groups', you will find a list of all the groups you belong to. By default, your PeARS install will index all groups for the locations you are subscribed to. If you wish to exclude a group from indexing, simply untick it here, and click on 'Update subscriptions'.
+
+Once you have selected the locations and groups you wish to index /not index, you can click on 'index all subscribed content'. Your PeARS will retrieve your documents from all relevant physical locations and build a searchable index for them.
+
+##### Website indexing
+
+On My Disk is not just a private cloud service, but also a private website hosting service. People hosting their website on the On My Disk network can have their public content directly searchable from local PeARS nodes. In order to know which websites are available on the network, head over to the Websites tab and click on 'Browse the current list':
+
+![Website tab of the PeARS client, showing the 'Browse the current list' link.](https://github.com/user-attachments/assets/156f320f-21e5-4f57-a656-bfbcc82e9929)
+
+If you don't see any websites, click on 'Pull new websites from the On My Disk network'. You should be presented with the current list of all sites on the network:
+
+![On My Disk website list](https://github.com/user-attachments/assets/3616e26c-5be9-4485-8ab2-8cb93aa103ed)
+
+To make a site searchable on your local PeARS client, simply click on the little cloud icon. This will add the site to your subscribed content. The list of sites you are subscribed to is visible from the 'Websites' tab. Whenever you want to unsubscribe from a site, you can untick the relevant checkbox and click on 'Update subscriptions'.
+
+![Website tab of the PeARS client, showing the list of currently subscribed websites.](https://github.com/user-attachments/assets/d672b5ef-02e6-434e-85af-06c5a95c5632)
+
+As for private indexing, clicking on 'index all subscribed content' will trigger indexing for all your locations, including subscribed websites.
+
+#### 8. Searching!
+
+Once indexing is complete, you can search. Results will look like this:
 
 ![Screenshot of the search results page](screenshot_search.png)
 
 The system will search both your files' metadata as well as their full text, if applicable: the contents from plain text files will be indexed directly; the contents of certain supported file types (`pdf``, `odt`, `docx`, `xlsx`, and `pptx`) will be automatically converted and made searchable.
 
 
-##### 8. Cleaning your environment
+#### 9. Cleaning your environment
 Whenever you want to come back to a clean install, manually delete your database and pods:
 
 ```
@@ -101,160 +145,6 @@ rm -f app/db/app.db
 rm -fr app/pods/*
 ```
 
-
-## API Usage
-
-To provide a toy example, the installation contains sample documents in the testdocs folder, organised in folders as follows:
-
-```
-http://localhost:9090/testdocs/
-    |_index.html
-    |_tester/
-        |_index.html
-        |_localhost.localdomain
-            |_index.html
-            |_Downloads
-                |_index.html
-                |_sample2.txt
-                |_sample3.txt
-                |_sample4.txt
-            |_Music
-                |_index.html
-            |_Pictures
-                |_index.html
-            |_Videos
-                |_index.html
-    |_shared/
-        |_index.html
-        |_shared_sample2.txt
-        |_shared_sample3.txt
-        |_shared_sample4.txt
-```
-			
-
-NB: on the OMD server, the index.html files are created on-the-fly at runtime.
- 
-
-To recursively crawl from base url:
-
-```
-curl localhost:9090/indexer/from_crawl?url=http://localhost:9090/testdocs/tester/index.html
-curl localhost:9090/indexer/from_crawl?url=http://localhost:9090/testdocs/shared/index.html
-```
-
-The commands above will index the files of user *tester*, as well as public shares. A user should be able to search their own files, as well as public shares. An anonymous user should only be able to search public files. There are two different checkpoints for search as a logged in user and an anonymous user, as the following example searches demonstrate.
-
-
-### Searching in anonymous mode
-
-You can either search directly from the PeARS interface, or use cURL:
-
-```
-curl localhost:9090/anonymous?q=theory+of+nothing
-```
-
-The search function returns json objects containing all information about the selected URLs in the database in JSON format. For instance, searching for the phrase 'theory of nothing' returns the following document:
-
-```
-{
-  "http://localhost:9090/testdocs/shared/shared_sample3.txt": {
-    "cc": "False", 
-    "date_created": "2023-11-06 09:59:18", 
-    "date_modified": "2023-11-06 09:59:18", 
-    "description": "A theater play.", 
-    "id": "10", 
-    "pod": "home", 
-    "snippet": "The Theory of Nothing, a play about science and existentialism.  ", 
-    "title": "Theory of Nothing", 
-    "url": "http://localhost:9090/testdocs/shared/shared_sample3.txt", 
-    "vector": "10"
-  }
-}
-
-```
-
-### Searching as a logged in user
-
-This is easier to test from the PeARS interface. Make sure you are logged in (username: tester, password: pwd). You should now note that searching for 'theory' returns not only the shared document that we obtained in anonymous mode, but also another document stored under user *tester*:
-
-```
-{
-  "http://localhost:9090/testdocs/shared/shared_sample3.txt": {
-    "cc": "False", 
-    "date_created": "2023-11-06 09:59:18", 
-    "date_modified": "2023-11-06 09:59:18", 
-    "description": "A theater play.", 
-    "id": "10", 
-    "pod": "home", 
-    "snippet": "The Theory of Nothing, a play about science and existentialism.  ", 
-    "title": "Theory of Nothing", 
-    "url": "http://localhost:9090/testdocs/shared/shared_sample3.txt", 
-    "vector": "10"
-  }, 
-  "http://localhost:9090/testdocs/tester/localhost.localdomain/Downloads/sample3.txt": {
-    "cc": "False", 
-    "date_created": "2023-11-06 09:59:10", 
-    "date_modified": "2023-11-06 09:59:10", 
-    "description": "The 347th draft of my theory of everything.", 
-    "id": "7", 
-    "pod": "home", 
-    "snippet": "This is a theory of everything. It may not work as intended, but then theories of everything never do.  ", 
-    "title": "Theory of Everything", 
-    "url": "http://localhost:9090/testdocs/tester/localhost.localdomain/Downloads/sample3.txt", 
-    "vector": "7"
-  }
-}
-```
-
-
-### Moving and deleting files
-
-When logged in, it is possible to move and delete files. Moving a file involves the *api/urls/move* endpoint, and should be given the arguments *src* and *target*, referring to the source and destination paths of the file to be moved.
-
-
-```
-curl http://localhost:9090/api/urls/move?src=http://localhost:9090/testdocs/tester/localhost.localdomain/Downloads/sample3.txt\&target=http://localhost:9090/testdocs/shared/shared_sample5.txt
-```
-
-Deleting a file uses the *api/urls/delete* endpoint and takes a *path* argument referring to the path of the file to be deleted.
-
-```
-curl http://localhost:9090/api/urls/delete?path=http://localhost:9090/testdocs/tester/localhost.localdomain/Downloads/sample4.txt
-```
-
-
-## Adding your own data
-
-To try PeARS-OMD with your own test data, you will have to set up a new user in the testdocs folder. The following illustrates this process with a toy example, to be run from the base directory.
-
-First, we will assume that we have a folder somewhere on our computer, containing .txt files. For the sake of illustration, we will reuse the *testdocs/tester/localhost.localdomain/Downloads/* directory in this example, but you can use your own.
-
-Second, we will create a new user with a *Documents* directory, where we will copy the .txt files from our chosen folder. There is a script in the root of the repo to do exactly this. You can feed it a new username and the path to the folder with your .txt documents. This script also sets up the directory structure required to match the OMD server. So for instance, let us create a new user called *myuser*, and copy some sample files to their space, using the content of our previous *Downloads* directory:
-
-```
-python3 mkuser.py myuser app/testdocs/tester/localhost.localdomain/Downloads/
-```
-
-The result of this call is a new *app/testdocs/myuser/* directory, with some .txt files in the *localhost.localdomain/Documents/* folder of that user.
-
-Once we have done this, we can index the files of this new user: 
-
-```
-curl localhost:9090/indexer/from_crawl?url=http://localhost:9090/testdocs/myuser/index.html
-```
-
-And finally we can search as before:
-
-```
-curl localhost:9090?q=grandma
-```
-
-NB: again, if you would like to start from a clean install, do not forget to manually delete the existing index:
-
-```
-rm -f app/db/app.db
-rm -fr app/pods/*npz
-```
 
 ## Credits
 
