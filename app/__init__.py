@@ -308,19 +308,25 @@ class LocationsModelView(ModelView):
     column_searchable_list = ['name']
     can_edit = False
     page_size = 50
+    def is_accessible(self):
+        return can_access_flaskadmin()
+
 
 class GroupsModelView(ModelView):
     list_template = 'admin/pears_list.html'
     column_searchable_list = ['name','identifier']
     can_edit = False
     page_size = 50
+    def is_accessible(self):
+        return can_access_flaskadmin()
 
 class SitesModelView(ModelView):
     list_template = 'admin/pears_list.html'
     column_searchable_list = ['title','owner','url','description']
     can_edit = False
     page_size = 50
-
+    def is_accessible(self):
+        return can_access_flaskadmin()
 
 admin.add_view(SitesModelView(Sites, db.session))
 #admin.add_view(LocationsModelView(Locations, db.session))
