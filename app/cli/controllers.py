@@ -388,8 +388,6 @@ def list_endpoints():
     @login_required or mistakenly have it. The final list can then be read by the 
     test_endpoint_permissions command, which checks for any authentication errors. 
     """
-    assert export_mode in ["csv", "json"]
-
     endpoint_permissions = {}
     for ep, func in app.view_functions.items():
         func_id = get_func_identifier(func)
