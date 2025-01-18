@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: AGPL-3.0-only
 
+import re
 import logging
 from os.path import join
 import requests
@@ -55,7 +56,6 @@ def extract_links(url):
     try:
         #Calling page directly without authorization, since the site is public
         req = requests.get(url, timeout=10)
-        print(req.headers)
         if "text/html" not in req.headers["content-type"]:
             print(url, "not a HTML document...")
             return links
@@ -80,7 +80,7 @@ def extract_html(url):
     title = ""
     body_str = ""
     snippet = ""
-    language = LANGS[0]
+    language = LANGS[0] #Hack
     error = None
     bs_obj, req = BS_parse(url)
     if not bs_obj:
@@ -89,44 +89,41 @@ def extract_html(url):
     if url.startswith('http'):
         og_title = bs_obj.find("meta", property="og:title")
         og_description = bs_obj.find("meta", property="og:description")
-        #print(f"OG TITLE {og_title}")
-        #print(f"OG DESC {og_description}")
+        print(f"OG TITLE {og_title}")
+        print(f"OG DESC {og_description}")
 
         # Process title
         if og_title:
             title = og_title['content']
         else:
-            if bs_obj.title:
-                title = bs_obj.title.string
-            else:
-                title = url
+            h1s = bs_obj.findAll('h1')
+            if len(h1s) > 0:
+                title = h1s[0]
 
-        # Get body string
-        try:
-            body_str = bs_obj.gettext()
-        except:
-            print("Could not get body string from beautifulsoup.")
-        
         if og_description:
-            body_str = og_description['content'][:1000]
-        ps = bs_obj.findAll('p')
+            body_str = ' '.join(og_description['content'].split()[:100])
+        ps = bs_obj.findAll(['h1','h2','h3','h4','p','span'])
         for p in ps:
-            body_str+=p.text+' '
+            text = re.sub(r'{{[^}]*}}','',p.text.strip())
+            text = text.strip().replace('\n',' ')
+            if text not in ['',':']:
+                print("<text>",text,"</text>")
+                body_str+=text+' '
         #print("BODY",body_str)
         try:
             language = detect(title + " " + body_str)
             logging.debug(f"\t>> INFO: Language for {url}: {language}")
         except Exception:
-            title = ""
+            # Note, language will be assumed to be LANGS[0]
             logging.error(f"\t>> ERROR: extract_html: Couldn't detect page language.")
-            return title, body_str, snippet, language
+
 
         # Process snippet
         if og_description:
-            snippet = og_description['content'][:1000]
+            snippet = ' '.join(og_description['content'].split()[:100])
         else:
             snippet = ' '.join(body_str.split()[:10]) #10 to conform with EU regulations
-    #print(body_str)
+    print(title, body_str[:100])
     return title, body_str, snippet, language
 
 
@@ -150,5 +147,5 @@ def extract_txt(url):
     except Exception:
         logging.error(f">> ERROR: INDEXER: HTMLPARSER: extract_txt: couldn't detect page language for {url}.")
 
-    snippet = body_str[:200].replace(',', '-')
+    snippet = ' '.join(body_str.split()[:50]).replace(',', '-')
     return title, body_str, snippet, language
