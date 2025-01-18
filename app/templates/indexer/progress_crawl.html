@@ -9,9 +9,9 @@ SPDX-License-Identifier: AGPL-3.0-only
         <div  class="row">
             <div class="col-md-6">
             <div  style="border: 1px solid #ccc; border-radius:10px; padding:10px; height:230px">
-		    <p><b>Crawl for user {{username}}</b></p>
-            <p>Your crawl is in progress. The PeARS spider is crawling the links referenced from your folder and indexing them. The progress bar on your right
-            will show you how many page have been indexed so far.</p>
+		    <p><b>Update crawl for user {{username}}</b></p>
+            <p>Your update is in progress. The PeARS spider is crawling the links referenced from your folder(s) and indexing them / deleting them, 
+	    to match your latest indexing preferences. </p>
 	    <p id="link" style="font-weight:bold"></p>
 	    {% with messages = get_flashed_messages() %}
             {% if messages %}
