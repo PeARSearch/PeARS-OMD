@@ -53,9 +53,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<div><ion-icon name="globe"></ion-icon> <a href="{{site['url']}}" style="text-decoration: none; font-size: large"><b>{{site['title']}}</b></a></div>
 				<div>
 				    {% if site['subscribed'] %}
-				        <a class="btn btn-link" href="{{url_for('subscriptions.unsubscribe_from_site')}}?sitename={{site['title']}}" data-toggle="tooltip" title="Unsubscribe from this site"><ion-icon name="close-circle-outline"></ion-icon></a>
+				        <a class="btn btn-link" href="{{url_for('subscriptions.unsubscribe_from_site')}}?sitename={{site['name']}}" data-toggle="tooltip" title="Unsubscribe from this site"><ion-icon name="close-circle-outline"></ion-icon></a>
 				    {% else %}
-				        <a class="btn btn-link" href="{{url_for('subscriptions.subscribe_to_site')}}?sitename={{site['title']}}" data-toggle="tooltip" title="Subscribe to this site"><ion-icon name="cloud-download-outline"></ion-icon></a>  
+				        <a class="btn btn-link" href="{{url_for('subscriptions.subscribe_to_site')}}?sitename={{site['name']}}" data-toggle="tooltip" title="Subscribe to this site"><ion-icon name="cloud-download-outline"></ion-icon></a>  
 				    {% endif %}
 				  <a class="btn btn-link" href="{{url_for('search.index')}}"  data-toggle="tooltip" title="Report this entry"><ion-icon name="flag-outline"></ion-icon></a> 
 				</div>
