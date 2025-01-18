@@ -249,8 +249,12 @@ def get_doc_info(doc, urldir):
     title = get_doc_title(doc, url)
     description = get_doc_description(doc, title)
     body_title, body_str, language = get_doc_content(url, convertible, content_type)
-    if title is None:
+
+    #Body title for a site is the open graph title, which we assume is the best title option
+    if url.startswith(join(OMD_PATH,'sites')) and body_title != "":
         title = body_title
+    if title is None:
+        title = ' '.join(body_str.split()[:7])
     url, title, description, snippet, body_str = clean_url_and_snippets(url, body_str, description, title)
     return url, group, islink, title, description, snippet, body_str, language
 
@@ -266,14 +270,3 @@ def process_html_links(url):
             break
     return links
 
-def index_site(start_link, username):
-    if not url.endswith('?direct'):
-        url = url+'?direct'
-    device = get_device_from_url(start_link)
-    docs, urldir = process_xml(start_link, username)
-    for doc in docs:
-        doc_info = get_doc_info(doc, urldir)
-        if doc_info is None:
-            continue
-        url, owner, islink, title, description, snippet, body_str, language = doc_info
-        pod_path = create_pod(url, owner, language, device)
