@@ -72,7 +72,7 @@ def pull_from_gateway():
     return redirect(url_for('indexer.index'))
 
 
-@indexer.route("/update_all/", methods=["POST"])
+@indexer.route("/update_all/", methods=["GET","POST"])
 @login_required
 def update_all():
     username = session['username']
@@ -97,7 +97,8 @@ def update_folder_subscriptions():
                     l.subscribed = True
             db.session.add(l)
             db.session.commit()
-    return redirect(url_for('indexer.index'))
+    #return redirect(url_for('indexer.index'))
+    return redirect(url_for('indexer.update_all'))
 
 
 @indexer.route("/update_group_subscriptions/", methods=["POST"])
@@ -114,7 +115,8 @@ def update_group_subscriptions():
                 g.subscribed = False
             db.session.add(g)
             db.session.commit()
-    return redirect(url_for('indexer.index'))
+    #return redirect(url_for('indexer.index'))
+    return redirect(url_for('indexer.update_all'))
 
 
 @indexer.route("/from_crawl", methods=["GET","POST"])
