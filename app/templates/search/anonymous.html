@@ -5,20 +5,24 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 {% extends "base/base.html" %}
+{% from "base/_formhelpers.html" import render_search_field %}
 {% block body %}
   <div class="row">
     <div class="col-lg-2"></div>
     <div class="col-lg-8 text-center mt-5">
         {% if session.get('theme') == 'dark' %}
-          <a href="{{ url_for('search.anonymous')}}"><img width=350px; src="{{url_for('serve_logos', path='logo-dark.png')}}"></a>
+          <a href="{{ url_for('search.anonymous')}}"><img width=250px; src="{{url_for('serve_logos', path='logo-dark.png')}}"></a>
         {% else %}
-          <a href="{{ url_for('search.anonymous')}}"><img width=350px; src="{{url_for('serve_logos', path='logo.png')}}"></a>
+          <a href="{{ url_for('search.anonymous')}}"><img width=250px; src="{{url_for('serve_logos', path='logo.png')}}"></a>
         {% endif %}
-      <form  action="{{url_for('search.anonymous')}}">
+        <form method="POST" action="{{url_for('search.anonymous')}}" enctype="multipart/form-data" id='searchform'>
+        {{ searchform.hidden_tag() }}
         <div class="input-group group mt-4" >
-          <input class="form-control" title="Enter your Search Query." placeholder="Enter your Search Query" type="search" name='q' required>
-          <input class="form-control" title="Is this the GUI calling?" type="hidden" name='gui' value='true' required>
-          <button class="btn btn-lg btn-success" type="submit">Search</button>
+          {{ render_search_field(searchform.query, placeholder) }}
+          <button class="btn btn-lg btn-success" type="submit" id='preloadingbutton'><ion-icon name="search-outline"></ion-icon></button>
+          <button class="btn btn-lg btn-success" type="button" id='loadingbutton' style='display:none'>
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          </button>
         </div>
       </form>
       <br>Hey there! You don't seem to be logged in. Please <a href="{{ url_for('auth.login') }}">sign in</a>.
