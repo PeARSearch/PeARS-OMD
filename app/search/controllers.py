@@ -30,10 +30,12 @@ pod_dir = join(dir_path,'app','pods')
 @search.route('/index', methods=['GET','POST'])
 def index():
     searchform = SearchForm()
+    placeholder = app.config['SEARCH_PLACEHOLDER']
+    searchform.query(render_kw={"placeholder": placeholder})
     access_token = request.cookies.get('OMD_SESSION_ID')
     if not access_token:
-        return render_template('search/anonymous.html', searchform=searchform)
-    return render_template('search/user.html', searchform=searchform)
+        return render_template('search/anonymous.html', searchform=searchform, placeholder=placeholder)
+    return render_template('search/user.html', searchform=searchform, placeholder=placeholder)
 
 
 @search.route('/user', methods=['POST','GET'])
@@ -50,7 +52,9 @@ def user():
         gui = request.args.get('gui')
     searchform = SearchForm()
     if not query:
-        return render_template("search/user.html", searchform=searchform), 200
+        placeholder = app.config['SEARCH_PLACEHOLDER']
+        searchform.query(render_kw={"placeholder": placeholder})
+        return render_template("search/user.html", searchform=searchform, placeholder=placeholder), 200
     results = run_user_search(query)
     if len(results) == 0:
         results = None
@@ -75,7 +79,9 @@ def anonymous():
         gui = request.args.get('gui')
     searchform = SearchForm()
     if not query:
-        return render_template("search/anonymous.html", searchform=searchform), 200
+        placeholder = app.config['SEARCH_PLACEHOLDER']
+        searchform.query(render_kw={"placeholder": placeholder})
+        return render_template("search/anonymous.html", searchform=searchform, placeholder=placeholder), 200
     results = run_anonymous_search(query)
     if len(results) == 0:
         results = None
@@ -112,7 +118,8 @@ def run_user_search(query):
 
 
 def run_anonymous_search(query):
-    url = join(OMD_PATH, 'shared')
+    url_shared = join(OMD_PATH, 'shared')
+    url_sites = join(OMD_PATH, 'sites')
     results = {}
     scores = []
     query, lang = get_language(query.lower())
@@ -121,7 +128,7 @@ def run_anonymous_search(query):
     else:
         languages = [lang]
     for lang in languages:
-        r, s = run_search(query+' -'+lang, url_filter=[url])
+        r, s = run_search(query+' -'+lang, url_filter=[url_shared, url_sites])
         results.update(r)
         scores.extend(s)
     results = order_results(results, scores)
