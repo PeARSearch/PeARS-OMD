@@ -25,18 +25,26 @@ SPDX-License-Identifier: AGPL-3.0-only
           </button>
         </div>
       </form>
-      <br><a href="{{ url_for('auth.logout') }}">Log out</a>.
+	{% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="notification is-danger">
+		    <br><b>{{ messages[0] }}</b>
+            </div>
+        {% endif %}
+        {% endwith %}
     </div>
   </div> 
   {% if welcome %}
   <div class="row">
-    <div class="col-lg-10 text-center mt-5 mx-auto">
+    <div class="col-lg-8 text-center mt-5 mx-auto">
       <div class="alert alert-info alert-dismissible">
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         {{welcome}}
       </div>
     </div>
   </div>
-      {% endif %}
+ {% endif %}
+</div>
+</div> 
 
 {% endblock %}

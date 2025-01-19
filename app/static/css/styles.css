@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022 PeARS Project, <community@pearsproject.org>, 
+ * SPDX-FileCopyrightText: 2025 PeARS Project, <community@pearsproject.org>, 
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
@@ -14,15 +14,15 @@
     --text-color: black;
  } 
 
+
 :root.dark {
-    --primary-color: #d66933;
+    --primary-color: orange;
     --secondary-color: #2d3250;
     --background-color: #2d3250;
-    --link-color: #d66933;
+    --link-color: orange;
     --hover-color: #f6b17a;
     --text-color: #fbf2f2;
  }
-
 
 body {
 	color: var(--text-color);
@@ -40,9 +40,9 @@ h2, h3 {
   color: var(--text-color);
 }
 
-.walkthrough a {
-  color: black;
- }
+th, td {
+	color: var(--text-color);
+}
 
 ion-icon {
   font-size: 20px;

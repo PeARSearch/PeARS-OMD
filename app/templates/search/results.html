@@ -48,7 +48,7 @@ SPDX-License-Identifier: AGPL-3.0-only
       <div class="col-md-10">
         {% if results == None %}
           <p><b>No results found.</b><br> The reason for this could be that you have not indexed the relevant folders / websites on your PeARS client. 
-	  To index, head over to the indexers <a href="{{url_for('indexer.index')}}">here</a> or <a href="{{url_for('subscriptions.index')}}">here</a>.</p>
+	  Or you may not be logged in.</p>
         {% else %}
           <h3>Search results:</h3>
           {% for result in results %}

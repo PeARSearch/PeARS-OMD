@@ -26,3 +26,6 @@ GATEWAY_TIMEZONE='Europe/Berlin'
 
 # Carbon-tracking
 CARBON_TRACKING=false
+
+# Personalization
+SEARCH_PLACEHOLDER="Search any of your indexed files or the websites hosted on the On My Disk network."
