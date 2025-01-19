@@ -8,7 +8,7 @@ from functools import wraps
 import requests
 from flask import Blueprint, request, render_template, make_response, session, flash
 from flask_cors import cross_origin
-from app.forms import LoginForm
+from app.forms import LoginForm, SearchForm
 from app import AUTH_TOKEN, OMD_PATH
 
 # Define the blueprint:
@@ -46,7 +46,8 @@ def login():
         session['token'] = session_token
         session['admin'] = is_admin
         # Create a new response object
-        resp_frontend = make_response(render_template( 'search/user.html', welcome="Welcome "+username))
+        searchform = SearchForm()
+        resp_frontend = make_response(render_template( 'search/user.html', welcome="Welcome "+username, searchform=searchform))
         # Transfer the cookies from backend response to frontend response
         for name, value in user_info.cookies.items():
             #print("SETTING COOKIE:",name, value)
@@ -75,7 +76,8 @@ def logout():
     session.clear()
     print(">> AUTH: user logged out. Clearing session and OMD_SESSION_ID cookie.")
     print(f">> SESSION: {session}")
-    resp_frontend = make_response(render_template( 'search/anonymous.html'))
+    searchform = SearchForm()
+    resp_frontend = make_response(render_template( 'search/anonymous.html', searchform=searchform))
     resp_frontend.set_cookie('OMD_SESSION_ID', '', expires=0, samesite='Lax')
     return resp_frontend
 
@@ -105,7 +107,8 @@ def login_required(f):
             session.clear()
             print(">> AUTH: no token found. Clearing session and OMD_SESSION_ID cookie.")
             print(f">> SESSION: {session}")
-            resp_frontend = make_response(render_template( 'search/anonymous.html'), 401)
+            searchform = SearchForm()
+            resp_frontend = make_response(render_template( 'search/anonymous.html', searchform=searchform), 401)
             resp_frontend.set_cookie('OMD_SESSION_ID', '', expires=0, samesite='Lax')
             return resp_frontend
 
@@ -130,7 +133,8 @@ def login_required(f):
         session.clear()
         print(">> AUTH DECORATOR: OMD session is not valid. Clearing session and OMD_SESSION_ID cookie.")
         print(f">> SESSION: {session}")
-        resp_frontend = make_response(render_template( 'search/anonymous.html'), 401)
+        searchform = SearchForm()
+        resp_frontend = make_response(render_template( 'search/anonymous.html', searchform=searchform), 401)
         resp_frontend.set_cookie('OMD_SESSION_ID', '', expires=0, samesite='Lax')
         return resp_frontend
     return decorated_function
