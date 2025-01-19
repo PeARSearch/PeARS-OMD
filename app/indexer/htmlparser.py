@@ -89,8 +89,8 @@ def extract_html(url):
     if url.startswith('http'):
         og_title = bs_obj.find("meta", property="og:title")
         og_description = bs_obj.find("meta", property="og:description")
-        print(f"OG TITLE {og_title}")
-        print(f"OG DESC {og_description}")
+        #print(f"OG TITLE {og_title}")
+        #print(f"OG DESC {og_description}")
 
         # Process title
         if og_title:
@@ -98,7 +98,7 @@ def extract_html(url):
         else:
             h1s = bs_obj.findAll('h1')
             if len(h1s) > 0:
-                title = h1s[0]
+                title = h1s[0].text
 
         if og_description:
             body_str = ' '.join(og_description['content'].split()[:100])
@@ -107,7 +107,7 @@ def extract_html(url):
             text = re.sub(r'{{[^}]*}}','',p.text.strip())
             text = text.strip().replace('\n',' ')
             if text not in ['',':']:
-                print("<text>",text,"</text>")
+                #print("<text>",text,"</text>")
                 body_str+=text+' '
         #print("BODY",body_str)
         try:
@@ -123,7 +123,7 @@ def extract_html(url):
             snippet = ' '.join(og_description['content'].split()[:100])
         else:
             snippet = ' '.join(body_str.split()[:10]) #10 to conform with EU regulations
-    print(title, body_str[:100])
+    #print(title, body_str[:100])
     return title, body_str, snippet, language
 
 
