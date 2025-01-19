@@ -77,7 +77,7 @@ def extract_links(url):
 def extract_html(url):
     '''From history info, extract url, title and body of page,
     cleaned with BeautifulSoup'''
-    title = ""
+    title = None
     body_str = ""
     snippet = ""
     language = LANGS[0] #Hack
@@ -124,6 +124,8 @@ def extract_html(url):
         else:
             snippet = ' '.join(body_str.split()[:10]) #10 to conform with EU regulations
     #print(title, body_str[:100])
+    if not title:
+        title = ' '.join(body_str.split()[:7])
     return title, body_str, snippet, language
 
 

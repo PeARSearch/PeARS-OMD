@@ -128,7 +128,7 @@ def get_doc_content_type(doc, url):
 
 
 def get_doc_title(doc, url):
-    title = ""
+    title = None
     try:
         logging.info(f">> SPIDER: GET DOC TITLE: {doc['title']}")
         title = doc['title']
@@ -251,16 +251,16 @@ def get_doc_info(doc, urldir):
     body_title, body_str, language = get_doc_content(url, convertible, content_type)
 
     #Body title for a site is the open graph title, which we assume is the best title option
-    if url.startswith(join(OMD_PATH,'sites')) and body_title != "":
+    if url.startswith(join(OMD_PATH,'sites')) and body_title:
         title = body_title
-    if title is None:
+    if not title:
         title = ' '.join(body_str.split()[:7])
     url, title, description, snippet, body_str = clean_url_and_snippets(url, body_str, description, title)
     return url, group, islink, title, description, snippet, body_str, language
 
 def process_html_links(url):
     links = extract_links(url)
-    processed_links = []
+    processed_links = [url[:-7]] #url ends in ?direct
     for link in links:
         if link not in processed_links:
             processed_links.append(link)
