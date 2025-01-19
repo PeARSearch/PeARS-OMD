@@ -29,6 +29,8 @@ def get_permission_class(url, owner):
     """
     if join(OMD_PATH, 'shared') in url:
         return 'others'
+    elif join(OMD_PATH, 'sites') in url:
+        return 'sites'
     elif ',' not in owner:
         return 'user'
     else:
@@ -303,18 +305,22 @@ def update_db_idvs_after_npz_delete(idv, pod):
 def delete_urls_recursively(url):
     """Delete url and all chidren
     """
+    print("\n\n>>>Calling delete_urls_recursively")
     urls_in_db = db.session.query(Urls).filter(Urls.url.startswith(url)).all()
+    print("URLS STARTING WITH",url)
     for u in urls_in_db:
+        print(u.url)
         delete_url(u.url)
 
 
 def delete_url(url):
     """ Delete url with some url on some pod.
     """
+    print("\n\n>>>Calling delete_url")
     u = db.session.query(Urls).filter_by(url=url).first()
     pod = u.pod
     username = pod.split('/')[0]  # pod = "user/device/lang/pod_name"
-    print("POD",pod,"USER",username)
+    #print("POD",pod,"USER",username)
 
     #Remove document row from .npz matrix
     idv = rm_from_npz(u.vector, pod)
