@@ -11,6 +11,7 @@ from flask import Blueprint, request, render_template
 from flask_cors import cross_origin
 
 from app import app
+from app.forms import SearchForm
 from app.utils import get_language, beautify_snippet, beautify_title
 from app.search.score_pages import run_search
 from app.auth.controllers import login_required
@@ -28,24 +29,34 @@ pod_dir = join(dir_path,'app','pods')
 @search.route('/', methods=['GET','POST'])
 @search.route('/index', methods=['GET','POST'])
 def index():
+    searchform = SearchForm()
     access_token = request.cookies.get('OMD_SESSION_ID')
     if not access_token:
-        return render_template('search/anonymous.html')
-    return render_template('search/user.html')
+        return render_template('search/anonymous.html', searchform=searchform)
+    return render_template('search/user.html', searchform=searchform)
 
 
 @search.route('/user', methods=['POST','GET'])
 @cross_origin()
 @login_required
 def user():
-    query = request.args.get('q')
-    gui = request.args.get('gui')
+    # POST from PeARS client
+    if request.method == "POST":
+        query = request.form.get('query')
+        gui = True
+    # GET from gateway
+    if request.method == "GET":
+        query = request.args.get('q')
+        gui = request.args.get('gui')
+    searchform = SearchForm()
     if not query:
-        return render_template("search/user.html"), 200
+        return render_template("search/user.html", searchform=searchform), 200
     results = run_user_search(query)
+    if len(results) == 0:
+        results = None
     if gui:
         displayresults = prepare_gui_results(query, results)
-        return render_template('search/results.html', query=query, results=displayresults)
+        return render_template('search/results.html', query=query, results=displayresults, searchform=searchform)
     r = app.make_response(jsonify(results))
     r.mimetype = "application/json"
     return r
@@ -54,16 +65,23 @@ def user():
 @search.route('/anonymous', methods=['POST','GET'])
 @cross_origin()
 def anonymous():  
-    query = request.args.get('q')
-    gui = request.args.get('gui')
+    # POST from PeARS client
+    if request.method == "POST":
+        query = request.form.get('query')
+        gui = True
+    # GET from gateway
+    if request.method == "GET":
+        query = request.args.get('q')
+        gui = request.args.get('gui')
+    searchform = SearchForm()
     if not query:
-        return render_template("search/anonymous.html"), 200
+        return render_template("search/anonymous.html", searchform=searchform), 200
     results = run_anonymous_search(query)
     if len(results) == 0:
         results = None
     if gui:
         displayresults = prepare_gui_results(query, results)
-        return render_template('search/results.html', query=query, results=displayresults)
+        return render_template('search/results.html', query=query, results=displayresults, searchform=searchform)
     r = app.make_response(jsonify(results))
     r.mimetype = "application/json"
     return r
@@ -140,6 +158,10 @@ def prepare_gui_results(query, results):
         r['snippet'] = beautify_snippet(r['snippet'], query)
         # remove stuff from URL so that link to OMD works correctly
         r['url'] = clean_url(r['url'])
+        if join(OMD_PATH, 'sites') in r['url']:
+            r['icon'] = 'web'
+        else:
+            r['icon'] = 'private'
         displayresults.append(list(r.values()))
     return displayresults
 
