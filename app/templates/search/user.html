@@ -5,34 +5,46 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 {% extends "base/base.html" %}
+{% from "base/_formhelpers.html" import render_search_field %}
 {% block body %}
   <div class="row">
     <div class="col-lg-2"></div>
     <div class="col-lg-8 text-center mt-5">
         {% if session.get('theme') == 'dark' %}
-          <a href="{{ url_for('search.user')}}"><img width=350px; src="{{url_for('serve_logos', path='logo-dark.png')}}"></a>
+          <a href="{{ url_for('search.user')}}"><img width=250px; src="{{url_for('serve_logos', path='logo-dark.png')}}"></a>
         {% else %}
-          <a href="{{ url_for('search.user')}}"><img width=350px; src="{{url_for('serve_logos', path='logo.png')}}"></a>
+          <a href="{{ url_for('search.user')}}"><img width=250px; src="{{url_for('serve_logos', path='logo.png')}}"></a>
         {% endif %}
-      <form  action="{{url_for('search.user')}}">
+        <form method="POST" action="{{url_for('search.user')}}" enctype="multipart/form-data" id='searchform'>
+        {{ searchform.hidden_tag() }}
         <div class="input-group group mt-4" >
-          <input class="form-control" title="Enter your Search Query." placeholder="Enter your Search Query" type="search" name='q' required>
-          <input class="form-control" title="Is this the GUI calling?" type="hidden" name='gui' value='true' required>
-          <button class="btn btn-lg btn-success" type="submit">Search</button>
+          {{ render_search_field(searchform.query, placeholder) }}
+          <button class="btn btn-lg btn-success" type="submit" id='preloadingbutton'><ion-icon name="search-outline"></ion-icon></button>
+          <button class="btn btn-lg btn-success" type="button" id='loadingbutton' style='display:none'>
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          </button>
         </div>
       </form>
-      <br><a href="{{ url_for('auth.logout') }}">Log out</a>.
+	{% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="notification is-danger">
+		    <br><b>{{ messages[0] }}</b>
+            </div>
+        {% endif %}
+        {% endwith %}
     </div>
   </div> 
   {% if welcome %}
   <div class="row">
-    <div class="col-lg-10 text-center mt-5 mx-auto">
+    <div class="col-lg-8 text-center mt-5 mx-auto">
       <div class="alert alert-info alert-dismissible">
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         {{welcome}}
       </div>
     </div>
   </div>
-      {% endif %}
+ {% endif %}
+</div>
+</div> 
 
 {% endblock %}

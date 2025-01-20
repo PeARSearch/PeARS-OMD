@@ -38,21 +38,21 @@ def index():
 @subscriptions.route("/allsites", methods=["GET","POST"])
 @login_required
 def show_all_sites():
+    pull_sites_from_gateway()
     sites_in_db = db.session.query(Sites).all()
     all_sites = []
     for site in sites_in_db:
-        all_sites.append({'url': site.url, 'title': site.title, 'owner': site.owner, 'description': site.description, 'subscribed': site.subscribed})
+        all_sites.append({'url': site.url, 'name': site.name, 'title': site.title, 'owner': site.owner, 'description': site.description, 'subscribed': site.subscribed})
     print(all_sites)
     return render_template("subscriptions/allsites.html", sites=all_sites)
 
 
-@subscriptions.route("/pull/", methods=["POST"])
-@login_required
 def pull_sites_from_gateway():
     all_sites = []
     url = join(OMD_PATH,'sites')
+    access_token = request.cookies.get('OMD_SESSION_ID')
     data = {'action': 'list'}
-    resp = requests.post(url, timeout=30, headers={'Authorization': 'token:'+AUTH_TOKEN}, json=data)
+    resp = requests.post(url, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
     json = resp.json()['list']
     for site in json:
         owner = site['owner']
@@ -62,7 +62,6 @@ def pull_sites_from_gateway():
         description = site['customAttributes']['description']
         all_sites.append({'url': link, 'name': name, 'title': title, 'owner': owner, 'description': description})
     update_sites_in_db(all_sites)
-    return redirect(url_for('subscriptions.show_all_sites'))
 
 
 @subscriptions.route("/subscribe_to_site", methods=['GET','POST'])
@@ -72,18 +71,11 @@ def subscribe_to_site():
     access_token = request.cookies.get('OMD_SESSION_ID')
     data = {'action': 'subscribe', 'site': site_name}
     resp = requests.post(OMD_PATH, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
-    s = db.session.query(Sites).filter_by(title=site_name).first()
-    s.subscribed = True
-    #html_links = process_html_links(s.url+'?direct')
-    #print(s.url,html_links)
-    #for link in html_links:
-    #    title, body_str, snippet, _ = extract_html(link)
-    #    description = ""
-    #    pod_path = ""
-    #    language = "en"
-    #    run_indexing(link, pod_path, title, snippet, description, language, body_str)
-    db.session.add(s)
-    db.session.commit()
+    s = db.session.query(Sites).filter_by(name=site_name).first()
+    if s and not s.subscribed:
+        s.subscribed = True
+        db.session.add(s)
+        db.session.commit()
     flash(f"Subscribed to site {site_name}")
     return redirect(url_for('subscriptions.show_all_sites'))
 
@@ -93,18 +85,22 @@ def subscribe_to_site():
 def unsubscribe_from_site():
     """ This caters for unsubscribing from the website list page.
     """
+    print("\n\n>>>Calling unsubscribe_from_site")
     site_name=request.args.get('sitename')
     access_token = request.cookies.get('OMD_SESSION_ID')
     url = OMD_PATH
     data = {'action': 'unsubscribe', 'site': site_name}
     resp = requests.post(url, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
-    s = db.session.query(Sites).filter_by(title=site_name).first()
-    s.subscribed = False
-    #delete_urls_recursively(s.url)
-    db.session.add(s)
-    db.session.commit()
+    s = db.session.query(Sites).filter_by(name=site_name).first()
+    if s and s.subscribed:
+        print(">> UNSUBSCRIBE from SITE: site info:", s.name, s.subscribed, s.url)
+        s.subscribed = False
+        delete_urls_recursively(s.url)
+        db.session.add(s)
+        db.session.commit()
     flash(f"Unsubscribed from site {site_name}")
-    return redirect(url_for('subscriptions.index'))
+    print(">> NOW REDIRECTING TO SHOWING ALL SITES")
+    return redirect(url_for('subscriptions.show_all_sites'))
 
 @subscriptions.route("/update_site_subscriptions/", methods=["POST"])
 @login_required
@@ -113,15 +109,20 @@ def update_site_subscriptions():
     """
     if request.method == "POST":
         subscriptions = request.form.getlist('sites')
-        print(subscriptions)
+        print(">> UPDATE SITE SUBSCRIPTIONS", subscriptions)
         sites = db.session.query(Sites).all()
         for s in sites:
-            if s.name in subscriptions:
+            if s.title in subscriptions:
                 s.subscribed = True
-            else:
+            elif s.subscribed:
+                url = OMD_PATH
+                access_token = request.cookies.get('OMD_SESSION_ID')
+                data = {'action': 'unsubscribe', 'site': s.name}
+                resp = requests.post(url, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
                 s.subscribed = False
-            db.session.add(s)
-            db.session.commit()
+                delete_urls_recursively(s.url)
+                db.session.add(s)
+                db.session.commit()
     return redirect(url_for('subscriptions.index'))
 
 def subscribe_to_user(username):

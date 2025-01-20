@@ -45,10 +45,45 @@ def deletedbonly():
             db.session.delete(u)
             db.session.commit()
 
+#####################
+# QUERIES
+#####################
+
+@pears.cli.command('showurls')
+@click.argument('username')
+@click.argument('device')
+@click.argument('lang')
+def showurls(username, device, lang):
+    from app.cli import dbquery
+    dbquery.show_user_urls(username, device, lang)
+
+@pears.cli.command('shownpz')
+@click.argument('username')
+@click.argument('device')
+@click.argument('lang')
+def shownpz(username, device, lang):
+    pod_path = join(pod_dir, username, device, lang, 'private.npz')
+    pod_m = load_npz(pod_path)
+    print(f"LEN NPZ, {pod_m.shape[0]}")
+
+@pears.cli.command('showallurls')
+def showallurls():
+    pods = Pods.query.all()
+    for pod in pods:
+        print('\n\n',pod.as_dict())
+        urls = Urls.query.filter_by(pod=pod.url).all()
+        for u in urls:
+            print(u.id, u.url, u.pod)
 
 #####################
 # UNIT TESTS
 #####################
+
+@pears.cli.command('utsearch')
+def run_unit_test_search_module():
+    from app.cli import searchtests
+    searchtests.test_compute_scores()
+
 
 @pears.cli.command('unittest')
 @click.argument('username')

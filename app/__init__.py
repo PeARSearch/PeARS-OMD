@@ -78,6 +78,9 @@ try:
     app.config['SESSION_COOKIE_NAME'] = os.getenv("SESSION_COOKIE_NAME")
 
 
+    # Personalization
+    app.config['SEARCH_PLACEHOLDER'] = os.getenv('SEARCH_PLACEHOLDER','Search')
+
 except:
     logging.error(">>\tERROR: __init__.py: the pears.ini file in the conf directory is incorrectly configured.")
     sys.exit()
@@ -276,7 +279,7 @@ class PodsModelView(ModelView):
             'readonly': True
         },
     }
-
+    
     def is_accessible(self):
         return can_access_flaskadmin()
 
@@ -329,8 +332,8 @@ class SitesModelView(ModelView):
         return can_access_flaskadmin()
 
 admin.add_view(SitesModelView(Sites, db.session))
-#admin.add_view(LocationsModelView(Locations, db.session))
-#admin.add_view(GroupsModelView(Groups, db.session))
+admin.add_view(LocationsModelView(Locations, db.session))
+admin.add_view(GroupsModelView(Groups, db.session))
 admin.add_view(PodsModelView(Pods, db.session))
 admin.add_view(UrlsModelView(Urls, db.session))
 
@@ -343,16 +346,10 @@ def page_not_found(e):
 from app.cli.controllers import pears as pears_module
 app.register_blueprint(pears_module)
 
-@app.errorhandler(404)
-def page_not_found(e):
-    # note that we set the 404 status explicitly
-    flash("404. Page not found. Please go back to search page.")
-    return render_template("404.html"), 404
-
-
 @app.route('/static/assets/<path:path>')
 def serve_logos(path):
     print(LOGO_PATH)
     return send_from_directory(LOGO_PATH, path)
+
 
 

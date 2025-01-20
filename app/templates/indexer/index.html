@@ -29,20 +29,28 @@ SPDX-License-Identifier: AGPL-3.0-only
     <div class="col-md-12">
       <div class="card">
         <div class="card-header text">
-		<div class="d-flex justify-content-start"><b>New to OnMyDisk? Recently added some devices or friends to your OnMyDisk network?</b>
-		  <form method="POST" accept-charset="UTF-8" enctype="multipart/form-data" action="{{url_for('indexer.pull_from_gateway')}}">
-		      <button class="btn btn-primary btn-update" type="submit" id='preloadingbutton'>Update your database</button>
-		      <button class="btn btn-primary btn-update" type="button" id='loadingbutton' style='display:none'>
-		        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-		      </button>
-		  </form>
+		<table>
+			<tr><td><b>New to OnMyDisk? Recently added some devices or friends to your OnMyDisk network?</b></td>
+			    <td><form method="POST" accept-charset="UTF-8" enctype="multipart/form-data" action="{{url_for('indexer.pull_from_gateway')}}">
+          		      <button class="btn btn-primary btn-update" type="submit" id='preloadingbutton'>Update your database</button>
+	        	      <button class="btn btn-primary btn-update" type="button" id='loadingbutton' style='display:none'>
+		              <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+		              </button>
+		  		</form>
+			   </td>
+		        </tr>
+			<tr><td><b>Need to manually index your latest content?</b></td>
+			    <td><form method="POST" accept-charset="UTF-8" enctype="multipart/form-data" action="{{url_for('indexer.update_all')}}">
+          		      <button class="btn btn-primary btn-update" type="submit" id='preloadingbutton'>Perform manual indexing</button>
+	        	      <button class="btn btn-primary btn-update" type="button" id='loadingbutton' style='display:none'>
+		              <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+		              </button>
+		  		</form>
+			   </td>
+		        </tr>
+		</table>
 		</div>
 	</div><!-- card header -->
-        <div class="card-body input-group">
-          <form method="POST" accept-charset="UTF-8" enctype="multipart/form-data" action="{{url_for('indexer.update_all')}}">
-              <button class="btn btn-success" type="submit">Index all subscribed content</button>
-	  </form>
-	</div><!-- card body -->
     </div><!-- card -->
 
     <hr>

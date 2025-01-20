@@ -27,13 +27,28 @@ SPDX-License-Identifier: AGPL-3.0-only
   <div class="row">
       <div class="card">
         <div class="card-header text">
-		<p><b>Discover cool websites hosted on OMD! <a href="{{url_for('subscriptions.show_all_sites')}}">Browse the current list</a></b></p>
+		<table>
+			<tr><td><b>Discover cool websites hosted on OMD!</b></td>
+			    <td><form method="POST" accept-charset="UTF-8" enctype="multipart/form-data" action="{{url_for('subscriptions.show_all_sites')}}">
+          		      <button class="btn btn-primary btn-update" type="submit" id='preloadingbutton'>Browse OMD websites</button>
+	        	      <button class="btn btn-primary btn-update" type="button" id='loadingbutton' style='display:none'>
+		              <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+		              </button>
+		  		</form>
+			   </td>
+		        </tr>
+			<tr><td><b>Need to manually index your latest content?</b></td>
+			    <td><form method="POST" accept-charset="UTF-8" enctype="multipart/form-data" action="{{url_for('indexer.update_all')}}">
+          		      <button class="btn btn-primary btn-update" type="submit" id='preloadingbutton'>Perform manual indexing</button>
+	        	      <button class="btn btn-primary btn-update" type="button" id='loadingbutton' style='display:none'>
+		              <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+		              </button>
+		  		</form>
+			   </td>
+		        </tr>
+		</table>
+		</div>
 	</div><!-- card header -->
-        <div class="card-body input-group">
-          <form method="POST" accept-charset="UTF-8" enctype="multipart/form-data" action="{{url_for('indexer.update_all')}}">
-              <button class="btn btn-success" type="submit">Index all subscribed content</button>
-	  </form>
-	</div><!-- card body -->
     </div><!-- card -->
 
     <hr>

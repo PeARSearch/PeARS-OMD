@@ -99,7 +99,7 @@ def get_group_pods(username, lang):
 
 
 def get_site_pods(lang):
-    '''Return pods for sites.
+    '''LEGACY Return pods for sites.
     NB: sites cannot have the name of a device on the OMD network
     '''
     npzs = []
@@ -152,13 +152,11 @@ def score_pods(query, query_vector, lang, username = None):
         group_npzs, group_pods = get_group_pods(username, lang)
         npzs.extend(group_npzs)
         pods.extend(group_pods)
-        #Get site pods
-        site_npzs, site_pods = get_site_pods(lang)
-        npzs.extend(site_npzs)
-        pods.extend(site_pods)
     #Get public files
     npzs.extend(glob(join(pod_dir, f"*/*/{lang}/others.npz")))
+    npzs.extend(glob(join(pod_dir, f"*/*/{lang}/sites.npz")))
     pods.extend(db.session.query(Pods).filter_by(language=lang).filter(Pods.url.endswith('/others')).all())
+    pods.extend(db.session.query(Pods).filter_by(language=lang).filter(Pods.url.endswith('/sites')).all())
     for npz in npzs:
         podname = npz.replace(pod_dir + "/", "").replace(".npz", "")
         s = np.sum(load_npz(npz).toarray(), axis=0)
@@ -230,6 +228,7 @@ def score_docs(query, query_vector, tokenized, pod_name):
 
 
 def return_best_urls(doc_scores, url_filter):
+    print(doc_scores)
     best_urls = []
     scores = []
     c = 0
