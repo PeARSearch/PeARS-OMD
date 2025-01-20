@@ -48,7 +48,7 @@ if (percent == 0) {
 } else {
     $('.progress-bar').css('width', percent+'%').attr('aria-valuenow', percent);
     $('.progress-bar-label').text(percent+'%');
-    link.innerHTML = "Indexing: "+msg;
+    link.innerHTML = "Updating: "+msg;
     if(percent == 100){
 	source.close()
     }

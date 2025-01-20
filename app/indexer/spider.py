@@ -172,7 +172,7 @@ def get_doc_content(url, convertible, content_type):
         else:
             title, body_str, _, language = extract_txt(url)
     elif content_type in ['text/html']:
-        print(">> Calling extract_html")
+        #print(">> Calling extract_html")
         title, body_str, _, language = extract_html(url)
 
     # Hack. Revert to main language if language is not installed
@@ -241,7 +241,7 @@ def get_doc_info(doc, urldir):
         print(f">> {url} is in an unsubscribed group. Returning none.")
         return None
     if last_modified is not None and uptodate(url, last_modified, group):
-        print(f">> {url} is up to date. Returning none.")
+        #print(f">> {url} is up to date. Returning none.")
         return None
     #print(f"{url} is not up to date. Reindexing.")
     convertible = assess_convertibility(doc)
