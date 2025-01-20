@@ -38,6 +38,7 @@ def index():
 @subscriptions.route("/allsites", methods=["GET","POST"])
 @login_required
 def show_all_sites():
+    pull_sites_from_gateway()
     sites_in_db = db.session.query(Sites).all()
     all_sites = []
     for site in sites_in_db:
@@ -46,14 +47,11 @@ def show_all_sites():
     return render_template("subscriptions/allsites.html", sites=all_sites)
 
 
-@subscriptions.route("/pull/", methods=["POST"])
-@login_required
 def pull_sites_from_gateway():
     all_sites = []
     url = join(OMD_PATH,'sites')
     access_token = request.cookies.get('OMD_SESSION_ID')
     data = {'action': 'list'}
-    #resp = requests.post(url, timeout=30, headers={'Authorization': 'token:'+AUTH_TOKEN}, json=data)
     resp = requests.post(url, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
     json = resp.json()['list']
     for site in json:
@@ -64,7 +62,6 @@ def pull_sites_from_gateway():
         description = site['customAttributes']['description']
         all_sites.append({'url': link, 'name': name, 'title': title, 'owner': owner, 'description': description})
     update_sites_in_db(all_sites)
-    return redirect(url_for('subscriptions.show_all_sites'))
 
 
 @subscriptions.route("/subscribe_to_site", methods=['GET','POST'])

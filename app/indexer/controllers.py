@@ -12,7 +12,7 @@ from flask import Blueprint, request, session, render_template, Response, redire
 
 from app import app, db, tracker
 from app import OMD_PATH, LANGS
-from app.api.models import Urls, Pods, Locations, Groups
+from app.api.models import Urls, Pods, Locations, Groups, Sites
 from app.indexer import mk_page_vector
 from app.indexer.spider import process_xml, process_html_links, get_doc_info
 from app.utils import read_docs, read_urls, carbon_print, get_device_from_url, get_username_from_url, init_crawl
@@ -77,7 +77,9 @@ def pull_from_gateway():
 def update_all():
     username = session['username']
     locations = db.session.query(Locations).filter_by(subscribed=True).all()
+    sites = db.session.query(Sites).filter_by(subscribed=True).all()
     start_urls = [l.name for l in locations]
+    start_urls.extend([s.url for s in sites])
     session['start_urls'] = start_urls
     print("UPDATE", start_urls)
     return render_template('indexer/progress_crawl.html', username=username)
