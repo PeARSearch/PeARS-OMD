@@ -279,7 +279,7 @@ class PodsModelView(ModelView):
             'readonly': True
         },
     }
-
+    
     def is_accessible(self):
         return can_access_flaskadmin()
 
