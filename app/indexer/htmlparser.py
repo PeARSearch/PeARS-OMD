@@ -85,6 +85,7 @@ def extract_html(url):
     bs_obj, req = BS_parse(url)
     if not bs_obj:
         logging.error(f"\t>> ERROR: extract_html: Failed to get BeautifulSoup object.")
+        title = ""
         return title, body_str, snippet, language
     if url.startswith('http'):
         og_title = bs_obj.find("meta", property="og:title")
