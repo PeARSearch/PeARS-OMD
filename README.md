@@ -33,7 +33,7 @@ You will have to set up the On My Disk client for use with PeARS, by navigating 
 #### 1. Clone this repo on your machine:
 
 ```
-    git clone https://github.com/PeARSearch/PeARS-OMD.git
+git clone https://github.com/PeARSearch/PeARS-OMD.git
 ```
 
 #### 2. **Optional step** Setup a virtualenv in your directory.
