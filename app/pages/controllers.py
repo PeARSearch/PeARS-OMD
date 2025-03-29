@@ -11,11 +11,6 @@ from app.api.models import Pods
 pages = Blueprint('pages', __name__, url_prefix='')
 
 
-@pages.route('/faq/')
-def return_faq():
-    return render_template("pages/faq.html")
-
-
 @pages.route('/acknowledgements/')
 def return_acknowledgements():
     return render_template("pages/acknowledgements.html")
