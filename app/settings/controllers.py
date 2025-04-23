@@ -71,7 +71,7 @@ def get_locations_and_groups(username=None, start_urls=None):
     groups = []
     while len(links) > 0:
         start_link = links[0]
-        docs, urldir = process_xml(start_link, username)
+        docs, urldir = process_xml(start_link)
         for doc in docs:
             url, _ = get_doc_url(doc, urldir)
             _, islink = get_doc_content_type(doc, url)

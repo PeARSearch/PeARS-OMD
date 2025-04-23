@@ -199,7 +199,7 @@ def progress_crawl(username=None, start_urls=None):
                 start_link = links[0]
                 print(f"\n\nProcessing {start_link}.")
                 device = get_device_from_url(start_link)
-                docs, urldir = process_xml(start_link, username)
+                docs, urldir = process_xml(start_link)
                 urls = [join(urldir,doc['@url'].split('?')[0]) for doc in docs]
                 urls = [join(OMD_PATH, url[1:]) if url.startswith('/shared') or url.startswith('/sites') else url for url in urls]
                 recorded_urls.extend(urls)
