@@ -5,3 +5,4 @@ TEST_XML_URL = <some url to one of your personal OMD folders>
 
 #Mock username
 TEST_USERNAME = <your username>
+TEST_PASSWORD = <your password>

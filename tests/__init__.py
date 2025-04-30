@@ -1,7 +1,9 @@
+import os
 from os.path import join, dirname, realpath
+import requests
 import pytest
 from dotenv import load_dotenv
-from app import app
+from app import app, OMD_PATH
 
 dir_path = dirname(dirname(realpath(__file__)))
 
@@ -13,6 +15,15 @@ class TestingUtils:
         html = page.data.decode()
         assert page.status_code == 401
         assert "Hey there! You don't seem to be logged in." in html
+
+    @staticmethod
+    def get_omd_session_id():
+        url = join(OMD_PATH, 'signin/')
+        username = os.environ["TEST_USERNAME"]
+        password = os.environ["TEST_PASSWORD"]
+        data = {'action': 'signin', 'username': username, 'password': password}
+        user_info = requests.post(url, timeout=30, json=data)
+        return user_info.json()["session_id"]
 
 
 @pytest.fixture
