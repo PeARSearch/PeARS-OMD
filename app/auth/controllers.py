@@ -36,8 +36,8 @@ def login():
             return render_template( 'auth/login.html', form=form), 401
         #print(user_info.json())
         #print(user_info.cookies)
-        username = user_info.json()['username']
-        is_admin = user_info.json()['isAdmin']
+        username = user_info.json()['profile']['user']
+        is_admin = user_info.json()['profile']['isAdmin']
         session_token = user_info.json()['session_id']
         # Fill in session info
         session.permanent = False
