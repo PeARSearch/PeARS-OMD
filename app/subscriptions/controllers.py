@@ -25,12 +25,16 @@ dir_path = dirname(dirname(realpath(__file__)))
 @login_required
 def index():
     sites_in_db = db.session.query(Sites).all()
-    sites_selected = [g.title for g in sites_in_db if g.subscribed]
-    sites = ChoiceObj('sites', sites_selected)
+    sites_selected_names = [g.name for g in sites_in_db if g.subscribed]
+    sites_selected_titles = [f"{g.title} [{g.name}]" for g in sites_in_db if g.subscribed]
+    sites = ChoiceObj('sites', sites_selected_names)
     site_form = SiteForm(obj=sites)
-    site_form.sites.choices =  [(c, c) for c in sites_selected]
+    site_form.sites.choices =  [
+        (name, title) 
+        for name, title in zip(sites_selected_names, sites_selected_titles)
+    ]
     nosites = False
-    if len(sites_selected) == 0:
+    if len(sites_selected_titles) == 0:
         nosites = True
     return render_template("subscriptions/index.html", form=site_form, nosites=nosites)
 
@@ -68,15 +72,22 @@ def pull_sites_from_gateway():
 @login_required
 def subscribe_to_site():
     site_name=request.args.get('sitename')
-    access_token = request.cookies.get('OMD_SESSION_ID')
-    data = {'action': 'subscribe', 'site': site_name}
-    resp = requests.post(OMD_PATH, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
     s = db.session.query(Sites).filter_by(name=site_name).first()
     if s and not s.subscribed:
+        # subscribe on the gateway
+        access_token = request.cookies.get('OMD_SESSION_ID')
+        data = {'action': 'subscribe', 'site': site_name}
+        resp = requests.post(OMD_PATH, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
+
+        # subscribe PeARS-internally
         s.subscribed = True
         db.session.add(s)
         db.session.commit()
-    flash(f"Subscribed to site {site_name}")
+        flash(f"Subscribed to site {site_name}")
+    elif s:  # we are already subscribed
+        flash(f"Error: you were already subscribed to site {site_name}")
+    else: # site does not exist
+        flash(f'Error: site {site_name} does not exist')
     return redirect(url_for('subscriptions.show_all_sites'))
 
 
@@ -87,18 +98,29 @@ def unsubscribe_from_site():
     """
     print("\n\n>>>Calling unsubscribe_from_site")
     site_name=request.args.get('sitename')
-    access_token = request.cookies.get('OMD_SESSION_ID')
-    url = OMD_PATH
-    data = {'action': 'unsubscribe', 'site': site_name}
-    resp = requests.post(url, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
     s = db.session.query(Sites).filter_by(name=site_name).first()
+            
     if s and s.subscribed:
+        # OMD unsubscribe action
+        access_token = request.cookies.get('OMD_SESSION_ID')
+        url = OMD_PATH
+        data = {'action': 'unsubscribe', 'site': site_name}
+        resp = requests.post(url, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
+
+        # mark as unsubscribed internally and delete from index
         print(">> UNSUBSCRIBE from SITE: site info:", s.name, s.subscribed, s.url)
         s.subscribed = False
         delete_urls_recursively(s.url)
         db.session.add(s)
         db.session.commit()
-    flash(f"Unsubscribed from site {site_name}")
+        flash(f"Unsubscribed from site {site_name}")
+    
+    # site exists but we weren't subscribed -> do nothing
+    elif s:
+        flash(f'Error: you weren\'t subscribed to {site_name}, cannot unsubscribe')
+    else:
+        flash(f'Error: site {site_name} does not exist')
+
     print(">> NOW REDIRECTING TO SHOWING ALL SITES")
     return redirect(url_for('subscriptions.show_all_sites'))
 
@@ -112,7 +134,7 @@ def update_site_subscriptions():
         print(">> UPDATE SITE SUBSCRIPTIONS", subscriptions)
         sites = db.session.query(Sites).all()
         for s in sites:
-            if s.title in subscriptions:
+            if s.name in subscriptions:
                 s.subscribed = True
             elif s.subscribed:
                 url = OMD_PATH
