@@ -29,12 +29,12 @@ def backup(backupdir):
     Path(backupdir).mkdir(parents=True, exist_ok=True)
     #Get today's date
     date = datetime.now().strftime('%Y-%m-%d-%Hh%Mm')
-    dirpath = join(backupdir,'pears-'+date)
-    Path(dirpath).mkdir(parents=True, exist_ok=True)
+    bckpath = join(backupdir,'pears-'+date)
+    Path(bckpath).mkdir(parents=True, exist_ok=True)
     #Copy database
-    copy2('app.db',dirpath)
+    copy2(join(dir_path, 'app', 'db', 'app.db'), bckpath)
     #Copy pods folder
-    copytree(pod_dir, join(dirpath,'pods'))
+    copytree(pod_dir, join(bckpath,'pods'))
 
 @pears.cli.command('deletedbonly')
 def deletedbonly():
@@ -93,9 +93,6 @@ def checkconsistency():
         print(">> CLI: UNITTEST: CONSISTENCY: CHECKING POD:", pod.name)
         check_db_vs_npz(pod)
         check_db_vs_pos(pod)
-        #check_npz_to_idx_vs_idx_to_url(pod.name, username)
-        #check_npz_vs_npz_to_idx(pod.name)
-        #check_pos_vs_npz_to_idx(pod.name)
 
 def check_db_vs_npz(pod):
     print(f"\t>> CHECKING DB VS NPZ FOR POD: {pod.name}")
@@ -105,6 +102,7 @@ def check_db_vs_npz(pod):
     vectors = load_npz(npz_path)
     if len(set(urls)) + 1 != vectors.shape[0]:
         print("\t\t> ERROR: Length of URL set in DB != number of rows in npz matrix", len(urls), vectors.shape[0])
+    return len(set(urls)), vectors.shape[0]
 
 def check_db_vs_pos(pod):
     print(f"\t>> CHECKING DB VS POS FOR POD: {pod.name}")
@@ -117,9 +115,13 @@ def check_db_vs_pos(pod):
         for doc_id, _ in token_id.items():
             unique_docs.append(doc_id)
     unique_docs = list(set(unique_docs))
+    db_docs_not_in_pos = []
     for i in urls:
         if i not in unique_docs:
             print(f"\t\t> ERROR: URL {i} is not in positional index.")
+            db_docs_not_in_pos.append(i)
+    return db_docs_not_in_pos
+
 
 
 
@@ -151,13 +153,6 @@ def repair_missing_docs_in_npz(username):
         idx.pop(i)
         urls.pop(i)
     joblib.dump([idx,urls], pod_path)
-
-
-def repair_pos_vs_npz_to_idx(pod):
-    idx1, idx2 = check_pos_vs_npz_to_idx(pod)
-    if len(idx1) > len(idx2):
-        orphans = list(idx1-idx2)
-        del_pod_docs(pod, orphans)
 
 
 def del_npz_rows(pod, todelete):
