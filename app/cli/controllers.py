@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 from collections import Counter
-from shutil import copy2, copytree
-from os.path import dirname, realpath, join
+from shutil import copy2, copytree, rmtree
+from os.path import dirname, realpath, join, exists
 from datetime import datetime
 from pathlib import Path
 import joblib
@@ -22,10 +22,9 @@ pod_dir = join(dir_path,'app','pods')
 
 
 @pears.cli.command('backup')
-@click.argument('backupdir')
-def backup(backupdir):
-    '''Backup database and pods to specified directory'''
-    #Check if directory exists, otherwise create it
+def backup():
+    '''Backup database and pods to .backups directory'''
+    backupdir = join(dir_path, '.backups')
     Path(backupdir).mkdir(parents=True, exist_ok=True)
     #Get today's date
     date = datetime.now().strftime('%Y-%m-%d-%Hh%Mm')
@@ -35,6 +34,22 @@ def backup(backupdir):
     copy2(join(dir_path, 'app', 'db', 'app.db'), bckpath)
     #Copy pods folder
     copytree(pod_dir, join(bckpath,'pods'))
+
+@pears.cli.command('restore')
+@click.argument('snapshot')
+def restore(snapshot):
+    '''Restore particular snapshot from backups'''
+    confirm = input(f"\nWARNING: this will override your current database with snapshot {snapshot}. Do you want to continue? (y/n): ")
+    if confirm == 'y':
+        #Copy database
+        bck_db = join(dir_path, '.backups', snapshot, 'app.db')
+        copy2(bck_db, join(dir_path, 'app', 'db', 'app.db'))
+        #Copy pods folder
+        bck_pods = join(dir_path, '.backups', snapshot, 'pods')
+        if exists(pod_dir):
+            rmtree(pod_dir)
+        copytree(bck_pods, pod_dir)
+
 
 @pears.cli.command('deletedbonly')
 def deletedbonly():
