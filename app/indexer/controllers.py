@@ -1,26 +1,24 @@
-# SPDX-FileCopyrightText: 2024 PeARS Project, <community@pearsproject.org> 
+# SPDX-FileCopyrightText: 2025 PeARS Project, <pears@possible-worlds.eu> 
 #
 # SPDX-License-Identifier: AGPL-3.0-only
 
 # Import flask dependencies
-import re
 import logging
 from math import ceil
-from os import remove
-from os.path import dirname, join, realpath, isfile
+from os.path import dirname, join, realpath
 from flask import Blueprint, request, session, render_template, Response, redirect, url_for, flash
 
 from app import app, db, tracker
-from app import OMD_PATH, LANGS
-from app.api.models import Urls, Pods, Locations, Groups, Sites
+from app import OMD_PATH
+from app.api.models import Urls, Locations, Groups, Sites
 from app.indexer import mk_page_vector
 from app.indexer.spider import process_xml, process_html_links, get_doc_info
-from app.utils import read_docs, read_urls, carbon_print, get_device_from_url, get_username_from_url, init_crawl
-from app.utils_db import create_pod, create_url_in_db, delete_url, delete_old_urls, delete_unsubscribed, delete_old_pods, subscribe_location
+from app.utils import carbon_print, get_device_from_url, get_username_from_url, init_crawl
+from app.utils_db import create_pod, create_url_in_db, delete_url, delete_old_urls, delete_unsubscribed, delete_old_pods, subscribe_location, check_consistency
 from app.indexer.posix import posix_doc
 from app.auth.controllers import login_required
 from app.forms import IndexerForm, FoldersForm, GroupForm, ChoiceObj
-from app.settings.controllers import get_user_devices, get_locations_and_groups, get_user_links
+from app.settings.controllers import get_user_devices, get_locations_and_groups
 from app.indexer.htmlparser import extract_html
 
 app_dir_path = dirname(dirname(realpath(__file__)))
@@ -157,19 +155,23 @@ def from_crawl():
     return progress_crawl(username=username)
 
 
-def run_indexing(owner, device, url, pod_path, title, snippet, description, lang, doc):
-    print(f"\t>>> INDEXER: CONTROLLER: PROGRESS CRAWL: INDEXING {url}")
+
+def run_indexing(url, pod_path, title, snippet, description, lang, doc):
+    print(f"\t>>> INDEXER: CONTROLLER: RUN_INDEXING: INDEXING {url}")
     url_in_db = Urls.query.filter_by(url=url).first()
     if url_in_db:
-        print(f"\t>>> INDEXER: CONTROLLER: PROGRESS CRAWL: URL PREVIOUSLY KNOWN: {url}")
+        print(f"\t>>> INDEXER: CONTROLLER: RUN_INDEXING: URL PREVIOUSLY KNOWN: {url}")
         delete_url(url)
-    #print(url, "SNIPPET", snippet, "DESCRIPTION", description)
-    # In case the last delete also deleted the pod
-    pod_path = create_pod(url, owner, lang, device)
+    
+    success, msg = check_consistency(pod_path)
+    if not success:
+        print(f"\t>>> INDEXER:CONTROLLER: RUN_INDEXING: INDEXING CANCELLED: {msg}")
+        return success, msg
+    
     idv, tokenized_text = mk_page_vector.compute_vectors_local_docs(url, pod_path, title, description, doc, lang)
     idx = create_url_in_db(url, title, snippet, description, idv, pod_path)
     posix_doc(tokenized_text, idx, pod_path)
-
+    return success, msg
 
 
 @indexer.route("/progress_crawl")
@@ -216,7 +218,9 @@ def progress_crawl(username=None, start_urls=None):
                     url, owner, islink, title, description, snippet, body_str, language = doc_info
                     #print(f"\n{url}, owner: {owner}, islink: {islink}, title: {title}, description: {description[:20]}, body_str: {body_str[:20]}, language: {language}\n")
                     pod_path = create_pod(url, owner, language, device)
-                    run_indexing(owner, device, url, pod_path, title, snippet, description, language, body_str)
+                    success, msg = run_indexing(url, pod_path, title, snippet, description, language, body_str)
+                    if not success:
+                        continue
                     if islink:
                         print("Appending link to list:",url)
                         links.append(url)
@@ -226,7 +230,7 @@ def progress_crawl(username=None, start_urls=None):
                     for link in html_links:
                         title, body_str, snippet, _ = extract_html(link)
                         description = ""
-                        run_indexing(owner, device, link, pod_path, title, snippet, description, language, body_str)
+                        success, msg = run_indexing(link, pod_path, title, snippet, description, language, body_str)
 
                     c += 1
                     p = ceil(c / m * 100)
