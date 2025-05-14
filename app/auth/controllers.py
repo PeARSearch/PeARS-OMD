@@ -74,8 +74,8 @@ def logout():
     #session['logged_in'] = False
     #session.pop('username', None)
     session.clear()
-    print(">> AUTH: user logged out. Clearing session and OMD_SESSION_ID cookie.")
-    print(f">> SESSION: {session}")
+    #print(">> AUTH: user logged out. Clearing session and OMD_SESSION_ID cookie.")
+    #print(f">> SESSION: {session}")
     searchform = SearchForm()
     resp_frontend = make_response(render_template( 'search/anonymous.html', searchform=searchform))
     resp_frontend.set_cookie('OMD_SESSION_ID', '', expires=0, samesite='Lax')
@@ -114,14 +114,14 @@ def login_required(f):
 
         #Token is present and it is user's session token. Check if this token is already stored in session
 	#to avoid excess OMD api calls on every key press
-        print(f">>AUTH DECORATOR: checking session token vs access token: {session.get('token')} : {access_token}")
+        #print(f">>AUTH DECORATOR: checking session token vs access token: {session.get('token')} : {access_token}")
         if bool(session.get('logged_in')) and  session.get('token') == access_token:
             if 'access_token' in getfullargspec(f).args:
                 kwargs['access_token'] = access_token
             return f(*args, **kwargs)
         #Token is present but we need to check if OMD session is valid
         data = {'action': 'getUserInfo', 'session_id': access_token}
-        print(f">>AUTH DECORATOR: sending request for user info with access token: {access_token}")
+        #print(f">>AUTH DECORATOR: sending request for user info with access token: {access_token}")
         resp = requests.post(url, json=data, timeout=30, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
         if resp.status_code < 400 and resp.json()['valid']:
             session['logged_in'] = True

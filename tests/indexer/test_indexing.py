@@ -1,10 +1,12 @@
 import os
 from os.path import join
-from tests import client
 from flask import session
-from app import AUTH_TOKEN
+from app import app, db, AUTH_TOKEN
+from app.api.models import Pods, Sites
+from app.cli.controllers import check_db_vs_npz, check_db_vs_pos
 from app.indexer.spider import get_xml, read_xml, get_docs_from_xml_parse, process_xml, get_doc_url
 
+from tests import client
 
 
 ##################
@@ -89,3 +91,22 @@ def test_spider_get_doc_url(client):
     url, process = get_doc_url(doc, urldir)
     assert url.startswith('http')
     assert isinstance(process, bool)
+
+
+#####################
+# CONSISTENCY CHECKS
+#####################
+
+def test_db_npz_consistency(client):
+    with app.app_context():
+        pods = db.session.query(Pods).all()
+        for pod in pods:
+            l1, l2 = check_db_vs_npz(pod)
+            assert l1 +1 == l2
+
+def test_db_pos_consistency(client):
+    with app.app_context():
+        pods = db.session.query(Pods).all()
+        for pod in pods:
+            errors = check_db_vs_pos(pod)
+            assert len(errors) == 0

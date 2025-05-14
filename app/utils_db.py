@@ -74,13 +74,13 @@ def create_pod_npz_pos(path):
     user_dir = join(pod_dir, dirname(path))
     Path(user_dir).mkdir(exist_ok=True, parents=True)
     if not isfile(path+'.npz'):
-        print("Making 0 CSR matrix for new pod")
+        #print("Making 0 CSR matrix for new pod")
         pod = np.zeros((1,VEC_SIZE))
         pod = csr_matrix(pod)
         save_npz(join(pod_dir, path+'.npz'), pod)
 
     if not isfile(path+'.pos'):
-        print("Making empty positional index for new pod")
+        #print("Making empty positional index for new pod")
         posindex = [{} for _ in range(VEC_SIZE)]
         joblib.dump(posindex, join(pod_dir, path+'.pos'))
 
@@ -93,7 +93,7 @@ def create_pod(url, owner, lang, device):
 
     def commit(path, owner_hash):
         if not db.session.query(Pods).filter_by(url=path).all():
-            print("Pod does not exist:",path,owner_hash)
+            #print("Pod does not exist:",path,owner_hash)
             create_pod_npz_pos(path)
             p = Pods(url=path)
             p.name = owner_hash
@@ -167,7 +167,7 @@ def update_groups_in_db(groups):
         g.identifier = hash_username(group)
         db.session.add(g)
         db.session.commit()
-        print(f"Adding Group {group}")
+        #print(f"Adding Group {group}")
 
     #Delete groups that do not exist anymore
     groups_in_db = db.session.query(Groups).all()
@@ -192,7 +192,7 @@ def update_sites_in_db(sites):
         s.description = site['description']
         db.session.add(s)
         db.session.commit()
-        print(f"Adding Site {site}")
+        #print(f"Adding Site {site}")
 
     #Delete sites that do not exist anymore
     sites_in_db = db.session.query(Sites).all()
