@@ -1,9 +1,12 @@
 import os
 from os.path import join
+import numpy as np
 from flask import session
-from app import app, db, AUTH_TOKEN
-from app.api.models import Pods, Sites
-from app.cli.controllers import check_db_vs_npz, check_db_vs_pos
+from app import app, db, AUTH_TOKEN, VEC_SIZE
+from app.utils_db import create_pod, create_url_in_db, delete_url, add_to_npz, rm_from_npz
+from app.api.models import Urls, Pods, Sites
+from app.cli.consistency import check_db_vs_npz, check_db_vs_pos
+from app.indexer.controllers import run_indexing
 from app.indexer.spider import get_xml, read_xml, get_docs_from_xml_parse, process_xml, get_doc_url
 
 from tests import client
@@ -108,5 +111,71 @@ def test_db_pos_consistency(client):
     with app.app_context():
         pods = db.session.query(Pods).all()
         for pod in pods:
-            errors = check_db_vs_pos(pod)
-            assert len(errors) == 0
+            errors1, errors2 = check_db_vs_pos(pod)
+            assert len(errors1) == 0
+            assert len(errors2) == 0
+
+
+def test_run_indexing(client):
+    title = 'Testing run_indexing'
+    snippet = 'This is a test of the run_indexing function.'
+    description = ''
+    lang = 'en'
+    doc = title + ' ' + snippet
+
+    with app.app_context():
+        random_pod_url = db.session.query(Pods).first().url
+        url = join(random_pod_url, 'test.txt')
+        success, msg = run_indexing(url, random_pod_url, title, snippet, description, lang, doc)
+        assert success is True
+        assert isinstance(msg, str)
+        delete_url(url)
+
+
+def test_run_indexing_db_inconsistent(client):
+
+    # Mock document
+    title = 'Testing run_indexing'
+    snippet = 'This is a test of the run_indexing function.'
+    description = ''
+    lang = 'en'
+    doc = title + ' ' + snippet
+
+    # Mock url and idv to add spurious extra url to pod
+    fake_idv = 999999
+
+    with app.app_context():
+        random_pod_url = db.session.query(Pods).first().url
+        spurious_url = join(random_pod_url, 'spurious.txt')
+        url = join(random_pod_url, 'test.txt')
+        create_url_in_db(spurious_url, title, snippet, description, fake_idv, random_pod_url)
+        success, msg = run_indexing(url, random_pod_url, title, snippet, description, lang, doc)
+        assert success is False
+        assert "does not match" in msg
+        u = db.session.query(Urls).filter_by(url=spurious_url).first()
+        db.session.delete(u)
+        db.session.commit()
+
+
+def test_run_indexing_npz_inconsistent_with_db(client):
+
+    # Mock document
+    title = 'Testing run_indexing'
+    snippet = 'This is a test of the run_indexing function.'
+    description = ''
+    lang = 'en'
+    doc = title + ' ' + snippet
+
+    # Spurious vector to add to .npz
+    spurious_vector = np.ones((1, VEC_SIZE))
+
+    with app.app_context():
+        random_pod_url = db.session.query(Pods).first().url
+        url = join(random_pod_url, 'test.txt')
+        vid = add_to_npz(spurious_vector, random_pod_url)
+        success, msg = run_indexing(url, random_pod_url, title, snippet, description, lang, doc)
+        assert success is False
+        assert "does not match" in msg
+        rm_from_npz(vid - 1, random_pod_url)
+
+
