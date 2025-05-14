@@ -42,12 +42,14 @@ def index():
 @subscriptions.route("/allsites", methods=["GET","POST"])
 @login_required
 def show_all_sites():
-    pull_sites_from_gateway()
+    success, msg = pull_sites_from_gateway()
+    if not success:
+        flash(msg)
     sites_in_db = db.session.query(Sites).all()
     all_sites = []
     for site in sites_in_db:
         all_sites.append({'url': site.url, 'name': site.name, 'title': site.title, 'owner': site.owner, 'description': site.description, 'subscribed': site.subscribed})
-    print(all_sites)
+    #print(all_sites)
     return render_template("subscriptions/allsites.html", sites=all_sites)
 
 
@@ -56,7 +58,13 @@ def pull_sites_from_gateway():
     url = join(OMD_PATH,'sites')
     access_token = request.cookies.get('OMD_SESSION_ID')
     data = {'action': 'list'}
-    resp = requests.post(url, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
+    try:
+        resp = requests.post(url, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
+    except requests.exceptions.RequestException as e:
+        return False, e
+    if resp.status_code >= 400:
+        return False, f"Response status code {resp.status_code}."
+    
     json = resp.json()['list']
     for site in json:
         owner = site['owner']
@@ -66,6 +74,7 @@ def pull_sites_from_gateway():
         description = site['customAttributes']['description']
         all_sites.append({'url': link, 'name': name, 'title': title, 'owner': owner, 'description': description})
     update_sites_in_db(all_sites)
+    return True, "Sites pulled from gateway."
 
 
 @subscriptions.route("/subscribe_to_site", methods=['GET','POST'])
@@ -77,7 +86,14 @@ def subscribe_to_site():
         # subscribe on the gateway
         access_token = request.cookies.get('OMD_SESSION_ID')
         data = {'action': 'subscribe', 'site': site_name}
-        resp = requests.post(OMD_PATH, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
+        try:
+            resp = requests.post(OMD_PATH, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
+        except requests.exceptions.RequestException as e:
+            flash(f"Error: {e}")
+            return redirect(url_for('subscriptions.show_all_sites'))
+        if resp.status_code >= 400:
+            flash(f"Error: Connection to gateway failed.")
+            return redirect(url_for('subscriptions.show_all_sites'))
 
         # subscribe PeARS-internally
         s.subscribed = True
@@ -105,7 +121,14 @@ def unsubscribe_from_site():
         access_token = request.cookies.get('OMD_SESSION_ID')
         url = OMD_PATH
         data = {'action': 'unsubscribe', 'site': site_name}
-        resp = requests.post(url, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
+        try:
+            resp = requests.post(url, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
+        except requests.exceptions.RequestException as e:
+            flash(f"Error: {e}")
+            return redirect(url_for('subscriptions.show_all_sites'))
+        if resp.status_code >= 400:
+            flash(f"Error: Connection to gateway failed.")
+            return redirect(url_for('subscriptions.show_all_sites'))
 
         # mark as unsubscribed internally and delete from index
         print(">> UNSUBSCRIBE from SITE: site info:", s.name, s.subscribed, s.url)
@@ -140,7 +163,15 @@ def update_site_subscriptions():
                 url = OMD_PATH
                 access_token = request.cookies.get('OMD_SESSION_ID')
                 data = {'action': 'unsubscribe', 'site': s.name}
-                resp = requests.post(url, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
+                try:
+                    resp = requests.post(url, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
+                except requests.exceptions.RequestException as e:
+                    flash(f"Error: {e}")
+                    return redirect(url_for('subscriptions.index'))
+                if resp.status_code >= 400:
+                    flash(f"Error: Connection to gateway failed.")
+                    return redirect(url_for('subscriptions.index'))
+
                 s.subscribed = False
                 delete_urls_recursively(s.url)
                 db.session.add(s)
@@ -151,5 +182,11 @@ def subscribe_to_user(username):
     access_token = request.cookies.get('OMD_SESSION_ID')
     url = OMD_PATH
     data = {'action': 'subscribe', 'user': username}
-    resp = requests.post(url, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
-    print(resp.status_code)
+    try:
+        resp = requests.post(url, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
+    except requests.exceptions.RequestException as e:
+        flash(f"Error: {e}")
+        return redirect(url_for('subscriptions.index'))
+    if resp.status_code >= 400:
+        flash(f"Error: Connection to gateway failed.")
+        return redirect(url_for('subscriptions.index'))
