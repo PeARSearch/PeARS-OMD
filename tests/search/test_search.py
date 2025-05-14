@@ -17,6 +17,12 @@ def test_anonymous_search(client):
     assert "No results" in html or "Search results" in html
     assert response.status_code == 200
 
+def test_anonymous_to_user_search(client):
+    data = {"query": "pears"}
+    response = client.post("/user", data=data)
+    html = response.data.decode()
+    assert response.status_code == 401
+
 def test_user_search(client):
     username = os.getenv('TEST_USERNAME')
     with client.session_transaction() as session:
