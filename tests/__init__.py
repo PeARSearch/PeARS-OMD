@@ -9,6 +9,10 @@ dir_path = dirname(dirname(realpath(__file__)))
 
 
 class TestingUtils:
+
+    FAKE_OMD_PATH = "https://fakesite.pearsproject.org/"
+    real_omd_path = None
+
     # Helper function for checking that an unauthorized page request is handled correctly
     @staticmethod
     def test_authentication_failed(page):
@@ -24,6 +28,18 @@ class TestingUtils:
         data = {'action': 'signin', 'username': username, 'password': password}
         user_info = requests.post(url, timeout=30, json=data)
         return user_info.json()["session_id"]
+
+
+    @classmethod
+    def set_fake_gateway_path(cls):
+        import app.subscriptions.controllers as subscription_controllers
+        cls.real_omd_path = subscription_controllers.OMD_PATH
+        subscription_controllers.OMD_PATH = cls.FAKE_OMD_PATH
+
+    @classmethod
+    def unset_fake_gateway_path(cls):
+        import app.subscriptions.controllers as subscription_controllers
+        subscription_controllers.OMD_PATH = cls.real_omd_path
 
 
 @pytest.fixture
