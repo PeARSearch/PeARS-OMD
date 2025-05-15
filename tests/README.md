@@ -17,7 +17,7 @@ cd conf
 cp test.pears.ini.template test.pears.ini
 ```
 
-* Open the *test.pears.ini* file and fill it in. The TEST\_XML\_URL variable should be set to one of your personal OMD folder. You can pick one path from your 'profile' page in the app, preferably one does not contain many files, to avoid having lengthy tests. This will be something like *https://onmydisk.net/<username>/<device>/testfolder/*. The test username, password and device fields should be set to your On My Disk credentials and the name of the device you are using for testing. (This will be the part after your username in the TEST\_XML\_URL variable.)
+* Open the *test.pears.ini* file and fill it in. The TEST\_XML\_URL variable should be set to one of your personal OMD folder. You can pick one path from your 'profile' page in the app, preferably one does not contain many files, to avoid having lengthy tests. This will be something like *https://onmydisk.net/username/device/testfolder/*. The test username, password and device fields should be set to your On My Disk credentials and the name of the device you are using for testing. (This will be the part after your username in the TEST\_XML\_URL variable.)
 
 
 ### Backing up
@@ -45,9 +45,9 @@ flask pears restore pears-2025-05-15-12h25m
 
 ### Run the tests
 
-| :point_up:    | Check before testing                                                                                                                                                     |
-|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Ensure that you are not running the front end while also running your tests. There could be interactions with calls from the On My Disk gateway that spuriously affect the test results. |
+| :point_up: Check before testing |
+|-------------------------------- |
+Ensure that you are not running the front end while also running your tests. There could be interactions with calls from the On My Disk gateway that spuriously affect the test results. If you have started the app with *python3 run.py*, make sure to hit Ctrl+C to stop it before running pytest.
 
 Run the tests with:
 
