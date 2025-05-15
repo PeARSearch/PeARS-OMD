@@ -177,16 +177,3 @@ def update_site_subscriptions():
                 db.session.add(s)
                 db.session.commit()
     return redirect(url_for('subscriptions.index'))
-
-def subscribe_to_user(username):
-    access_token = request.cookies.get('OMD_SESSION_ID')
-    url = OMD_PATH
-    data = {'action': 'subscribe', 'user': username}
-    try:
-        resp = requests.post(url, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
-    except requests.exceptions.RequestException as e:
-        flash(f"Error: {e}")
-        return redirect(url_for('subscriptions.index'))
-    if resp.status_code >= 400:
-        flash(f"Error: Connection to gateway failed.")
-        return redirect(url_for('subscriptions.index'))
