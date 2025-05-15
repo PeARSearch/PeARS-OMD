@@ -18,38 +18,53 @@ from app.utils import clean_comma_separated_name, mk_group_name, get_device_from
 app_dir_path = dirname(dirname(realpath(__file__)))
 user_app_dir_path = join(app_dir_path,'userdata')
 
-def get_xml(xml_url):
+def get_xml(xml_url, token=AUTH_TOKEN):
+    ''' Get a pseudo-xml file from OnMyDisk, which will contain the content of a particular
+    user directory.
+    '''
     xml = None
     try:
         #xml = requests.get(xml_url, timeout=120, \
-        #        headers={'Authorization': 'token:'+AUTH_TOKEN}, stream =True).raw
+        #        headers={'Authorization': 'token:'+token}, stream =True).raw
         #print(xml.read())
-        xml = requests.get(xml_url, timeout=120, headers={'Authorization': 'token:'+AUTH_TOKEN}, stream =True).raw
-    except RuntimeError as error:
+        xml = requests.get(xml_url, timeout=120, headers={'Authorization': 'token:'+token}, stream =True).raw
+    except RuntimeError as e:
         logging.error(">> ERROR: SPIDER: GET XML: Request failed. Moving on.")
-        logging.error(error)
+        logging.error(">> MSG: %e", e)
     return xml
 
 def read_xml(xml):
+    ''' Read the xml for a particular user directory and parse the content into a dictionary.
+    Return: a dictionary with an 'omd_index' key itself containing a 'doc' key.
+    The 'doc' key is associated with a list containing all docs for that directory.
+    '''
     parse = None
     try:
         xml_content = xml.read()
         xml_content = xml_content.replace(b'&',b' and ')
         parse = xmltodict.parse(xml_content)
-    except:
+    except RuntimeError as e:
         logging.error(">> ERROR: SPIDER: PARSE XML: File may have some bad XML. Could not parse.")
+        logging.error(">> MSG: %e", e)
     return parse
 
 def get_docs_from_xml_parse(parse):
+    ''' Read the document list included in the XML.
+    Return: list of dictionaries, one dictionary per document.
+    '''
     docs = None
     try:
         docs = parse['omd_index']['doc']
-    except:
+    except RuntimeError as e:
         logging.error(">> ERROR: SPIDER: get docs from xml parse: No documents found in the XML.")
+        logging.error(">> MSG: %e", e)
     return docs
 
 
-def process_xml(xml_url, username):
+def process_xml(xml_url):
+    ''' Call xml processing functions to get metadata about documents in a given directory.
+    Return: a list of documents for that directory as well as the directory of xml_url.
+    '''
     logging.info("\n>> INDEXER: SPIDER: xml_parse: Running OMD parse on "+xml_url)
     urldir = '/'.join(xml_url.split('/')[:-1])
     docs = []
@@ -72,13 +87,24 @@ def process_xml(xml_url, username):
 
 
 def get_doc_url(doc, urldir):
+    ''' Process a document url in preparation for indexing.
 
+    Args: the document url and the directory currently being processed.
+
+    Return: the preprocessed url and a boolean indicating whether
+    we actually want to process that document (see .pearsignore 
+    list in the conf folder).
+    '''
     url = ""
     process = True
+
+    # Sites have urls starting with '/'
     if doc['@url'][0] == '/':
         url = doc['@url'][1:]
     else:
         url = doc['@url']
+
+    # Shared urls and sites have urls missing the OMD_PATH
     if url.startswith('shared/') or url.startswith('sites/'):
         url = join(OMD_PATH, url)
     else:
