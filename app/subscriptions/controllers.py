@@ -89,7 +89,7 @@ def subscribe_to_site():
         try:
             resp = requests.post(OMD_PATH, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
         except requests.exceptions.RequestException as e:
-            flash(f"Error: {e}")
+            flash(f"A request exception occurred: {e}")
             return redirect(url_for('subscriptions.show_all_sites'))
         if resp.status_code >= 400:
             flash(f"Error: Connection to gateway failed.")
@@ -124,7 +124,7 @@ def unsubscribe_from_site():
         try:
             resp = requests.post(url, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
         except requests.exceptions.RequestException as e:
-            flash(f"Error: {e}")
+            flash(f"A request exception occurred: {e}")
             return redirect(url_for('subscriptions.show_all_sites'))
         if resp.status_code >= 400:
             flash(f"Error: Connection to gateway failed.")
@@ -166,7 +166,7 @@ def update_site_subscriptions():
                 try:
                     resp = requests.post(url, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
                 except requests.exceptions.RequestException as e:
-                    flash(f"Error: {e}")
+                    flash(f"A request exception occurred: {e}")
                     return redirect(url_for('subscriptions.index'))
                 if resp.status_code >= 400:
                     flash(f"Error: Connection to gateway failed.")
