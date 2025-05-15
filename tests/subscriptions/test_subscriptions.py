@@ -211,7 +211,7 @@ def test_update_subscriptions_unsubscribe_all_except_one(client, utils):
 #       (when publishing these tests, these are hosted on @gossminn's VPS, 
 #       if these tests fail, first check if the sites are still online.)
 #   3) simulate what happens when you check only one of the boxes of sites to stay subscribed to
-#       (expectation: only one of the subscriptions is kept | currently this doesn't work!)
+#       (expectation: only one of the subscriptions is kept.)
 def test_update_subscriptions_unsubscribe_equal_title(client, utils):
     omd_session_token = utils.get_omd_session_id()
     client.set_cookie("OMD_SESSION_ID", omd_session_token)
