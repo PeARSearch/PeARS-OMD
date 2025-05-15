@@ -53,6 +53,27 @@ def test_user_allsites(client, utils):
     assert page.status_code == 200
 
 
+def test_allsites_gateway_down_message(client, utils):
+    # make sure everything is identical to a real request (except the gateway URL) 
+    omd_session_token = utils.get_omd_session_id()
+    client.set_cookie("OMD_SESSION_ID", omd_session_token)
+        
+    # set the gateway URL to something fake
+    import app.subscriptions.controllers as subscription_controllers
+    real_omd_path = subscription_controllers.OMD_PATH
+    subscription_controllers.OMD_PATH = "https://fakesite.pearsproject.org/"
+
+    # do the request
+    page = client.get("/subscriptions/allsites", headers={"Token":AUTH_TOKEN})
+
+    # set the gateway URL back to the real one
+    subscription_controllers.OMD_PATH = real_omd_path
+
+    html = page.data.decode()
+
+    assert "<b>A request exception occurred:" in html
+
+
 # check that we can subscribe to an existing site
 # -> SIDE EFFECT: will subscribe to the 'onmydisk' site
 def test_subscribe_to_site(client, utils):

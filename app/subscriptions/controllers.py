@@ -61,7 +61,7 @@ def pull_sites_from_gateway():
     try:
         resp = requests.post(url, json=data, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
     except requests.exceptions.RequestException as e:
-        return False, e
+        return False, f"A request exception occurred: {repr(e)}"
     if resp.status_code >= 400:
         return False, f"Response status code {resp.status_code}."
     
