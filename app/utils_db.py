@@ -1,23 +1,23 @@
-# SPDX-FileCopyrightText: 2024 PeARS Project, <community@pearsproject.org> 
+# SPDX-FileCopyrightText: 2025 PeARS Project, <pears@possible-worlds.eu> 
 #
 # SPDX-License-Identifier: AGPL-3.0-only
 
-import logging
-from os.path import dirname, realpath, join, isfile, isdir
+from os.path import dirname, realpath, join, isfile
 from os import remove
 from pathlib import Path
-from datetime import datetime
 from pytz import timezone
 import joblib
-from app import db, models
-from app import OMD_PATH, LANGS, VEC_SIZE, SERVER_HOST, GATEWAY_TIMEZONE
-from app.utils import hash_username
-from app.api.models import Urls, Pods, Locations, Groups, Sites
-from app.api.models import installed_languages
-from app.indexer.posix import load_posix, dump_posix
 import numpy as np
 from scipy.sparse import csr_matrix, vstack, save_npz, load_npz
 from sqlalchemy import update
+
+from app import db, models
+from app import OMD_PATH, VEC_SIZE, GATEWAY_TIMEZONE
+from app.utils import hash_username
+from app.api.models import Urls, Pods, Locations, Groups, Sites
+from app.indexer.posix import load_posix, dump_posix
+from app.cli.consistency import check_db_vs_npz, check_db_vs_pos
+
 
 dir_path = dirname(realpath(__file__))
 pod_dir = join(dir_path,'pods')
@@ -74,13 +74,13 @@ def create_pod_npz_pos(path):
     user_dir = join(pod_dir, dirname(path))
     Path(user_dir).mkdir(exist_ok=True, parents=True)
     if not isfile(path+'.npz'):
-        print("Making 0 CSR matrix for new pod")
+        #print("Making 0 CSR matrix for new pod")
         pod = np.zeros((1,VEC_SIZE))
         pod = csr_matrix(pod)
         save_npz(join(pod_dir, path+'.npz'), pod)
 
     if not isfile(path+'.pos'):
-        print("Making empty positional index for new pod")
+        #print("Making empty positional index for new pod")
         posindex = [{} for _ in range(VEC_SIZE)]
         joblib.dump(posindex, join(pod_dir, path+'.pos'))
 
@@ -93,7 +93,7 @@ def create_pod(url, owner, lang, device):
 
     def commit(path, owner_hash):
         if not db.session.query(Pods).filter_by(url=path).all():
-            print("Pod does not exist:",path,owner_hash)
+            #print("Pod does not exist:",path,owner_hash)
             create_pod_npz_pos(path)
             p = Pods(url=path)
             p.name = owner_hash
@@ -167,7 +167,7 @@ def update_groups_in_db(groups):
         g.identifier = hash_username(group)
         db.session.add(g)
         db.session.commit()
-        print(f"Adding Group {group}")
+        #print(f"Adding Group {group}")
 
     #Delete groups that do not exist anymore
     groups_in_db = db.session.query(Groups).all()
@@ -192,7 +192,7 @@ def update_sites_in_db(sites):
         s.description = site['description']
         db.session.add(s)
         db.session.commit()
-        print(f"Adding Site {site}")
+        #print(f"Adding Site {site}")
 
     #Delete sites that do not exist anymore
     sites_in_db = db.session.query(Sites).all()
@@ -259,7 +259,7 @@ def rm_from_npz(vid, pod_path):
     pod_path = join(pod_dir, pod_path+'.npz')
     pod_m = load_npz(pod_path)
     #print(f"SHAPE OF NPZ MATRIX BEFORE RM: {vid} {pod_m.shape}")
-    v = pod_m[vid]
+    #v = pod_m[vid]
     #print(f"CHECKING SHAPE OF DELETED VEC: {pod_m.shape}")
     m1 = pod_m[:vid]
     m2 = pod_m[vid+1:]
@@ -407,3 +407,26 @@ def delete_unsubscribed():
             if l and not l.subscribed:
                 print(f">> {u.url} has been unsubscribed.")
                 delete_url(u.url)
+
+####################
+# CONSISTENCY CHECKS
+####################
+
+
+def check_consistency(pod_path):
+    success = True
+    msg = ""
+
+    pod_in_db = Pods.query.filter_by(url=pod_path).first()
+    l1, l2 = check_db_vs_npz(pod_in_db, verbose=False)
+    if l1 + 1 != l2:
+        success = False
+        msg += "Length of DB records does not match length of .npz matrix prior to vectors computation. "
+
+    db_urls_not_in_pos, pos_urls_not_in_db  = check_db_vs_pos(pod_in_db, verbose=False)
+    if len(db_urls_not_in_pos) != 0:
+        success = False
+        msg += "Some DB records are not to be found in the positional index."
+    return success, msg
+    
+

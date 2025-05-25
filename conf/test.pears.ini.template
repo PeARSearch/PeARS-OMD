@@ -1,0 +1,9 @@
+# .ini file for unit tests
+
+#Mock XML file
+TEST_XML_URL = <some url to one of your personal OMD folders>
+
+#Mock username and device
+TEST_USERNAME = <your username>
+TEST_PASSWORD = <your password>
+TEST_DEVICE = <your device name>

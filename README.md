@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2024 PeARS Project, <community@pearsproject.org>
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
-# PeARS Lite - OMD integration
+# PeARS - OMD integration
 
 
 ## Executive summary
@@ -59,7 +59,7 @@ Then run:
 
 #### 3. Install the build dependencies:
 
-From the PeARS-lite directory, run:
+From the PeARS-OMD directory, run:
 
     pip install -r requirements.txt
 
