@@ -26,7 +26,7 @@ def login():
         password = request.form.get('password', '', type=str)
         # send authorization message to on my disk
         url = join(OMD_PATH, 'signin/')
-        data = {'action': 'signin', 'username': username, 'password': password}
+        data = {'action': 'signin', 'username': username, 'password': password, 'remember': True}
         user_info = requests.post(url, timeout=30, json=data)
         if user_info is None:
             flash("Incorrect credentials")
@@ -88,7 +88,12 @@ def login_required(f):
         url = join(OMD_PATH, 'signin/')
         
         access_token = request.headers.get('Token') #Get token from request header
-        #print(">> login_required: access_token: OMD_SESSION_ID", access_token)
+        #print(">> login_required: access_token from header: OMD_SESSION_ID", access_token)
+
+        if not access_token:
+           access_token = session.get('token')
+           #print(">> login_required: access_token from session: OMD_SESSION_ID", access_token)
+
         if access_token:
             #backend_to_backend
             if access_token == AUTH_TOKEN: #if it equals to system-wide security token, then it is call from OMD backend
@@ -100,7 +105,7 @@ def login_required(f):
         #Otherwise, it is frontend calling
         if not access_token:
             access_token = request.cookies.get('OMD_SESSION_ID')
-            #print(">> login_required: access_token: OMD_SESSION_ID", access_token)
+            #print(">> login_required: access_token from cookie: OMD_SESSION_ID", access_token)
         if not access_token: # still no token - relogin is needed
             #session['logged_in'] = False
             #session['token'] = ''
@@ -125,7 +130,7 @@ def login_required(f):
         resp = requests.post(url, json=data, timeout=30, headers={'accept':'application/json', 'Authorization': 'token:'+access_token})
         if resp.status_code < 400 and resp.json()['valid']:
             session['logged_in'] = True
-            session['username'] = resp.json()['username']
+            session['username'] = resp.json()['user']
             session['token'] = access_token #save token	in session
             if 'access_token' in getfullargspec(f).args:
                 kwargs['access_token'] = access_token
