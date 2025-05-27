@@ -53,6 +53,9 @@ def BS_parse(url):
 def extract_links(url):
     links = []
     print("Extracting links from",url)
+    # Ensure we only process OMD links (we should anyway, but you never know...)
+    if not url.startswith(OMD_PATH):
+        return links
     try:
         if url.endswith('?direct'):
             req = requests.get(url, timeout=10, headers={'Authorization': 'token:'+AUTH_TOKEN})
