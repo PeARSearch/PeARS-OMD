@@ -33,7 +33,7 @@ def check_db_vs_pos(pod, verbose=True):
 
     Return: the database document ids not found in the positional index.
     """
-    print(f"\t>>> CHECKING DB VS POS FOR POD: {pod.name}")
+    #print(f"\t>>> CHECKING DB VS POS FOR POD: {pod.name}")
     urls = Urls.query.filter_by(pod=pod.url).all()
     urls = set([url.id for url in urls])
     posix_path = join(pod_dir, pod.url+'.pos')
