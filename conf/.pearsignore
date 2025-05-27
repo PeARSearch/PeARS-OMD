@@ -17,6 +17,10 @@
 #json files
 .json
 
+#numpy files
+.npy
+.npz
+
 #Archive files
 .a
 .ar

@@ -54,8 +54,10 @@ def extract_links(url):
     links = []
     print("Extracting links from",url)
     try:
-        #Calling page directly without authorization, since the site is public
-        req = requests.get(url, timeout=10)
+        if url.endswith('?direct'):
+            req = requests.get(url, timeout=10, headers={'Authorization': 'token:'+AUTH_TOKEN})
+        else:
+            req = requests.get(url, timeout=10)
         if "text/html" not in req.headers["content-type"]:
             print(url, "not a HTML document...")
             return links
