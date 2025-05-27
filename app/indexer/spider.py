@@ -260,10 +260,10 @@ def get_doc_info(doc, urldir):
     owner = get_doc_owner(doc)
     shared_with = get_doc_shared_with(doc)
     group = mk_group_name(owner, shared_with)
-    #print(f"\n>> {url} {group}")
+    #print(f"\n>> {url} {group} {owner} {shared_with}")
 
     #If document belong to a group that is currently unsubscribed, ignore
-    if not check_group_is_subscribed(group) and not url.startswith(join(OMD_PATH,"sites")):
+    if owner != group and  not check_group_is_subscribed(group) and not url.startswith(join(OMD_PATH,"sites")):
         print(f">> {url} is in an unsubscribed group. Returning none.")
         return None
     if last_modified is not None and uptodate(url, last_modified, group):
