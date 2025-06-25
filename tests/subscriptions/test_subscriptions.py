@@ -98,6 +98,13 @@ def test_subscribe_to_site(client, utils):
     omd_session_token = utils.get_omd_session_id()
     client.set_cookie("OMD_SESSION_ID", omd_session_token)
     with client: # needed for accessing session
+        # clear all existing subscriptions
+        client.post(
+            "/subscriptions/update_site_subscriptions",
+            data={"sites": []},
+            headers={"Token":AUTH_TOKEN}, 
+            follow_redirects=True)
+
         page = client.get("/subscriptions/subscribe_to_site?sitename=onmydisk", headers={"Token":AUTH_TOKEN}, follow_redirects=True)
         flash = flask_session["_flashes"].pop()
     assert flash == ('message', 'Subscribed to site onmydisk')
@@ -111,7 +118,7 @@ def test_subscribe_to_site(client, utils):
 def test_subscribe_to_already_subscribed_site(client, utils):
     omd_session_token = utils.get_omd_session_id()
     client.set_cookie("OMD_SESSION_ID", omd_session_token)
-    with client: # needed for accessing session
+    with client: # needed for accessing session        
         page = client.get(f"/subscriptions/subscribe_to_site?sitename=onmydisk", headers={"Token":AUTH_TOKEN}, follow_redirects=True)
         flash = flask_session["_flashes"].pop()
     assert flash == ('message', f'Error: you were already subscribed to site onmydisk')
@@ -167,14 +174,15 @@ def test_unsubscribe_from_site(client, utils):
     assert page.status_code == 200
 
 
-# check that we get an error trying to unsubscribe from a site that doesn't exist
+# check that we get an error trying to unsubscribe from a site that we weren't subscribed to in the first place
 def test_unsubscribe_from_non_subscribed_site(client, utils):
     omd_session_token = utils.get_omd_session_id()
     client.set_cookie("OMD_SESSION_ID", omd_session_token)
     with client: # needed for accessing session
-        page = client.get("/subscriptions/unsubscribe_from_site?sitename=cleanblog", headers={"Token":AUTH_TOKEN}, follow_redirects=True)
+
+        page = client.get("/subscriptions/unsubscribe_from_site?sitename=onmydisk", headers={"Token":AUTH_TOKEN}, follow_redirects=True)
         flash = flask_session["_flashes"].pop()
-    assert flash == ('message', 'Error: you weren\'t subscribed to cleanblog, cannot unsubscribe')
+    assert flash == ('message', 'Error: you weren\'t subscribed to onmydisk, cannot unsubscribe')
     html = page.data.decode()
     assert "<b>All OMD sites:</b>" in html # check that we got back to the /allsites page
     assert page.status_code == 200
