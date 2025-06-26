@@ -74,10 +74,18 @@ def test_user_allsites(client, utils):
 
 
 # simulate trying to subscribe to a site while the gateway is down
-# N.B.: needs to be run *before* test_subscribe_to_site, do not change the testing order
 def test_subscribe_to_site_gateway_down(client, utils):
     omd_session_token = utils.get_omd_session_id()
     client.set_cookie("OMD_SESSION_ID", omd_session_token)
+
+    # first clear all existing subscriptions
+    with client:
+        client.post(
+            "/subscriptions/update_site_subscriptions",
+            data={"sites": []},
+            headers={"Token":AUTH_TOKEN}, 
+            follow_redirects=True)
+
 
     # set the gateway URL to something fake
     utils.set_fake_gateway_path()
