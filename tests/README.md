@@ -19,6 +19,13 @@ cp test.pears.ini.template test.pears.ini
 
 * Open the *test.pears.ini* file and fill it in. The TEST\_XML\_URL variable should be set to one of your personal OMD folder. You can pick one path from your 'profile' page in the app, preferably one does not contain many files, to avoid having lengthy tests. This will be something like *https://onmydisk.net/username/device/testfolder/*. The test username, password and device fields should be set to your On My Disk credentials and the name of the device you are using for testing. (This will be the part after your username in the TEST\_XML\_URL variable.)
 
+* If you're doing a clean install, make sure your database isn't completely empty before running the tests. If you are copying your development install from the general install that you were aready using, you won't have this problem. However, if you are starting with a clean slate, you can create a minimally populated database like this:
+    - Start the main application (`python3 run.py`) and log in to your OMD account;
+    - On the "Private" page (`/indexer`), first click "Update your database" to pull your OMD devices. 
+    - In the "Subscriptions: your locations" section, check at least one of your devices and click "Update subscriptions". For testing purposes, we recommend choosing a device with some but not too many searchable files so that the tests run quickly.
+    - Alternatively, you can also choose to not subscribe to any devices and manually index a specific folder (at the bottom of the page).
+    - N.B.: the `test_user_search` test will fail unless the word "pears" appears at least once in the files that you indexed. 
+    - After you're done creating a minimal index using the steps above, close the main PeARS app in order to avoid interference with the tests.
 
 ### Backing up
 
